@@ -1,0 +1,4 @@
+Caratteri incorporati in FeedOS 16 (sottoinsiemi rinominati):
+- FeedOS Sans e FeedOS Display: derivati da TeX Gyre Heros e TeX Gyre Heros Condensed (GUST Font License, licenza libera).
+- FeedOS Mono: derivato da DejaVu Sans Mono (licenza libera Bitstream Vera / DejaVu).
+I file .woff sono generati da make_fonts.py.

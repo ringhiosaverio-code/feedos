@@ -1,0 +1,3 @@
+Questa cartella contiene solo la versione dimostrativa (mangimificio di fantasia, nessun dato della tesi).
+Si può pubblicare così com'è su un hosting statico (per esempio GitHub Pages): index.html è autosufficiente.
+Non pubblicare mai il file FeedOS-16-completa-RISERVATA.html: contiene i dati dell'impresa studiata nella tesi.

@@ -1,0 +1,40 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { generateDemo } from '../../src/data/demo/generator.js';
+import { computeSignals } from '../../src/engine/signals.js';
+import { computeKpis, vsmeCoverage } from '../../src/engine/esg.js';
+import { VSME_BASIC } from '../../src/data/esgRegistry.js';
+import { runScenario } from '../../src/engine/scenario.js';
+import { annualVolumes } from '../../src/engine/signals.js';
+import { recall, buildIndex } from '../../src/engine/trace.js';
+import { labelFor } from '../../src/engine/label.js';
+import { byId } from '../../src/core/util.js';
+const today = '2026-09-23';
+const d = generateDemo({ today });
+test('segnali', () => {
+  const t0 = performance.now();
+  const s = computeSignals(d, today);
+  console.log(`segnali ${s.length} in ${(performance.now() - t0).toFixed(0)} ms`);
+  for (const x of s.slice(0, 40)) console.log(`[${x.severity}] ${x.area} · ${x.title}\n      ${x.why}`);
+  assert.ok(s.length > 5);
+});
+test('ESG', () => {
+  const r = computeKpis(d, { from: '2025-09-24', to: today });
+  const auto = r.kpis.filter(k => k.source === 'auto');
+  console.log('KPI automatici:', auto.map(k => `${k.code}=${typeof k.value === 'number' ? k.value.toFixed(2) : k.value} ${k.unitShown}`).join(' | '));
+  console.log('CO2/t vettori', r.energy.co2PerT?.toFixed(2), 'copertura FV', (r.energy.coverage * 100).toFixed(1), '% · kWh/t', r.energy.elecPerT.toFixed(2));
+  const v = vsmeCoverage(r.kpis, VSME_BASIC);
+  console.log('VSME:', v.map(x => x.id + ':' + x.covered).join(' '));
+});
+test('scenario e richiamo e cartellino', () => {
+  const vol = annualVolumes(d, today);
+  const sc = runScenario({ ...d, energy: d.settings.energy, volumes: vol }, { byIngredient: { mais: 10 }, reoptimize: true });
+  console.log('Mais +10%: Δ costo annuo', Math.round(sc.annualCostDelta), '€ · risparmio ri-ottimizzando', Math.round(sc.savingReopt), '€ · drivers', sc.drivers.map(x => x.label + ' ' + Math.round(x.annual)).join(', '));
+  const ix = buildIndex(d);
+  const lot = d.ingLots.find(l => l.analyses?.AFB1 === 13.4);
+  const r = recall(ix, { ingLots: [lot.id] });
+  console.log('Richiamo', lot.code, ': lotti', r.lots.length, '· clienti', r.customers.length, '· prodotto', r.producedT.toFixed(1), 't · spedito', r.shippedT.toFixed(1), 't · bilancio', JSON.stringify(r.massBalance));
+  const f = d.formulas[0]; const p = d.products[0];
+  const L = labelFor({ product: p, formula: f, spec: d.specs.find(s => s.id === f.specId), ingById: byId(d.ingredients), company: d.settings.company, lot: d.lots[0] });
+  console.log(L.title, '|', L.composition.map(c => c.name + ' ' + c.pct.toFixed(1)).join(', '), '|', L.analytical.map(a => a.name + ' ' + a.value + a.unit).join(', '));
+});

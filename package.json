@@ -1,0 +1,17 @@
+{
+  "name": "feedos-16",
+  "version": "16.0.0",
+  "private": true,
+  "type": "module",
+  "description": "FeedOS 16 · sistema operativo del mangimificio (applicazione locale in un unico file HTML)",
+  "scripts": {
+    "build": "node build.mjs",
+    "test": "node --test tests/engine/*.test.mjs"
+  },
+  "devDependencies": {
+    "esbuild": "^0.27.7",
+    "react": "^19.2.6",
+    "react-dom": "^19.2.6",
+    "react-icons": "^5.6.0"
+  }
+}
