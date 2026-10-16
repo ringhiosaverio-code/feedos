@@ -6,9 +6,9 @@ import { createRequire } from 'module';
 import fs from 'fs';
 import path from 'path';
 const require = createRequire(import.meta.url);
-// esbuild dalla cartella del progetto (npm install); in alternativa dall'installazione globale usata per lo sviluppo
+// esbuild dalla cartella del progetto (npm install)
 let esbuild;
-try { esbuild = require('esbuild'); } catch { esbuild = require('/home/claude/.npm-global/lib/node_modules/tsx/node_modules/esbuild'); }
+try { esbuild = require('esbuild'); } catch { console.error('esbuild non trovato: esegui prima «npm install».'); process.exit(1); }
 const ROOT = path.dirname(new URL(import.meta.url).pathname);
 const dist = p => path.join(ROOT, 'dist', p);
 fs.mkdirSync(dist('artifact'), { recursive: true });
@@ -21,7 +21,7 @@ const css = fs.readFileSync(path.join(ROOT, 'src/styles/app.css'), 'utf8');
 async function bundle(full) {
   const r = await esbuild.build({
     entryPoints: [path.join(ROOT, 'src/main.jsx')], bundle: true, minify: true, format: 'iife', write: false, jsx: 'automatic', target: ['es2020'],
-    define: { 'process.env.NODE_ENV': '"production"', __FULL__: String(full) }, nodePaths: [path.join(ROOT, 'node_modules'), '/home/claude/.npm-global/lib/node_modules'], legalComments: 'none', metafile: true,
+    define: { 'process.env.NODE_ENV': '"production"', __FULL__: String(full) }, nodePaths: [path.join(ROOT, 'node_modules')], legalComments: 'none', metafile: true,
     logLevel: 'error',
   });
   return { js: r.outputFiles[0].text.replace(/<\/script/gi, '<\\/script'), meta: r.metafile };

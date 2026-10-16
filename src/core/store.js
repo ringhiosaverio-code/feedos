@@ -25,13 +25,13 @@ export function useStore(selector = s => s) {
 }
 export const useData = () => useStore(s => s.data);
 
-export async function initStore(makeDefault) {
+export async function initStore(makeDefault, upgrade = d => d) {
   const saved = await loadData();
-  if (saved && saved.settings?.schema === 16) set({ data: migrate(saved), ready: true, saveMode: storageMode() });
+  if (saved && saved.settings?.schema === 16) set({ data: upgrade(migrate(saved)), ready: true, saveMode: storageMode() });
   else set({ data: makeDefault ? await makeDefault() : emptyData(), ready: true, saveMode: storageMode(), fresh: true });
   if (!saved) scheduleSave();
 }
-function migrate(d) { for (const c of COLLECTIONS) if (!Array.isArray(d[c])) d[c] = []; d.settings ||= {}; d.settings.signalState ||= {}; d.esgManual ||= {}; return d; }
+function migrate(d) { for (const c of COLLECTIONS) if (!Array.isArray(d[c])) d[c] = []; d.settings ||= {}; d.settings.signalState ||= {}; d.esgManual ||= {}; d.survey ||= {}; return d; }
 
 function scheduleSave() {
   clearTimeout(saveTimer);
@@ -65,6 +65,12 @@ function applyOps(ops, label, record = true) {
       const before = d.esgManual;
       d = { ...d, esgManual: { ...d.esgManual, ...op.value } };
       done.push({ kind: 'esg', before, after: d.esgManual });
+      continue;
+    }
+    if (op.kind === 'survey') {
+      const before = d.survey || {};
+      d = { ...d, survey: { ...before, ...op.value } };
+      done.push({ kind: 'survey', before, after: d.survey });
       continue;
     }
     const arr = d[op.coll] || [];
@@ -108,6 +114,7 @@ export const store = {
   replace: (coll, value, label) => applyOps([{ kind: 'replace', coll, value }], label),
   settings: (value, label) => applyOps([{ kind: 'settings', value }], label),
   esg: (value, label) => applyOps([{ kind: 'esg', value }], label),
+  survey: (value, label) => applyOps([{ kind: 'survey', value }], label),
   batch: (ops, label) => applyOps(ops, label),
   /** Sostituisce l'intero archivio (demo, importazione, ripristino). Non annullabile, ma salva un'istantanea prima. */
   async load(data, label) {
@@ -143,6 +150,7 @@ export const store = {
 function revert(d, op) {
   if (op.kind === 'settings') return { ...d, settings: op.before };
   if (op.kind === 'esg') return { ...d, esgManual: op.before };
+  if (op.kind === 'survey') return { ...d, survey: op.before };
   const arr = d[op.coll];
   if (op.kind === 'add') return { ...d, [op.coll]: arr.filter(x => x.id !== op.id) };
   if (op.kind === 'update') return { ...d, [op.coll]: arr.map(x => x.id === op.id ? op.before : x) };
@@ -153,6 +161,7 @@ function revert(d, op) {
 function reapply(d, op) {
   if (op.kind === 'settings') return { ...d, settings: op.after };
   if (op.kind === 'esg') return { ...d, esgManual: op.after };
+  if (op.kind === 'survey') return { ...d, survey: op.after };
   const arr = d[op.coll];
   if (op.kind === 'add') return { ...d, [op.coll]: [op.after, ...arr] };
   if (op.kind === 'update') return { ...d, [op.coll]: arr.map(x => x.id === op.id ? op.after : x) };

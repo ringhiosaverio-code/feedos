@@ -4,8 +4,10 @@ import fs from 'fs';
 import { migrateF15, detectF15 } from '../../src/core/migrate.js';
 import { starterData } from '../../src/data/demo/index.js';
 import { optimize } from '../../src/engine/formulation.js';
-const F15 = '/tmp/claude-0/-home-claude/26da914b-e289-5e67-a6c7-37fe3f4316b6/scratchpad/f15/src/FeedOS-15.0-Galtieri/tests/demo-project.json';
-test('migrazione da FeedOS 15 (progetto 6.1)', () => {
+// Progetto dimostrativo di FeedOS 15 (non incluso nel repository): FEEDOS15_PROJECT=/percorso/demo-project.json
+const F15 = process.env.FEEDOS15_PROJECT || '';
+const noF15 = !F15 || !fs.existsSync(F15) ? 'progetto dimostrativo di FeedOS 15 non disponibile (variabile FEEDOS15_PROJECT)' : false;
+test('migrazione da FeedOS 15 (progetto 6.1)', { skip: noF15 }, () => {
   const j = JSON.parse(fs.readFileSync(F15, 'utf8'));
   assert.equal(detectF15(j), 'project');
   const r = migrateF15(j, starterData());
@@ -19,7 +21,7 @@ test('migrazione da FeedOS 15 (progetto 6.1)', () => {
   // stessa soluzione del motore di FeedOS 15 sullo stesso progetto: 244,08 €/t di materie prime
   assert.ok(Math.abs(o.cost - 244.08) < 0.01);
 });
-test('migrazione da backup completo 7/8', () => {
+test('migrazione da backup completo 7/8', { skip: noF15 }, () => {
   const j = { schema: 'feedos-workspace-7', exportedAt: '2026-01-01', workspace: { version: 7, kpis: { E4: { value: 19.56 }, S1: { value: 39 } }, products: [{ name: 'x' }], quotes: [] }, project: JSON.parse(fs.readFileSync(F15, 'utf8')), history: [], legacy: {} };
   const r = migrateF15(j, starterData());
   assert.equal(r.kind, 'backup');

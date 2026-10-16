@@ -1,11 +1,12 @@
 /* FeedOS 16 · barra comandi (Ctrl K): pagine, azioni e voci dell'archivio con ricerca tollerante. */
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { LuSearch, LuArrowRight, LuFlaskConical, LuUsers, LuBoxes, LuWheat, LuTag, LuFileText, LuZap, LuSparkles, LuShieldCheck, LuHandshake, LuMessageSquare } from 'react-icons/lu';
+import { LuSearch, LuArrowRight, LuFlaskConical, LuUsers, LuBoxes, LuWheat, LuTag, LuFileText, LuZap, LuSparkles, LuShieldCheck, LuHandshake, LuMessageSquare, LuDroplets, LuRecycle, LuClipboardList, LuLeaf } from 'react-icons/lu';
 import { useUi, uiStore, useData, store, toast, openDrawer } from '../core/store.js';
 import { go } from '../core/router.js';
 import { ROLES } from '../core/roles.js';
 import { norm, nf } from '../core/util.js';
 import { NAV } from './nav.js';
+import { kpis, esgOverview } from '../core/derived.js';
 
 function buildIndex(d) {
   const items = [];
@@ -21,6 +22,9 @@ function buildIndex(d) {
   A('Simula un richiamo di prodotto', () => go('qualita', 'richiamo'), LuShieldCheck);
   A('Apri il simulatore «E se…»', () => go('economia', 'scenari'), LuSparkles);
   A('Registra un reclamo', () => go('qualita', 'reclami', 'nuovo'), LuMessageSquare);
+  A('Registra la lettura dell’acqua', () => go('esg', 'acqua', 'nuova'), LuDroplets);
+  A('Registra un rifiuto (formulario)', () => go('esg', 'rifiuti', 'nuovo'), LuRecycle);
+  A('Compila il questionario ESG', () => go('esg', 'questionario'), LuClipboardList);
   A('Esporta un backup completo', () => go('dati', 'archivio', 'backup'));
   A('Carica il mangimificio dimostrativo', () => go('dati', 'archivio'));
   A('Presentazione guidata', () => uiStore.set({ tour: 0 }), LuSparkles);
@@ -52,6 +56,10 @@ function questions(q, d) {
     for (const l of d.lots.filter(l => norm(l.code).includes(norm(m[2]))).slice(0, 3)) out.push({ kind: 'Risposta', icon: LuShieldCheck, label: `Richiamo del lotto ${l.code}`, extra: 'simula dove è finito', run: () => go('qualita', 'richiamo', l.id) });
   }
   if ((m = s.match(/^(e se|se)\s+(.+?)\s*([+-]\s*\d+)\s*%?/))) for (const i of find(d.ingredients, m[2], i => i.name)) out.push({ kind: 'Risposta', icon: LuSparkles, label: `E se ${i.name.toLowerCase()} ${m[3].replace(/\s/g, '')}%?`, extra: 'apre il simulatore con questo scenario', run: () => { uiStore.set({ scenarioSeed: { byIngredient: { [i.id]: +m[3].replace(/\s/g, '') } } }); go('economia', 'scenari'); } });
+  if (/^(acqua|consumo idrico|prelievo idrico)\b/.test(s)) { const W = kpis(d).water; out.push({ kind: 'Risposta', icon: LuDroplets, label: W.nMonths ? `Acqua: ${nf(W.m3)} m³ in 12 mesi · ${nf(W.intensity * 1000, 1)} litri/t` : 'Acqua: nessuna lettura registrata', extra: 'apre ESG › Acqua', run: () => go('esg', 'acqua') }); }
+  if (/^(rifiuti|spazzatura|recupero)\b/.test(s)) { const S = kpis(d).waste; out.push({ kind: 'Risposta', icon: LuRecycle, label: S.n ? `Rifiuti: ${nf(S.kg / 1000, 1)} t in 12 mesi · ${nf(S.recovery * 100)}% a recupero` : 'Rifiuti: nessun formulario registrato', extra: 'apre ESG › Rifiuti', run: () => go('esg', 'rifiuti') }); }
+  if (/^(esg|sostenibilita|maturita|punteggio esg)\b/.test(s)) { const o = esgOverview(d); out.push({ kind: 'Risposta', icon: LuLeaf, label: `Maturità ESG ${nf(o.score.score)}/100 · ${o.score.level}`, extra: 'apre il cruscotto ESG', run: () => go('esg', 'cruscotto') }); }
+  if (/^(co2|emissioni|scope)\b/.test(s)) { const G = kpis(d).ghg; out.push({ kind: 'Risposta', icon: LuLeaf, label: `Emissioni: Scope 1 ${nf(G.scope1)} t · Scope 2 ${nf(G.scope2)} t · Scope 3 ${nf(G.scope3)} t CO₂e`, extra: 'apre il cruscotto ESG', run: () => go('esg', 'cruscotto') }); }
   return out;
 }
 

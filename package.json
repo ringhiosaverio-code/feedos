@@ -1,6 +1,6 @@
 {
   "name": "feedos-16",
-  "version": "16.0.0",
+  "version": "16.1.0",
   "private": true,
   "type": "module",
   "description": "FeedOS 16 · sistema operativo del mangimificio (applicazione locale in un unico file HTML)",

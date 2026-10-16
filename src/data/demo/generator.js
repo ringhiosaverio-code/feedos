@@ -8,9 +8,10 @@ import { optimize } from '../../engine/formulation.js';
 import { profile, SPECIES, AFB1_LIMITS } from '../../engine/nutrients.js';
 import { PV_PROFILE } from '../../engine/energy.js';
 import { productCost } from '../../engine/costing.js';
+import { demoSustainability } from './sustainability.js';
 import { rng, iso, addDays, mondayOf, monthOf, parse, round, byId, sum, dayOfYear } from '../../core/util.js';
 
-export const DEMO_VERSION = 1;
+export const DEMO_VERSION = 2;
 
 const PRODUCTS = [
   // code, name, spec, form, packaging, line, share, processCost, packCost, logistics, minMargin, targetMargin
@@ -487,11 +488,11 @@ export function generateDemo({ today = iso(new Date()), seed = 16 } = {}) {
     { id: 't-3', createdAt: addDays(today, -40), title: 'Taratura del condizionatore linea pellet 1', area: 'produzione', owner: 'Produzione', due: addDays(today, -25), status: 'fatto', priority: 'media', source: 'manuale', detail: '', doneAt: addDays(today, -26) },
   ];
 
-  // ---------- valori ESG inseriti a mano (dati dimostrativi) ----------
-  const esgManual = {
-    S1: 31, S2: 19.2, S3: 0.31, S4: 18, S5: 6.5, S6: 6.4, S7: 25, E9: 2150, E10: 186, E11: 78, E16: 4.2,
-    C2: null, C4: 3.8, C5: 2.4, C6: 420000, C7: 36, G1: '3 consiglieri (1 donna)', G2: 'Sì', G3: 'Sì', G4: 0, G5: 'ISO 9001; biologico (Reg. UE 2018/848)', G6: 6, G7: 1, G8: 60, G9: 'Sì', G10: 'No', G11: 25, G12: 'No',
-  };
+  // ---------- acqua, rifiuti e questionario ESG (dati dimostrativi derivati dalla produzione) ----------
+  const { water, waste, survey } = demoSustainability({ today, runs });
+
+  // ---------- valori ESG inseriti a mano nel registro (quelli che non arrivano da dati o questionario) ----------
+  const esgManual = { E16: 4.2, C2: null, C4: 3.8, C5: 2.4, C6: 420000, C7: 36 };
 
   const settings = {
     schema: 16, dataset: 'demo', demoVersion: DEMO_VERSION, demoAnchor: today,
@@ -502,8 +503,8 @@ export function generateDemo({ today = iso(new Date()), seed = 16 } = {}) {
   };
   return {
     settings, ingredients, specs, formulas, products, lines: LINES.map(l => ({ ...l })), customers, agents: AGENTS.map(a => ({ ...a })),
-    ingLots, lots, runs, shipments, complaints, market, purchases, plan, energy, visits, offers, tasks,
-    esgManual, scenarios: [
+    ingLots, lots, runs, shipments, complaints, market, purchases, plan, energy, water, waste, visits, offers, tasks,
+    esgManual, survey, scenarios: [
       { id: 'sc-1', name: 'Mais +10%', byIngredient: { mais: 10 }, byCategory: {}, reoptimize: true },
       { id: 'sc-2', name: 'Tutta la soia senza deforestazione', byIngredient: {}, byCategory: {}, reoptimize: true, swapSoy: true },
     ],

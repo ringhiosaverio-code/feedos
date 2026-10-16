@@ -1,9 +1,11 @@
 /* FeedOS 16 · Indicatori ESG alimentati dai dati operativi (registro della tesi, Tabella A.1).
- * Ogni valore dichiara la provenienza: 'auto' (calcolato dai dati dell'app), 'manuale' (inserito), 'tesi'. */
+ * Ogni valore dichiara la provenienza: 'auto' (calcolato dai dati dell'app), 'questionario' (risposta al questionario ESG),
+ * 'manuale' (inserito nel registro), 'tesi'. Precedenza: dati > questionario > inserimento manuale. */
 import { ESG_REGISTRY } from '../data/esgRegistry.js';
 import { formulaCO2, coProductShare } from './formulation.js';
 import { balance, aggregate, scope1PerKg, DEFAULTS } from './energy.js';
 import { sum } from '../core/util.js';
+import { waterStats, wasteStats, ghgInventory, surveyKpis } from './sustainability.js';
 
 /**
  * @param {object} d dati dell'app; @param {{from:string,to:string}} period date ISO incluse
@@ -41,6 +43,7 @@ export function computeKpis(d, period, opt = {}) {
   const purchVal = sum(ingLotsP, l => l.tonnes * (l.price || 0));
   const itVal = sum(ingLotsP.filter(l => ingById[l.ingId]?.origin === 'Italia'), l => l.tonnes * (l.price || 0));
   const m = d.esgManual || {};
+  const water = waterStats(d, period), waste = wasteStats(d, period);
   const auto = {
     E1: [b.kwhGrid, 'kWh'], E2: [b.kwhSelf, 'kWh'], E3: [b.coverage != null ? b.coverage * 100 : null, '%'], E4: [b.elecPerT, 'kWh/t'],
     E5: [b.gplKg, 'kg'], E6: [b.co2Gpl, 't CO₂'], E7: [b.co2Grid, 't CO₂'],
@@ -49,17 +52,24 @@ export function computeKpis(d, period, opt = {}) {
     S8: [analyses, 'n.'], S9: [nc, 'n.'], S10: [compl.length, 'n.'], S11: [assisted, 'n.'],
     C1: [revenue, '€'], C3: [revenue ? rawCost / revenue * 100 : null, '% sui ricavi', 'Costo materie prime ai prezzi correnti sulle quantità prodotte'],
     C10: [purchVal ? itVal / purchVal * 100 : null, '%', 'Quota in valore dei lotti di materie prime di origine italiana'],
+    E9: [water.nMonths ? water.m3 : null, 'm³', `Registro delle letture: ${water.nMonths} mesi`],
+    E10: [waste.n ? waste.kg : null, 'kg', `Registro dei rifiuti: ${waste.n} registrazioni, di cui ${Math.round(waste.hazKg)} kg pericolosi`],
+    E11: [waste.recovery != null ? waste.recovery * 100 : null, '%', 'Quota in peso con destinazione «recupero» nel registro dei rifiuti'],
   };
-  if (m.S1) auto.C8 = [revenue / m.S1, '€/addetto'];
+  const fromSurvey = surveyKpis(d.survey || {});
+  const staff = fromSurvey.S1?.[0] ?? (+m.S1 || null);
+  if (staff) auto.C8 = [revenue / staff, '€/addetto'];
   const out = [];
   for (const k of ESG_REGISTRY) {
     let value = null, unit = k.unit, source = null, note = '';
     if (auto[k.code] && auto[k.code][0] != null && Number.isFinite(auto[k.code][0])) { [value, unit, note = ''] = auto[k.code]; source = 'auto'; }
+    else if (fromSurvey[k.code]) { [value, unit, note = ''] = fromSurvey[k.code]; source = 'questionario'; }
     else if (m[k.code] != null && m[k.code] !== '') { value = m[k.code]; source = 'manuale'; }
     if (opt.thesis && opt.thesis[k.code] != null) { value = opt.thesis[k.code]; source = 'tesi'; unit = k.unit; }
     out.push({ ...k, value, unitShown: unit, source, note });
   }
-  return { kpis: out, energy: b, tonnes, revenue, scope1: b.scope1, scope2: b.scope2, factors, scope1PerKg: scope1PerKg(factors) };
+  const ghg = ghgInventory({ energy: b, survey: d.survey, ingCO2Kg: ingCO2, tonnes, revenue, factors });
+  return { kpis: out, energy: b, tonnes, revenue, scope1: b.scope1, scope2: b.scope2, factors, scope1PerKg: scope1PerKg(factors), water, waste, ghg };
 }
 
 /** Copertura del modulo Basic del VSME: requisito coperto se almeno un indicatore collegato è in classe A o B (regola della tesi, §2.8). */

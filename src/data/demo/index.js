@@ -1,5 +1,6 @@
 /* FeedOS 16 · archivi di partenza: mangimificio dimostrativo (dati inventati) e archivio vuoto con il catalogo di base. */
-import { generateDemo } from './generator.js';
+import { generateDemo, DEMO_VERSION } from './generator.js';
+import { demoSustainability } from './sustainability.js';
 import { INGREDIENTS, SPECS } from './catalog.js';
 import { emptyData } from '../../core/schema.js';
 import { iso } from '../../core/util.js';
@@ -20,4 +21,14 @@ export function starterData(keep = {}) {
     { id: 'L2', code: 'F1', name: 'Linea farine', kind: 'farina', capacityTph: 12, hoursWeek: 24, kwhPerT: 8, gplKgPerT: 0, color: 3 },
   ];
   return d;
+}
+
+/** Archivio dimostrativo salvato da una versione precedente: aggiunge acqua, rifiuti e questionario senza toccare il resto. */
+export function upgradeDemo(d) {
+  if (d?.settings?.dataset !== 'demo' || (d.settings.demoVersion || 1) >= DEMO_VERSION) return d;
+  const s = demoSustainability({ today: d.settings.demoAnchor || iso(new Date()), runs: d.runs || [] });
+  return {
+    ...d, water: d.water?.length ? d.water : s.water, waste: d.waste?.length ? d.waste : s.waste,
+    survey: d.survey && Object.keys(d.survey).length ? d.survey : s.survey, settings: { ...d.settings, demoVersion: DEMO_VERSION },
+  };
 }

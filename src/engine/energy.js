@@ -8,6 +8,9 @@ export const DEFAULTS = {
   lhvKwhKg: 13.14,    // contenuto energetico del GPL (PCI) kWh/kg
   pciTJperGg: 47.3,
   ch4KgTJ: 1.0, n2oKgTJ: 0.1, gwpCh4: 27.9, gwpN2o: 273,
+  // altri combustibili dello Scope 1 (valori indicativi: verificare con i parametri standard nazionali dell'anno)
+  feGas: 1.975,       // kg CO₂/Smc di gas naturale
+  feDiesel: 2.65,     // kg CO₂/litro di gasolio
 };
 
 export function scope1PerKg(f = DEFAULTS) {

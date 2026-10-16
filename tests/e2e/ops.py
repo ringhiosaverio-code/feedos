@@ -1,11 +1,13 @@
-"""Operazioni complete: accettazione lotto, reclamo, offerta, listino, scenario, backup e ripristino, importazione CSV, annulla."""
-import asyncio, json
+"""Operazioni complete: accettazione lotto, reclamo, offerta, listino, scenario, acqua, rifiuti, questionario ESG, backup e ripristino, importazione CSV, annulla."""
+import asyncio, json, os
+from pathlib import Path
 from playwright.async_api import async_playwright
-BASE = 'file:///tmp/claude-0/-home-claude/26da914b-e289-5e67-a6c7-37fe3f4316b6/scratchpad/f16/dist/FeedOS-16.html'
-FIX = '/tmp/claude-0/-home-claude/26da914b-e289-5e67-a6c7-37fe3f4316b6/scratchpad/f16/tests/e2e/fixtures/'
+ROOT = Path(__file__).resolve().parents[2]
+BASE = (ROOT / 'dist' / 'FeedOS-16.html').as_uri()
+FIX = str(ROOT / 'tests' / 'e2e' / 'fixtures') + '/'
 async def main():
     async with async_playwright() as p:
-        b = await p.chromium.launch(); ctx = await b.new_context(viewport={'width': 1440, 'height': 900}, accept_downloads=True)
+        b = await p.chromium.launch(executable_path=os.environ.get('CHROMIUM') or None); ctx = await b.new_context(viewport={'width': 1440, 'height': 900}, accept_downloads=True)
         pg = await ctx.new_page(); errs = []
         pg.on('pageerror', lambda e: errs.append(str(e)[:300]))
         pg.on('console', lambda m: errs.append(m.text[:200]) if m.type == 'error' else None)
@@ -49,6 +51,36 @@ async def main():
         await pg.get_by_text('Energia +25%', exact=True).click(); await pg.wait_for_timeout(900)
         await pg.get_by_text('Salva', exact=True).click(); await pg.wait_for_timeout(400)
         print('6 scenario:', await toast(), '·', await pg.evaluate("() => document.querySelector('#eco-results .val')?.innerText"))
+        # 6b acqua: lettura del contatore con consumo calcolato dalla lettura precedente
+        await go('esg.acqua.nuova'); await pg.wait_for_timeout(600)
+        await pg.locator('#esg-water-form .seg button', has_text='Pozzo').click(); await pg.wait_for_timeout(200)
+        await pg.locator('#esg-water-form input[type=month]').fill('2030-01')
+        await pg.locator('#esg-water-form .btn.primary').click(); await pg.wait_for_timeout(300)
+        print('6b mese futuro:', await toast())
+        await pg.locator('#esg-water-form input[type=month]').fill(await pg.evaluate("() => new Date().toISOString().slice(0, 7)"))
+        before = await pg.evaluate("() => document.querySelector('.kpi .val')?.innerText")
+        reading = pg.get_by_label('Lettura del contatore'); await reading.fill('99999'); await reading.press('Tab')
+        cons = pg.get_by_label('Consumo del mese'); await cons.fill('150'); await cons.press('Tab')
+        await pg.locator('#esg-water-form .btn.primary').click(); await pg.wait_for_timeout(500)
+        print('6b acqua:', await toast(), '· righe', await pg.evaluate("() => document.querySelectorAll('table.t tbody tr').length"))
+        # 6c rifiuto pericoloso a smaltimento
+        await go('esg.rifiuti.nuovo'); await pg.wait_for_timeout(600)
+        await pg.locator('#esg-waste-form select').select_option('15 01 10*'); await pg.wait_for_timeout(150)
+        haz = await pg.evaluate("() => document.querySelector('#esg-waste-form .chip')?.innerText")
+        kg = pg.get_by_label('Quantità in kg'); await kg.fill('42'); await kg.press('Tab')
+        await pg.locator('#esg-waste-form .btn.primary').click(); await pg.wait_for_timeout(500)
+        print('6c rifiuto:', haz, '·', await toast())
+        # 6d questionario: risposta, valore proposto dai dati, annulla
+        await go('esg.questionario.generale'); await pg.wait_for_timeout(600)
+        await pg.locator('.suggest').first.click(); await pg.wait_for_timeout(400)
+        print('6d questionario (proposta):', await pg.evaluate("() => document.querySelector('#q-gen-emp .pill[aria-pressed=true]')?.innerText"))
+        await go('esg.questionario.sicurezza'); await pg.wait_for_timeout(500)
+        await pg.locator('#q-hs-iso .pill', has_text='Sì').click(); await pg.wait_for_timeout(400)
+        await go('esg.cruscotto'); await pg.wait_for_timeout(600)
+        score1 = await pg.evaluate("() => document.querySelector('.hero-score .ring-c b')?.innerText")
+        await pg.keyboard.press('Control+z'); await pg.wait_for_timeout(500)
+        score0 = await pg.evaluate("() => document.querySelector('.hero-score .ring-c b')?.innerText")
+        print('   maturità con ISO 45001:', score1, '→ dopo Ctrl Z:', score0, '·', await toast())
         # 7 importazione CSV dei prezzi
         await go('dati.importa'); await pg.wait_for_timeout(500)
         await pg.locator('#dati-csv input[type=file]').set_input_files(FIX + 'prezzi.csv'); await pg.wait_for_timeout(600)

@@ -1,10 +1,11 @@
 """Collaudo di tutte le pagine: errori della console, sbordi orizzontali, tempi. python3 tests/e2e/smoke.py [larghezza] [tema] [file]"""
-import asyncio, sys, time, json
+import asyncio, sys, time, json, os
+from pathlib import Path
 from playwright.async_api import async_playwright
 W = int(sys.argv[1]) if len(sys.argv) > 1 else 1440
 theme = sys.argv[2] if len(sys.argv) > 2 else 'light'
 FILE = sys.argv[3] if len(sys.argv) > 3 and sys.argv[3].endswith('.html') else 'FeedOS-16.html'
-BASE = f'file:///tmp/claude-0/-home-claude/26da914b-e289-5e67-a6c7-37fe3f4316b6/scratchpad/f16/dist/{FILE}'
+BASE = (Path(__file__).resolve().parents[2] / 'dist' / FILE).as_uri()
 ROUTES = ['oggi', 'oggi.attivita', 'oggi.registro', 'gemello',
   'formulazione', 'formulazione.formule.f-br21', 'formulazione.formule.nuova', 'formulazione.materie', 'formulazione.specifiche',
   'acquisti', 'acquisti.fabbisogni.mais', 'acquisti.scorte', 'acquisti.ordini', 'acquisti.mercati', 'acquisti.mercati.olio',
@@ -12,12 +13,12 @@ ROUTES = ['oggi', 'oggi.attivita', 'oggi.registro', 'gemello',
   'qualita', 'qualita.lotti-mp', 'qualita.analisi', 'qualita.reclami', 'qualita.reclami.nuovo', 'qualita.richiamo',
   'commerciale', 'commerciale.offerte', 'commerciale.offerte.nuova', 'commerciale.listino', 'commerciale.visite', 'commerciale.rete',
   'economia', 'economia.scenari', 'economia.previsioni',
-  'esg', 'esg.energia', 'esg.passaporto', 'esg.vsme', 'esg.tesi',
+  'esg', 'esg.questionario', 'esg.questionario.persone', 'esg.questionario.filiera', 'esg.acqua', 'esg.acqua.nuova', 'esg.rifiuti', 'esg.rifiuti.nuovo', 'esg.indicatori', 'esg.energia', 'esg.passaporto', 'esg.vsme', 'esg.tesi',
   'dati', 'dati.importa', 'dati.registro', 'dati.impostazioni']
 DRAWERS = [('product', 'p-lt18'), ('ingredient', 'mais'), ('customer', 'c-1'), ('offer', 'of-1'), ('complaint', 'rc-1'), ('lot', None), ('ingLot', None)]
 async def main():
     async with async_playwright() as p:
-        b = await p.chromium.launch()
+        b = await p.chromium.launch(executable_path=os.environ.get('CHROMIUM') or None)
         ctx = await b.new_context(viewport={'width': W, 'height': 900}, color_scheme=theme, device_scale_factor=1)
         pg = await ctx.new_page(); errs = []
         pg.on('pageerror', lambda e: errs.append('PAGEERROR ' + str(e)[:400]))

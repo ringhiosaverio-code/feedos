@@ -8,7 +8,7 @@ from fontTools.ttLib import TTFont
 
 TG = Path('/usr/share/texmf/fonts/opentype/public/tex-gyre')
 DJ = Path('/usr/share/fonts/truetype/dejavu')
-OUT = Path(__file__).resolve().parent / 'fonts'
+OUT = Path(__file__).resolve().parents[1] / 'fonts'
 OUT.mkdir(exist_ok=True)
 
 # Latino di base + Latin-1 + punteggiatura tipografica e simboli usati nell'app

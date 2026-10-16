@@ -1,14 +1,16 @@
 """Percorsi interattivi: python3 tests/e2e/flow.py nome_percorso [larghezza]
 Ogni passo: ('go', hash) · ('click', testo o selettore css) · ('fill', selettore, valore) · ('wait', ms) · ('shot', nome) · ('eval', js)"""
-import asyncio, sys, json
+import asyncio, sys, json, os
+from pathlib import Path
 from playwright.async_api import async_playwright
-BASE = 'file:///tmp/claude-0/-home-claude/26da914b-e289-5e67-a6c7-37fe3f4316b6/scratchpad/f16/dist/FeedOS-16.html'
+ROOT = Path(__file__).resolve().parents[2]
+BASE = (ROOT / 'dist' / 'FeedOS-16.html').as_uri()
 FLOWS = json.load(open('tests/e2e/flows.json'))
 name = sys.argv[1]; W = int(sys.argv[2]) if len(sys.argv) > 2 else 1440
 theme = sys.argv[3] if len(sys.argv) > 3 else 'light'
 async def main():
     async with async_playwright() as p:
-        b = await p.chromium.launch()
+        b = await p.chromium.launch(executable_path=os.environ.get('CHROMIUM') or None)
         ctx = await b.new_context(viewport={'width': W, 'height': 900}, color_scheme=theme, device_scale_factor=1 if W > 800 else 2)
         pg = await ctx.new_page(); errs = []
         pg.on('pageerror', lambda e: errs.append('PAGEERROR ' + str(e)[:500]))

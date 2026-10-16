@@ -20,6 +20,6 @@ export const AREA_META = {
   qualita: { label: 'Qualità e tracciabilità', lead: 'Lotti, analisi, contaminanti, reclami e richiamo con bilancio di massa.' },
   commerciale: { label: 'Commerciale', lead: 'Clienti, offerte con margine in tempo reale, listino, visite e rete agenti.' },
   economia: { label: 'Economia', lead: 'Costo pieno e margine per tonnellata, previsioni verificate e simulatore «E se…».' },
-  esg: { label: 'ESG e tesi', lead: 'I 49 indicatori della tesi alimentati dai dati di ogni giorno, energia e CO₂, VSME e report.' },
+  esg: { label: 'ESG e tesi', lead: 'Cruscotto ESG, questionario guidato, acqua, rifiuti, energia e CO₂: i 49 indicatori della tesi alimentati dai dati di ogni giorno.' },
   dati: { label: 'Dati', lead: 'Archivio, salvataggi, importazioni, registro delle modifiche e impostazioni.' },
 };

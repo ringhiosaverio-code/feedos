@@ -1,8 +1,8 @@
-/* FeedOS 16 · ESG e tesi: i 49 indicatori del registro alimentati dai dati di ogni giorno (con la provenienza di ogni
- * valore), energia e CO₂ con il modello della tesi, passaporto di prodotto, copertura VSME e bozza di report,
- * collegamento tra la tesi e l'uso in azienda. */
+/* FeedOS 16 · ESG e tesi: cruscotto di maturità, questionario guidato, registri di acqua e rifiuti (in sostenibilita.jsx),
+ * i 49 indicatori del registro alimentati dai dati di ogni giorno (con la provenienza di ogni valore), energia e CO₂ con
+ * il modello della tesi, passaporto di prodotto, copertura VSME e bozza di report, collegamento tra la tesi e l'azienda. */
 import React, { useMemo, useState } from 'react';
-import { LuCopy, LuDownload, LuPrinter, LuLeaf, LuDatabase, LuPencil, LuFileText, LuInfo } from 'react-icons/lu';
+import { LuCopy, LuDownload, LuPrinter, LuLeaf, LuDatabase, LuPencil, LuFileText, LuInfo, LuClipboardList } from 'react-icons/lu';
 import { useData, store, toast, openDrawer } from '../core/store.js';
 import { go } from '../core/router.js';
 import { idx, appToday, kpis, period12, volumes, shippedByLot } from '../core/derived.js';
@@ -17,19 +17,28 @@ import { PageHead, Panel, Btn, Table, Chip, Kpi, Field, Select, Empty, SearchBox
 import { Columns, LineChart, Sankey, Bars, StackBar, Legend, SERIES } from '../ui/charts.jsx';
 import { lotCheck } from './qualita.jsx';
 import { NAV } from '../app/nav.js';
+import { Cruscotto, Questionario, Acqua, Rifiuti, openQuestion } from './sostenibilita.jsx';
+import { SURVEY_QUESTIONS } from '../data/survey.js';
 
 // Solo la versione completa contiene i dati della tesi: nella pubblica TH è null e il modulo dei dati non entra nel file.
 const TH = __FULL__ ? THESIS : null;
 const FULL = !!TH;
-const SRC = { auto: { kind: 'good', label: 'dai dati' }, manuale: { kind: 'accent', label: 'inserito' }, tesi: { kind: 'maize', label: 'tesi' } };
+const SRC = { auto: { kind: 'good', label: 'dai dati' }, questionario: { kind: 'violet', label: 'questionario' }, manuale: { kind: 'accent', label: 'inserito' }, tesi: { kind: 'maize', label: 'tesi' } };
+const SRC_ICON = { auto: LuDatabase, questionario: LuClipboardList, manuale: LuPencil, tesi: LuFileText };
+// indicatore del registro → domanda del questionario che lo alimenta
+const KPI_Q = Object.fromEntries(SURVEY_QUESTIONS.filter(q => q.kpi && q.type !== 'auto').map(q => [q.kpi, q.id]));
 
 export function Esg({ route }) {
   const d = useData();
-  const tab = route.tab || 'indicatori';
+  const tab = route.tab || 'cruscotto';
   return (
     <>
-      <PageHead title="ESG e tesi" lead="Il registro dei 49 indicatori (ambiente, sociale, economia, governance) alimentato dai dati di ogni giorno: ogni valore dichiara da dove viene. Energia e CO₂ con il modello della tesi, passaporto di prodotto, copertura del VSME e bozza di report."
+      <PageHead title="ESG e tesi" lead="Quanto è sostenibile lo stabilimento, misurato con i dati di ogni giorno: energia, emissioni Scope 1-2-3, acqua, rifiuti, persone e filiera. Il questionario guidato completa ciò che i dati non dicono e alimenta i 49 indicatori della tesi, il passaporto di prodotto e la bozza del VSME."
         tabs={NAV.esg.tabs} tab={tab} onTab={t => go('esg', t)} />
+      {tab === 'cruscotto' && <Cruscotto d={d} />}
+      {tab === 'questionario' && <Questionario d={d} sec={route.id} />}
+      {tab === 'acqua' && <Acqua d={d} nuova={route.id === 'nuova'} />}
+      {tab === 'rifiuti' && <Rifiuti d={d} nuovo={route.id === 'nuovo'} />}
       {tab === 'indicatori' && <Indicatori d={d} />}
       {tab === 'energia' && <Energia d={d} />}
       {tab === 'passaporto' && <Passaporto d={d} sel={route.id} />}
@@ -53,22 +62,23 @@ function Indicatori({ d }) {
       <div className="kpis">
         <Kpi label="Indicatori con un valore" value={`${withV.length} / ${R.kpis.length}`} foot={`periodo ${dateIt(P.from, 'dm')} – ${dateIt(P.to, 'dm')}`} />
         <Kpi label="Calcolati dai dati operativi" value={R.kpis.filter(k => k.source === 'auto').length} foot="si aggiornano da soli" onClick={() => setSrc('auto')} />
+        <Kpi label="Dal questionario ESG" value={R.kpis.filter(k => k.source === 'questionario').length} foot="si modificano nel questionario" onClick={() => setSrc('questionario')} />
         <Kpi label="Inseriti a mano" value={R.kpis.filter(k => k.source === 'manuale').length} foot="con data e vista nel registro" onClick={() => setSrc('manuale')} />
         <Kpi label="Senza valore" value={R.kpis.filter(k => k.value == null).length} foot="da acquisire o da costruire" onClick={() => setSrc('vuoto')} />
       </div>
       <Panel title="Registro degli indicatori" sub="Classe A calcolabile · B da acquisire o consolidare · C nuova rilevazione (Appendice A della tesi) · i valori «dai dati» non si modificano a mano" flush id="esg-kpi"
         actions={<>
           <Seg options={[{ id: '', label: 'Tutti' }, ...Object.entries(PILLARS).map(([k, l]) => ({ id: k, label: l }))]} value={pil} onChange={setPil} label="Pilastro" />
-          <Seg options={[{ id: '', label: 'Ogni fonte' }, { id: 'auto', label: 'Dai dati' }, { id: 'manuale', label: 'Inseriti' }, { id: 'vuoto', label: 'Vuoti' }]} value={src} onChange={setSrc} label="Fonte" />
+          <Seg options={[{ id: '', label: 'Ogni fonte' }, { id: 'auto', label: 'Dai dati' }, { id: 'questionario', label: 'Questionario' }, { id: 'manuale', label: 'Inseriti' }, { id: 'vuoto', label: 'Vuoti' }]} value={src} onChange={setSrc} label="Fonte" />
           <SearchBox value={q} onChange={setQ} placeholder="Cerca indicatore" id="kpi-search" />
           {FULL && <label className="check small"><input type="checkbox" checked={thesis} onChange={e => setThesis(e.target.checked)} /> Valori della tesi</label>}
         </>}>
         <Table rows={rows} rowKey={k => k.code} pageSize={60} cols={[
           { key: 'code', label: 'Codice', render: k => <span className="code">{k.code}</span> },
           { key: 'name', label: 'Indicatore', render: k => <><b>{k.name}</b><span className="sub">{k.formula}</span></> },
-          { key: 'value', label: 'Valore', align: 'r', sort: k => (typeof k.value === 'number' ? k.value : null), render: k => k.source === 'auto' || k.source === 'tesi' ? <><b>{typeof k.value === 'number' ? nf(k.value, Math.abs(k.value) < 100 ? (Math.abs(k.value) < 10 ? 2 : 1) : 0) : k.value}</b><span className="sub">{k.unitShown}</span></>
+          { key: 'value', label: 'Valore', align: 'r', sort: k => (typeof k.value === 'number' ? k.value : null), render: k => k.source === 'auto' || k.source === 'tesi' || k.source === 'questionario' ? <><b>{typeof k.value === 'number' ? nf(k.value, Math.abs(k.value) < 100 ? (Math.abs(k.value) < 10 ? 2 : 1) : 0) : k.value}</b><span className="sub">{k.unitShown}</span>{k.source === 'questionario' && KPI_Q[k.code] && <button className="linkish xs" onClick={() => openQuestion(KPI_Q[k.code])}>modifica nel questionario</button>}</>
             : <ManualCell k={k} onSave={v => setVal(k, v)} /> },
-          { key: 'source', label: 'Fonte', render: k => k.source ? <Chip kind={SRC[k.source].kind} icon={k.source === 'auto' ? LuDatabase : k.source === 'manuale' ? LuPencil : LuFileText} title={k.note || k.source}>{SRC[k.source].label}</Chip> : <span className="muted small">da acquisire</span> },
+          { key: 'source', label: 'Fonte', render: k => k.source ? <Chip kind={SRC[k.source].kind} icon={SRC_ICON[k.source]} title={k.note || k.source}>{SRC[k.source].label}</Chip> : KPI_Q[k.code] ? <button className="linkish small" onClick={() => openQuestion(KPI_Q[k.code])}>rispondi nel questionario</button> : <span className="muted small">da acquisire</span> },
           { key: 'cls', label: 'Classe', render: k => <Cls c={k.cls} /> },
           { key: 'freq', label: 'Frequenza', render: k => <span className="small">{k.freq}</span> },
           { key: 'vsme', label: 'VSME', render: k => k.vsme ? <span className="code">{k.vsme}</span> : '—' },
@@ -233,38 +243,50 @@ function Vsme({ d }) {
   const K = Object.fromEntries(R.kpis.map(k => [k.code, k]));
   const c = d.settings?.company || {};
   const v = (code, dec = 0) => { const k = K[code]; return k?.value == null ? '[da completare]' : typeof k.value === 'number' ? `${nf(k.value, dec)} ${k.unitShown}` : `${k.value}`; };
+  const G = R.ghg, Wt = R.water, Ws = R.waste, A = d.survey || {};
   const text = `# Rapporto di sostenibilità · VSME modulo Basic (bozza)
 ${c.name || ''} · ${c.site || ''} · periodo ${dateIt(P.from)} – ${dateIt(P.to)}
 
 ## B1 · Criteri di redazione
-Rapporto redatto secondo lo standard volontario VSME (EFRAG), modulo Basic, su base individuale. Perimetro: ${c.site || 'stabilimento'}. I valori operativi sono calcolati dai dati di FeedOS; gli altri sono stati inseriti dall’impresa.
+Rapporto redatto secondo lo standard volontario VSME (EFRAG), modulo Basic, su base individuale. Perimetro: ${c.site || 'stabilimento'}. I valori operativi sono calcolati dai dati di FeedOS; gli altri provengono dal questionario ESG o sono stati inseriti dall’impresa.
+
+## B2 · Pratiche e iniziative per la transizione
+- Obiettivi di riduzione delle emissioni: ${A['em-target'] === 'si' ? (A['em-target-desc'] || 'sì') : A['em-target'] === 'no' ? 'non ancora definiti' : '[da completare]'}.
+- Programmi di riduzione degli sprechi: ${A['wt-reduce'] === 'si' ? (A['wt-reduce-desc'] || 'sì') : A['wt-reduce'] === 'no' ? 'nessuno' : '[da completare]'}.
 
 ## B3 · Energia ed emissioni di gas serra
 - Elettricità prelevata dalla rete: ${v('E1')}; fotovoltaico autoconsumato: ${v('E2')} (copertura ${v('E3', 1)}).
 - Intensità elettrica: ${v('E4', 1)}. GPL: ${v('E5')}.
-- Scope 1 (combustione GPL): ${nf(R.scope1, 1)} t CO₂e. Scope 2 location-based: ${nf(R.scope2, 1)} t CO₂ (fattore ${nf((R.factors.feGrid) * 1000, 1)} g CO₂/kWh).
-- Intensità sui ricavi: ${R.revenue ? nf((R.scope1 + R.scope2) / (R.revenue / 1e6), 2) : '[da completare]'} t CO₂e per milione di euro.
+- Scope 1 (GPL${G.gasSmc ? ', gas naturale' : ''}${G.dieselL ? ', gasolio' : ''}): ${nf(G.scope1, 1)} t CO₂e. Scope 2 location-based: ${nf(G.scope2, 1)} t CO₂ (fattore ${nf((R.factors.feGrid) * 1000, 1)} g CO₂/kWh).
+- Scope 3, categoria 1 (materie prime acquistate, stima dai fattori indicativi delle formule): ${nf(G.scope3)} t CO₂e.
+- Intensità sui ricavi (Scope 1+2): ${G.perMEur != null ? nf(G.perMEur, 2) : '[da completare]'} t CO₂e per milione di euro.
+
+## B4 · Inquinamento di aria, acqua e suolo
+- Concentrazione di polveri alle emissioni: ${v('E16', 1)}. Scarichi idrici monitorati: ${A['wa-disch'] === 'si' ? 'sì' : A['wa-disch'] === 'no' ? 'no' : '[da completare]'}.
+
+## B5 · Biodiversità
+- Siti in o vicino ad aree sensibili: ${A['bd-protected'] === 'si' ? `sì (${A['bd-area'] || 'area da indicare'}${A['bd-dist'] != null ? `, ${nf(A['bd-dist'], 1)} km` : ''})` : A['bd-protected'] === 'no' ? 'nessuno' : '[da completare]'}.
 
 ## B6 · Acqua
-- Prelievo idrico: ${v('E9')}.
+- Prelievo idrico: ${v('E9')}${Wt.intensity != null ? ` (${nf(Wt.intensity * 1000, 1)} litri per tonnellata prodotta)` : ''}.
 
 ## B7 · Uso delle risorse, economia circolare e rifiuti
 - Co-prodotti dell’agroindustria nelle formule: ${v('E12', 1)} del prodotto. Soia certificata senza deforestazione: ${v('E15', 1)}.
-- Rifiuti prodotti: ${v('E10')}; avviati a recupero: ${v('E11')}.
+- Rifiuti prodotti: ${v('E10')}${Ws.n ? ` (pericolosi ${nf(Ws.hazKg)} kg)` : ''}; avviati a recupero: ${v('E11', 1)}.
 
-## B8 · Forza lavoro
-- Addetti: ${v('S1')}. Tasso di turnover: ${v('S2', 1)}.
+## B8 · Forza lavoro · caratteristiche
+- Addetti: ${v('S1')}. Turnover: ${v('S6', 1)}. Donne in ruoli di responsabilità: ${v('S7', 1)}.
 
-## B9 · Salute e sicurezza
-- Infortuni registrabili: ${v('S3', 2)}. Ore di formazione per addetto: ${v('S4')}.
+## B9 · Forza lavoro · salute e sicurezza
+- Indice di frequenza degli infortuni: ${v('S2', 2)}. Indice di gravità: ${v('S3', 2)}.
 
-## B10 · Retribuzione, contrattazione e formazione
-- Copertura della contrattazione collettiva: ${v('G2')}.
+## B10 · Forza lavoro · retribuzione, contrattazione e formazione
+- Divario retributivo di genere: ${v('S5', 1)}. Ore di formazione per addetto: ${v('S4', 1)}.
 
-## B11 · Condotta d’impresa
-- Condanne o sanzioni per corruzione: ${v('G4')}. Certificazioni: ${v('G5')}.
+## B11 · Condanne e sanzioni per corruzione
+- Episodi di corruzione: ${v('G4')}. Modello 231: ${v('G2')}. Procedura anticorruzione: ${v('G3')}. Certificazioni: ${v('G5')}.
 
-Bozza generata automaticamente: verificare ogni valore e completare le parti narrative (B2, B4, B5) prima della pubblicazione.`;
+Bozza generata automaticamente: verificare ogni valore e completare le parti narrative prima della pubblicazione.`;
   return (
     <div className="split">
       <Panel title="Copertura del modulo Basic del VSME" sub="Un requisito è coperto se almeno un indicatore collegato è di classe A o B (regola della tesi, §2.8)" flush id="esg-vsme">

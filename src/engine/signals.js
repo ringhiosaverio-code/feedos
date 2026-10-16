@@ -5,7 +5,8 @@ import { optimize, formulaCost, afb1Check } from './formulation.js';
 import { productCost } from './costing.js';
 import { checkAnalysis } from './quality.js';
 import { profile, SPECIES, AFB1_LIMITS } from './nutrients.js';
-import { addDays, daysBetween, mondayOf, sum, mean, nf, dateIt, byId } from '../core/util.js';
+import { addDays, daysBetween, mondayOf, sum, mean, nf, dateIt, byId, monthLabel } from '../core/util.js';
+import { waterStats, wasteStats } from './sustainability.js';
 
 const SEV = { critico: 3, attenzione: 2, info: 1 };
 
@@ -223,6 +224,33 @@ export function computeSignals(d, today, x = {}) {
   if (!d.energy.some(e => e.month === lastMonth)) add({ key: `esg-energy:${lastMonth}`, area: 'esg', roles: ['direzione', 'produzione'], severity: 'attenzione',
     title: `Letture energetiche di ${lastMonth} da registrare`, why: 'Prelievo di rete, produzione e immissione del fotovoltaico, GPL: servono per E1–E7 e per la CO₂ per tonnellata.',
     action: 'Registrare le letture del mese.', impact: 1e3, link: { area: 'esg', tab: 'energia' } });
+
+  // 13b · acqua: lettura del mese mancante, consumo per tonnellata in aumento
+  const P12 = { from: addDays(today, -364), to: today };
+  if ((d.water || []).length) {
+    if (!d.water.some(w => w.month === lastMonth)) add({ key: `esg-water:${lastMonth}`, area: 'esg', roles: ['direzione', 'produzione'], severity: 'attenzione',
+      title: `Lettura dell’acqua di ${monthLabel(lastMonth, false)} da registrare`, why: 'Serve per il prelievo idrico (E9) e per i litri d’acqua per tonnellata di mangime.',
+      action: 'Registrare la lettura del contatore.', impact: 900, link: { area: 'esg', tab: 'acqua' } });
+    const ws = waterStats(d, P12);
+    if (ws.drift != null && ws.drift > 0.12) {
+      const top = Object.entries(ws.sourceDrift).sort((a, b) => b[1] - a[1])[0];
+      add({ key: `water-drift:${ws.lastMonth}`, area: 'esg', roles: ['direzione', 'produzione'], severity: 'attenzione',
+        title: `Acqua per tonnellata +${nf(ws.drift * 100)}% negli ultimi 3 mesi`,
+        why: `${nf(ws.recent * 1000, 1)} litri per tonnellata contro ${nf(ws.before * 1000, 1)} dei mesi precedenti, a parità di produzione.${top && top[1] > 0.12 ? ` L’aumento viene soprattutto da: ${top[0].toLowerCase()} (+${nf(top[1] * 100)}%).` : ''}`,
+        action: 'Cercare perdite sulla rete e sui servizi (servizi igienici, lavaggi, reintegro caldaia) e confrontare le letture dei contatori.', impact: 1.5e5 + ws.drift * 1e5,
+        link: { area: 'esg', tab: 'acqua' } });
+    }
+  }
+  // 13c · rifiuti recuperabili mandati a smaltimento
+  if ((d.waste || []).length) {
+    const wst = wasteStats(d, P12);
+    const top = wst.missed[0];
+    if (wst.n >= 4 && wst.missedKg >= 500) add({ key: `waste-missed:${today.slice(0, 7)}`, area: 'esg', roles: ['direzione', 'produzione', 'qualita'], severity: 'info',
+      title: `${nf(wst.missedKg)} kg di rifiuti recuperabili sono andati a smaltimento`,
+      why: `${top.name} (EER ${top.code}): ${nf(top.disposedKg)} kg negli ultimi 12 mesi con destinazione smaltimento. Quota complessiva a recupero ${nf((wst.recovery || 0) * 100)}%.`,
+      action: 'Separare gli imballaggi alla fonte e chiedere al trasportatore il conferimento a recupero.', impact: 2e4 + wst.missedKg,
+      link: { area: 'esg', tab: 'rifiuti' } });
+  }
 
   // 14 · attività scadute
   for (const t of d.tasks) if (t.status !== 'fatto' && t.status !== 'scartato' && t.due && t.due < today) add({ key: `task:${t.id}`, area: t.area || 'oggi', roles: ['direzione', t.area], severity: 'attenzione',
