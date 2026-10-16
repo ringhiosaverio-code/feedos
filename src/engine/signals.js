@@ -1,11 +1,13 @@
-/* FeedOS 16 · Segnali: regole trasparenti che leggono i dati e propongono una decisione.
- * Ogni segnale spiega il perché con i numeri e suggerisce il passo successivo; nessuna azione è automatica. */
-import { requirements } from './mrp.js';
+/* FeedOS 17 · Segnali: regole trasparenti che leggono i dati e propongono una decisione.
+ * Ogni segnale spiega il perché con i numeri e suggerisce il passo successivo; nessuna azione è automatica.
+ * Dopo le regole incorporate girano i fornitori dei pacchetti (providers.js), ciascuno isolato dagli errori degli altri. */
+import { makeCtx } from './actuals.js';
+import { SIGNAL_PROVIDERS } from './providers.js';
 import { optimize, formulaCost, afb1Check } from './formulation.js';
 import { productCost } from './costing.js';
 import { checkAnalysis } from './quality.js';
 import { profile, SPECIES, AFB1_LIMITS } from './nutrients.js';
-import { addDays, daysBetween, mondayOf, sum, mean, nf, dateIt, byId, monthLabel } from '../core/util.js';
+import { addDays, daysBetween, sum, nf, dateIt, byId, monthLabel } from '../core/util.js';
 import { waterStats, wasteStats } from './sustainability.js';
 
 const SEV = { critico: 3, attenzione: 2, info: 1 };
@@ -17,15 +19,20 @@ export function annualVolumes(d, today) {
   return v;
 }
 
+/**
+ * Segnali alla data. x = contesto dei motori {mrp, volumes, reopt, facts, costs, ix} (derived.signals);
+ * se manca qualcosa (test in node) si ricostruisce con actuals.makeCtx. I fornitori ricevono ctx = {today, ...x}.
+ */
 export function computeSignals(d, today, x = {}) {
   const out = [];
   const add = s => out.push({ date: today, ...s, rank: SEV[s.severity] * 1e9 + (s.impact || 0) });
   const ingById = byId(d.ingredients), prodById = byId(d.products), formById = byId(d.formulas), specById = byId(d.specs), lineById = byId(d.lines), custById = byId(d.customers);
-  const volumes = x.volumes || annualVolumes(d, today);
+  const ctx = x.ix && x.costs && x.facts && x.mrp && x.volumes ? { today, ...x } : { ...makeCtx(d, today), ...x, today };
+  const volumes = ctx.volumes;
   const en = d.settings?.energy || {};
 
   // 1 · fabbisogni di materie prime
-  const mrp = x.mrp || requirements({ today, weeks: 8, plan: d.plan, products: d.products, formulas: d.formulas, ingredients: d.ingredients, purchases: d.purchases, runs: d.runs });
+  const mrp = ctx.mrp;
   const later = [], week = [];
   for (const r of mrp.rows) {
     if (!r.planned?.length && r.risk === 'ok') continue;
@@ -82,15 +89,20 @@ export function computeSignals(d, today, x = {}) {
     }
   }
 
-  // 3 · margini di listino sotto il minimo
+  // 3 · prezzo netto realizzato (ultimi 90 giorni, dai fatti) sotto il prezzo minimo; senza consegne vale il listino
+  const net90 = {}, from90 = addDays(today, -90);
+  for (const f of ctx.facts || []) if (f.date > from90 && f.date <= today) { const n = (net90[f.productId] ||= { t: 0, rev: 0 }); n.t += f.tonnes; n.rev += f.revenue; }
   for (const p of d.products) {
     if (p.active === false) continue;
     const c = productCost(p, formById[p.formulaId], ingById, lineById[p.lineId], en);
-    if (c.marginPct != null && c.marginPct * 100 < (+p.minMarginPct || 0)) {
+    const n = net90[p.id], realized = n?.t > 0;
+    const net = realized ? n.rev / n.t : +p.listPrice || 0;
+    if (c.minPrice != null && net > 0 && net < c.minPrice) {
+      const mPct = (net - c.total) / net;
       add({ key: `margin:${p.id}:${Math.round(c.total)}`, area: 'economia', roles: ['direzione', 'commerciale'], severity: 'attenzione',
-        title: `Listino di ${p.name} sotto il margine minimo`,
-        why: `Costo pieno ${nf(c.total, 2)} €/t contro prezzo di listino ${nf(p.listPrice)} €/t: margine ${nf(c.marginPct * 100, 1)}% (minimo ${nf(p.minMarginPct)}%). Prezzo minimo ${nf(c.minPrice)} €/t.`,
-        action: 'Valutare revisione del listino o ri-ottimizzazione della formula.', impact: (c.minPrice - p.listPrice) * (volumes[p.id] || 0),
+        title: `Prezzo netto di ${p.name} sotto il margine minimo`,
+        why: `${realized ? `Prezzo netto realizzato negli ultimi 90 giorni ${nf(net)} €/t (${nf(n.t)} t consegnate, listino ${nf(p.listPrice)} €/t)` : `Nessuna consegna negli ultimi 90 giorni: listino ${nf(net)} €/t`} contro costo pieno di oggi ${nf(c.total, 2)} €/t: margine ${nf(mPct * 100, 1)}% (minimo ${nf(p.minMarginPct)}%). Prezzo minimo ${nf(c.minPrice)} €/t.`,
+        action: 'Valutare revisione del listino e degli sconti, o ri-ottimizzazione della formula.', impact: (c.minPrice - net) * (volumes[p.id] || 0),
         link: { area: 'economia', tab: 'margini', id: p.id } });
     }
   }
@@ -98,6 +110,7 @@ export function computeSignals(d, today, x = {}) {
   // 4 · offerte sotto il prezzo minimo
   for (const o of d.offers) {
     if (!['bozza', 'inviata'].includes(o.status)) continue;
+    if (o.validUntil && o.validUntil < today) continue; // offerta scaduta: non è più una decisione sul prezzo
     const p = prodById[o.productId]; if (!p) continue;
     const c = productCost(p, formById[p.formulaId], ingById, lineById[p.lineId], en);
     if (o.price < c.minPrice - 0.5) {
@@ -105,7 +118,7 @@ export function computeSignals(d, today, x = {}) {
         title: `Offerta ${o.code} a ${custById[o.customerId]?.name} sotto il prezzo minimo`,
         why: `${nf(o.tonnes)} t di ${p.name} a ${nf(o.price)} €/t; prezzo minimo per il margine del ${nf(p.minMarginPct)}%: ${nf(c.minPrice)} €/t (differenza ${nf(c.minPrice - o.price)} €/t).`,
         action: o.status === 'bozza' ? 'Correggere il prezzo prima dell’invio o chiedere approvazione alla direzione.' : 'Offerta già inviata: valutare con la direzione.',
-        impact: (c.minPrice - o.price) * o.tonnes, link: { area: 'commerciale', tab: 'offerte', id: o.id } });
+        impact: (c.minPrice - o.price) * o.tonnes, link: { area: 'commerciale', tab: 'offerte', id: o.id }, agentId: o.agentId ?? custById[o.customerId]?.agentId ?? null });
     }
   }
 
@@ -159,55 +172,29 @@ export function computeSignals(d, today, x = {}) {
       title: `Reclamo ${c.code} aperto da ${age} giorni`, why: `${custById[c.customerId]?.name}: «${c.description}». Stato: ${c.status}.`,
       action: 'Assegnare l’analisi della causa e dare una risposta al cliente.', impact: 3e5 + age, link: { area: 'qualita', tab: 'reclami', id: c.id } });
   }
-  const recent = d.complaints.filter(c => c.date >= addDays(today, -35) && c.category === 'Qualità del pellet');
-  const byLine = {};
-  for (const c of recent) { const run = d.runs.find(r => r.lotId === c.lotId); if (run) (byLine[run.lineId] ||= []).push(c); }
+  // 9 e 10 (deriva energetica, capacità nel piano): in oee.js › productionSignals, eseguiti con i fornitori
 
-  // 9 · derive energetiche per linea (ultime 4 settimane contro le 12 precedenti)
-  for (const line of d.lines) {
-    const rs = d.runs.filter(r => r.lineId === line.id);
-    const last = rs.filter(r => r.date > addDays(today, -28)), prev = rs.filter(r => r.date <= addDays(today, -28) && r.date > addDays(today, -112));
-    const k = a => sum(a, r => r.kwh) / Math.max(1, sum(a, r => r.tonnes));
-    if (last.length < 3 || prev.length < 6) continue;
-    const a = k(last), b = k(prev), dlt = a / b - 1;
-    if (dlt > 0.07) {
-      const cl = byLine[line.id] || [];
-      add({ key: `drift:${line.id}:${Math.round(a)}`, area: 'produzione', roles: ['produzione', 'direzione', 'qualita'], severity: cl.length ? 'critico' : 'attenzione',
-        title: `${line.name}: +${nf(dlt * 100)}% di energia per tonnellata`,
-        why: `Ultime 4 settimane ${nf(a, 1)} kWh/t contro ${nf(b, 1)} kWh/t delle 12 precedenti.${cl.length ? ` Nello stesso periodo ${cl.length} reclami su pellet friabile da lotti di questa linea.` : ''}`,
-        action: 'Controllare matrice, rulli e condizionamento a vapore; confrontare con le ore di fermo.', impact: 2e5 + dlt * 1e5,
-        link: { area: 'produzione', tab: 'energia', id: line.id } });
-    }
+  // 11 · clienti fermi: frequenza = giorni di consegna distinti / giorni dalla prima consegna (almeno 30); soglia = max(30, 3 intervalli)
+  const firstShip = {}, lastShip = {}, days = {};
+  for (const s of d.shipments) {
+    if (s.date > today) continue;
+    if (!firstShip[s.customerId] || s.date < firstShip[s.customerId]) firstShip[s.customerId] = s.date;
+    if (!lastShip[s.customerId] || s.date > lastShip[s.customerId]) lastShip[s.customerId] = s.date;
+    (days[s.customerId] ||= new Set()).add(s.date);
   }
-
-  // 10 · capacità delle linee nel piano
-  const load = {};
-  for (const p of d.plan) { const k = p.week + '|' + p.lineId; load[k] = (load[k] || 0) + p.tonnes; }
-  for (const [k, t] of Object.entries(load)) {
-    const [week, lineId] = k.split('|'); const line = lineById[lineId]; if (!line) continue;
-    const cap = line.capacityTph * line.hoursWeek * 0.9;
-    const u = t / cap;
-    if (t - cap > 1 && week >= mondayOf(today)) add({ key: `cap:${k}`, area: 'produzione', roles: ['produzione', 'direzione'], severity: u > 1.1 ? 'critico' : 'attenzione',
-      title: `Settimana del ${dateIt(week, 'dm')}: ${line.name} al ${nf(u * 100)}%`,
-      why: `Pianificate ${nf(t)} t contro una capacità utile di ${nf(cap)} t (${line.capacityTph} t/h × ${line.hoursWeek} h al 90%).`,
-      action: 'Spostare volumi su un’altra linea o aggiungere un turno.', impact: 2e5 + u * 1e3, link: { area: 'produzione', tab: 'piano' } });
-  }
-
-  // 11 · clienti fermi
-  const lastShip = {}, cnt = {};
-  for (const s of d.shipments) { lastShip[s.customerId] = s.date > (lastShip[s.customerId] || '') ? s.date : lastShip[s.customerId]; cnt[s.customerId] = (cnt[s.customerId] || 0) + 1; }
   for (const c of d.customers) {
     const ls = lastShip[c.id]; if (!ls) continue;
-    const every = 365 / Math.max(1, cnt[c.id] / 1.3);
+    const f = days[c.id].size / Math.max(30, daysBetween(firstShip[c.id], today));
+    const every = 1 / f;
     const gap = daysBetween(ls, today);
-    if (gap > Math.max(30, every * 3)) add({ key: `idle:${c.id}:${ls}`, area: 'commerciale', roles: ['commerciale', 'agente', 'direzione'], severity: 'attenzione',
+    if (gap > Math.max(30, 3 / f)) add({ key: `idle:${c.id}:${ls}`, area: 'commerciale', roles: ['commerciale', 'agente', 'direzione'], severity: 'attenzione',
       title: `${c.name} non ordina da ${gap} giorni`, why: `Di solito riceve una consegna ogni ${nf(every)} giorni; ultima il ${dateIt(ls, 'dm')}.`,
-      action: 'Programmare una visita o una telefonata.', impact: 1e5 + gap, link: { area: 'commerciale', tab: 'clienti', id: c.id } });
+      action: 'Programmare una visita o una telefonata.', impact: 1e5 + gap, link: { area: 'commerciale', tab: 'clienti', id: c.id }, agentId: c.agentId ?? null });
   }
 
   // 12 · mercati
   const byCom = {};
-  for (const q of d.market) (byCom[q.commodity] ||= []).push(q);
+  for (const q of d.market) if (q.date <= today) (byCom[q.commodity] ||= []).push(q); // solo quotazioni già pubblicate
   for (const [com, qs] of Object.entries(byCom)) {
     qs.sort((a, b) => a.date < b.date ? -1 : 1);
     const last = qs[qs.length - 1], prev = qs[qs.length - 5];
@@ -255,6 +242,9 @@ export function computeSignals(d, today, x = {}) {
   // 14 · attività scadute
   for (const t of d.tasks) if (t.status !== 'fatto' && t.status !== 'scartato' && t.due && t.due < today) add({ key: `task:${t.id}`, area: t.area || 'oggi', roles: ['direzione', t.area], severity: 'attenzione',
     title: `Attività scaduta: ${t.title}`, why: `Scadenza ${dateIt(t.due, 'dm')} · responsabile ${t.owner || 'da assegnare'}.`, action: 'Aggiornare lo stato o ripianificare.', impact: 5e4, link: { area: 'oggi', tab: 'attivita', id: t.id } });
+
+  // fornitori dei pacchetti (budget, finanza, redditività, commerciale, acquisti, produzione, KPI, qualità dei dati)
+  for (const p of SIGNAL_PROVIDERS) try { for (const s of p(d, ctx) || []) add(s); } catch (e) { console.warn('FeedOS: segnali non calcolati', p.name, e); }
 
   const st = d.settings?.signalState || {};
   return out.filter(s => { const k = st[s.key]; return !k || (k.status === 'rimandato' && k.until <= today); }).sort((a, b) => b.rank - a.rank);

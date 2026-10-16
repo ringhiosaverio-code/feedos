@@ -11,7 +11,7 @@ import { runScenario } from '../engine/scenario.js';
 import { forecast, backtest } from '../engine/forecast.js';
 import { PageHead, Panel, Btn, Table, Chip, Kpi, Field, Select, Empty, Seg, Kv } from '../ui/ui.jsx';
 import { Waterfall, Bars, LineChart, Legend, StackBar } from '../ui/charts.jsx';
-import { SignalList } from './shared.jsx';
+import { SignalList, SectionPlaceholder } from './shared.jsx';
 import { NAV } from '../app/nav.js';
 
 const CAT = [['cereale', 'Cereali'], ['proteico', 'Proteici'], ['coprodotto', 'Co-prodotti'], ['grasso', 'Grassi'], ['minerale', 'Minerali'], ['aminoacido', 'Aminoacidi'], ['premix', 'Premiscele']];
@@ -24,6 +24,8 @@ export function Economia({ route }) {
       <PageHead title="Economia" lead="Quanto rende ogni tonnellata: costo pieno ai prezzi di oggi, margine sui prezzi realmente incassati, simulatore «E se…» sulle materie prime e sull’energia, previsioni della domanda verificate sul passato."
         tabs={NAV.economia.tabs} tab={tab} onTab={t => go('economia', t)} />
       {tab === 'margini' && <Margini d={d} sel={route.id} />}
+      {tab === 'redditivita' && <SectionPlaceholder title="Redditività">Margine netto per cliente, prodotto e agente dopo il costo di servizio, concentrazione dei ricavi e rischio di abbandono.</SectionPlaceholder>}
+      {tab === 'pareggio' && <SectionPlaceholder title="Pareggio">Punto di pareggio in tonnellate e in euro, margine di sicurezza, leva operativa e assorbimento dei costi fissi per linea.</SectionPlaceholder>}
       {tab === 'scenari' && <Scenari d={d} />}
       {tab === 'previsioni' && <Previsioni d={d} sel={route.id} />}
     </>

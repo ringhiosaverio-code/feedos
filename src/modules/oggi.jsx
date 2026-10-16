@@ -4,10 +4,11 @@ import { LuPlus, LuSparkles, LuPresentation, LuFactory, LuTruck } from 'react-ic
 import { useData, store, toast, uiStore } from '../core/store.js';
 import { go } from '../core/router.js';
 import { ROLE } from '../core/roles.js';
+import { usePrefs } from '../core/prefs.js';
 import { signals, appToday, costs, kpis, weekly, idx, mrp } from '../core/derived.js';
 import { addDays, dateIt, nf, sum, mondayOf, daysBetween, relDays } from '../core/util.js';
 import { PageHead, Panel, Kpi, Btn, Table, Field, Select, Chip, Empty, Tabs, Sev } from '../ui/ui.jsx';
-import { SignalList } from './shared.jsx';
+import { SignalList, SectionPlaceholder } from './shared.jsx';
 import { TwinMini } from './gemello.jsx';
 import { checkAnalysis } from '../engine/quality.js';
 import { profile } from '../engine/nutrients.js';
@@ -19,7 +20,7 @@ export function Oggi({ route }) {
   const d = useData();
   const tab = route.tab || 'decisioni';
   const today = appToday(d);
-  const role = ROLE[d.settings?.role] || ROLE.direzione;
+  const role = ROLE[usePrefs(p => p.role)] || ROLE.direzione;
   const all = signals(d);
   const mine = role.id === 'direzione' ? all : all.filter(s => s.roles?.includes(role.id));
   const crit = mine.filter(s => s.severity === 'critico').length;
@@ -28,8 +29,9 @@ export function Oggi({ route }) {
     <>
       <PageHead title="Oggi" lead={<>{greeting()}. {cap(dateIt(today, 'day'))} · vista {role.label.toLowerCase()}. {mine.length ? <><b>{mine.length}</b> decisioni aperte{crit ? <>, <b>{crit}</b> critiche</> : ''}. Ogni segnale spiega il perché con i numeri: nessuna azione parte da sola.</> : 'Nessuna decisione aperta.'}</>}
         actions={<><Btn icon={LuSparkles} onClick={() => go('economia', 'scenari')}>E se…</Btn><Btn kind="primary" icon={LuPresentation} onClick={() => uiStore.set({ tour: 0 })}>Presentazione guidata</Btn></>}
-        tabs={[{ id: 'decisioni', label: 'Decisioni', n: mine.length }, { id: 'attivita', label: 'Attività', n: openTasks.length }, { id: 'registro', label: 'Ultime modifiche' }]} tab={tab} onTab={t => go('oggi', t)} />
+        tabs={[{ id: 'decisioni', label: 'Decisioni', n: mine.length }, { id: 'cruscotto', label: 'Cruscotto' }, { id: 'attivita', label: 'Attività', n: openTasks.length }, { id: 'registro', label: 'Ultime modifiche' }]} tab={tab} onTab={t => go('oggi', t)} />
       {tab === 'decisioni' && <Decisioni d={d} today={today} mine={mine} role={role} />}
+      {tab === 'cruscotto' && <SectionPlaceholder title="Cruscotto">Indicatori chiave del periodo con obiettivo, semaforo, confronto e andamento di 13 mesi, e le prime perdite in euro.</SectionPlaceholder>}
       {tab === 'attivita' && <Attivita d={d} today={today} />}
       {tab === 'registro' && <Registro d={d} />}
     </>

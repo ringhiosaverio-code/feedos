@@ -325,8 +325,8 @@ function Richiamo({ d, sel }) {
             <Kpi label="Tempo di risposta" value={nf(Math.max(ms, 0.1), 1)} unit="ms" foot="Reg. (CE) 178/2002, art. 18" />
           </div>
           {R.massBalance && (
-            <Panel title="Bilancio di massa del lotto di materia prima" sub="Ricevuto = usato nei lotti di prodotto + residuo in silo (+ scarto)">
-              <Kv items={[['Ricevuto', `${nf(R.massBalance.received, 2)} t`], ['Usato in produzione', `${nf(R.massBalance.used, 2)} t`], ['Residuo in silo', `${nf(R.massBalance.remaining, 2)} t`], ['Differenza', `${nf(R.massBalance.gap, 3)} t ${Math.abs(R.massBalance.gap) < 0.05 ? '· bilancio chiuso' : '· da verificare'}`]]} />
+            <Panel title="Bilancio di massa del lotto di materia prima" sub="Ricevuto = usato nei lotti di prodotto + residuo in silo + rettifiche inventariali">
+              <Kv items={[['Ricevuto', `${nf(R.massBalance.received, 2)} t`], ['Usato in produzione', `${nf(R.massBalance.used, 2)} t`], ['Residuo in silo', `${nf(R.massBalance.remaining, 2)} t`], Math.abs(R.massBalance.adjusted || 0) > 0.0005 ? ['Rettifiche inventariali', `${nf(R.massBalance.adjusted, 2)} t`] : null, ['Differenza', `${nf(R.massBalance.gap, 3)} t ${Math.abs(R.massBalance.gap) < 0.05 ? '· bilancio chiuso' : '· da verificare'}`]]} />
             </Panel>
           )}
           <div className="row">

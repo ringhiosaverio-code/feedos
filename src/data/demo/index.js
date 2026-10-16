@@ -1,19 +1,22 @@
-/* FeedOS 16 · archivi di partenza: mangimificio dimostrativo (dati inventati) e archivio vuoto con il catalogo di base. */
+/* FeedOS 17 · archivi di partenza: mangimificio dimostrativo (dati inventati) e archivio vuoto con il catalogo di base.
+ * Le preferenze d'interfaccia (tema, dimensione, vista) non stanno più nei dati: vedi core/prefs.js. */
 import { generateDemo, DEMO_VERSION } from './generator.js';
 import { demoSustainability } from './sustainability.js';
+import { applyDemoExtenders } from './extend.js';
 import { INGREDIENTS, SPECS } from './catalog.js';
 import { emptyData } from '../../core/schema.js';
-import { iso } from '../../core/util.js';
+import { todayLocal, round } from '../../core/util.js';
 
-export function demoData(today = iso(new Date())) {
-  const d = generateDemo({ today });
-  return { ...d, settings: { ...d.settings, role: 'direzione', signalState: {}, theme: 'auto', size: 'normale' }, events: [] };
+/** Demo alla data indicata (giorno locale): generatore (schema 17) più i dati dei pacchetti (extend.js). */
+export function demoData(today = todayLocal()) {
+  const d = applyDemoExtenders(generateDemo({ today }), today);
+  return { ...d, settings: { ...d.settings, signalState: {} }, events: [] };
 }
 
 /** Archivio senza movimenti: materie prime e specifiche di esempio (da verificare), una linea per tipo. */
-export function starterData(keep = {}) {
+export function starterData() {
   const d = emptyData();
-  d.settings = { ...d.settings, dataset: 'proprio', theme: keep.theme || 'auto', size: keep.size || 'normale', role: keep.role || 'direzione' };
+  d.settings = { ...d.settings, dataset: 'proprio' };
   d.ingredients = INGREDIENTS.map(i => ({ ...i, stock: 0, supplier: '', nutr: { ...i.nutr }, contam: { ...i.contam } }));
   d.specs = SPECS.map(s => ({ ...s, constraints: s.constraints.map(c => ({ ...c })) }));
   d.lines = [
@@ -23,12 +26,51 @@ export function starterData(keep = {}) {
   return d;
 }
 
-/** Archivio dimostrativo salvato da una versione precedente: aggiunge acqua, rifiuti e questionario senza toccare il resto. */
+/** Rettifiche che chiudono il bilancio di massa dei lotti MP tagliati a mano dai demo fino alla versione 2 (solo aggiunte). */
+export function closingAdjustments(d, date) {
+  const used = {}, adj = {};
+  for (const l of d.lots || []) for (const c of l.comp || []) used[c.l] = (used[c.l] || 0) + (+c.kg || 0) / 1000;
+  for (const a of d.adjustments || []) adj[a.ingLotId] = (adj[a.ingLotId] || 0) + (+a.tonnes || 0);
+  const ids = new Set((d.adjustments || []).map(a => a.id));
+  const out = [];
+  for (const l of d.ingLots || []) {
+    const gap = round((+l.tonnes || 0) - (+l.remaining || 0) - (used[l.id] || 0) + (adj[l.id] || 0), 4);
+    if (gap <= 0.01) continue;
+    let n = out.length + 1; while (ids.has('adj-u' + n)) n++;
+    ids.add('adj-u' + n);
+    out.push({ id: 'adj-u' + n, date, ingId: l.ingId, ingLotId: l.id, tonnes: -gap, reason: 'inventario', note: 'Rettifica inventariale (dato dimostrativo)' });
+  }
+  return out;
+}
+
+/**
+ * Passi di aggiornamento di un archivio dimostrativo salvato da una versione precedente (settings.demoVersion),
+ * applicati in ordine dopo migrateData (le raccolte dello schema corrente ci sono già). Ogni passo aggiunge, non cancella.
+ */
+export const DEMO_UPGRADES = [
+  {
+    to: 2, label: 'acqua, rifiuti e questionario',
+    up(d) {
+      const s = demoSustainability({ today: d.settings.demoAnchor || todayLocal(), runs: d.runs || [] });
+      return { ...d, water: d.water?.length ? d.water : s.water, waste: d.waste?.length ? d.waste : s.waste, survey: d.survey && Object.keys(d.survey).length ? d.survey : s.survey };
+    },
+  },
+  {
+    to: 3, label: 'rettifiche di inventario e dati dei pacchetti (costi, finanza, operations)',
+    up(d) {
+      const today = d.settings.demoAnchor || todayLocal();
+      const adj = closingAdjustments(d, today);
+      const base = adj.length ? { ...d, adjustments: [...(d.adjustments || []), ...adj] } : d;
+      return applyDemoExtenders(base, today);
+    },
+  },
+];
+
+/** Archivio dimostrativo di una versione precedente: applica i passi mancanti senza toccare il resto. */
 export function upgradeDemo(d) {
-  if (d?.settings?.dataset !== 'demo' || (d.settings.demoVersion || 1) >= DEMO_VERSION) return d;
-  const s = demoSustainability({ today: d.settings.demoAnchor || iso(new Date()), runs: d.runs || [] });
-  return {
-    ...d, water: d.water?.length ? d.water : s.water, waste: d.waste?.length ? d.waste : s.waste,
-    survey: d.survey && Object.keys(d.survey).length ? d.survey : s.survey, settings: { ...d.settings, demoVersion: DEMO_VERSION },
-  };
+  const v = d?.settings?.dataset === 'demo' ? d.settings.demoVersion || 1 : DEMO_VERSION;
+  if (v >= DEMO_VERSION) return d;
+  let out = d;
+  for (const step of DEMO_UPGRADES) if (step.to > v && step.to <= DEMO_VERSION) out = step.up(out);
+  return { ...out, settings: { ...out.settings, demoVersion: DEMO_VERSION } };
 }

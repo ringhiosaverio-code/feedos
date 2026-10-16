@@ -1,7 +1,9 @@
 /* FeedOS 16 · componenti di base dell'interfaccia. */
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { LuCircleAlert, LuTriangleAlert, LuInfo, LuCircleCheck, LuX, LuChevronUp, LuChevronDown, LuSearch, LuInbox } from 'react-icons/lu';
-import { nf, norm } from '../core/util.js';
+import { LuCircleAlert, LuTriangleAlert, LuInfo, LuCircleCheck, LuX, LuChevronUp, LuChevronDown, LuSearch, LuInbox, LuDownload } from 'react-icons/lu';
+import { nf, norm, pct } from '../core/util.js';
+import { num, toCSV, download, stamp } from '../core/io.js';
+import { deltaInfo } from '../core/period.js';
 import { uiStore, useUi, closeDrawer } from '../core/store.js';
 
 export function Panel({ title, sub, actions, children, flush, className = '', id, inset }) {
@@ -65,14 +67,31 @@ export function Chip({ kind = '', icon: I, children, title }) {
 }
 export function Cls({ c }) { return <span className={`cls ${c}`} title={{ A: 'Classe A · calcolabile', B: 'Classe B · da acquisire o consolidare', C: 'Classe C · nuova rilevazione' }[c]}>{c}</span>; }
 
-export function Kpi({ label, value, unit, foot, delta, deltaGood, spark, onClick, title, sparkColor }) {
+const KPI_STATUS = { ok: 'In linea con l’obiettivo', warn: 'Vicino alla soglia', bad: 'Fuori obiettivo' };
+/**
+ * Indicatore. Facoltativi: status 'ok'|'warn'|'bad' (pallino), target (testo «obiettivo …» nel piede),
+ * cmp {value, kind: 'flow'|'ratio', good: 'up'|'down', unit, decimals, scale, label, cov, cur} confronto col periodo C:
+ * il valore corrente è cmp.cur ?? raw ?? value (se numero); cov < 0,9 mostra «non confrontabile».
+ */
+export function Kpi({ label, value, unit, foot, delta, deltaGood, spark, onClick, title, sparkColor, status, target, cmp, raw }) {
   const Tag = onClick ? 'button' : 'div';
+  const st = KPI_STATUS[status] ? status : null;
+  const cur = cmp ? cmp.cur ?? raw ?? (typeof value === 'number' ? value : null) : null;
+  const nc = cmp && cmp.cov != null && cmp.cov < 0.9;
+  const di = cmp && !nc && cur != null && cmp.value != null ? deltaInfo(cur, cmp.value, cmp) : null;
   return (
-    <Tag className="kpi" onClick={onClick} title={title} type={onClick ? 'button' : undefined}>
-      <span className="lbl">{label}</span>
+    <Tag className={`kpi ${st ? 'kpi-' + st : ''}`} onClick={onClick} title={title} type={onClick ? 'button' : undefined}>
+      <span className="lbl">{st && <i className="kdot" role="img" aria-label={KPI_STATUS[st]} title={KPI_STATUS[st]} />}{label}</span>
       <span className="val">{value}{unit && <small>{unit}</small>}</span>
       <span className="foot">
-        <span>{delta != null && <span className={`delta ${delta >= 0 ? 'up' : 'down'} ${deltaGood == null ? '' : deltaGood ? 'good' : 'bad'}`}>{delta >= 0 ? '▲' : '▼'} {nf(Math.abs(delta), 1)}%</span>} {foot}</span>
+        <span>
+          {delta != null && <span className={`delta ${delta >= 0 ? 'up' : 'down'} ${deltaGood == null ? '' : deltaGood ? 'good' : 'bad'}`}>{delta >= 0 ? '▲' : '▼'} {nf(Math.abs(delta), 1)}%</span>}
+          {nc && <Chip kind="outline" title={`Dati presenti solo per il ${pct(cmp.cov, 0)} del periodo di confronto`}>non confrontabile</Chip>}
+          {di && di.abs != null && <span className={`delta ${di.sign >= 0 ? 'up' : 'down'} ${di.good == null ? '' : di.good ? 'good' : 'bad'}`} title={cmp.label ? `Rispetto a ${cmp.label}` : undefined}>{di.sign > 0 ? '▲' : di.sign < 0 ? '▼' : '='} {di.text.replace(/^[+−]/, '')}</span>}
+          {di && cmp.label && <span className="cmp-l"> vs {cmp.label}</span>}
+          {(delta != null || nc || di) && foot ? ' · ' : ' '}{foot}
+          {target && <span className="tgt">{foot || di || nc ? ' · ' : ''}obiettivo {target}</span>}
+        </span>
         {spark && <Spark values={spark} color={sparkColor} />}
       </span>
     </Tag>
@@ -99,23 +118,29 @@ export function Field({ label, hint, children, className = '' }) {
   return <label className={`field ${className}`}><span>{label}</span>{children}{hint && <small>{hint}</small>}</label>;
 }
 
-/** Numero con virgola decimale all'italiana; conferma su invio o uscita dal campo. */
+/** Numero con virgola decimale all'italiana; conferma su invio o uscita dal campo.
+ *  Si legge con io.num: «0,19» e «0.19» valgono 0,19 · «1.234,5» vale 1234,5. */
 export function NumInput({ value, onChange, decimals = 2, className = '', min, max, placeholder, id, slim, ariaLabel, step }) {
   const fmt = v => v == null || v === '' || !Number.isFinite(+v) ? '' : String(Math.round(+v * 10 ** decimals) / 10 ** decimals).replace('.', ',');
   const [txt, setTxt] = useState(fmt(value));
   const focused = useRef(false);
   useEffect(() => { if (!focused.current) setTxt(fmt(value)); }, [value]);
+  const clampV = v => { if (min != null) v = Math.max(min, v); if (max != null) v = Math.min(max, v); return v; };
   const commit = () => {
-    const s = txt.trim().replace(/\./g, '').replace(',', '.');
-    if (s === '') { onChange(null); return; }
-    let v = Number(s);
-    if (!Number.isFinite(v)) { setTxt(fmt(value)); return; }
-    if (min != null) v = Math.max(min, v); if (max != null) v = Math.min(max, v);
+    if (String(txt).trim() === '') { onChange(null); return; }
+    const n = num(txt);
+    if (n == null) { setTxt(fmt(value)); return; }
+    const v = clampV(n);
+    onChange(v); setTxt(fmt(v));
+  };
+  const stepBy = dir => {
+    const base = num(txt) ?? (Number.isFinite(+value) && value !== '' && value != null ? +value : 0);
+    const v = clampV(Math.round((base + dir * step) * 1e9) / 1e9);
     onChange(v); setTxt(fmt(v));
   };
   return <input id={id} aria-label={ariaLabel} inputMode="decimal" className={`input num ${slim ? 'slim' : ''} ${className}`} value={txt} placeholder={placeholder}
     onFocus={() => { focused.current = true; }} onBlur={() => { focused.current = false; commit(); }}
-    onChange={e => setTxt(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') { e.currentTarget.blur(); } if (step && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) { e.preventDefault(); const v = (+String(txt).replace(',', '.') || 0) + (e.key === 'ArrowUp' ? step : -step); onChange(v); setTxt(fmt(v)); } }} />;
+    onChange={e => setTxt(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') { e.currentTarget.blur(); } if (step && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) { e.preventDefault(); stepBy(e.key === 'ArrowUp' ? 1 : -1); } }} />;
 }
 
 export function Select({ value, onChange, options, className = '', id, ariaLabel }) {
@@ -134,28 +159,37 @@ export function Empty({ icon: I = LuInbox, title, children }) {
   return <div className="empty"><I aria-hidden="true" /><b>{title}</b>{children && <div className="small">{children}</div>}</div>;
 }
 
+// valore di una cella per il CSV: col.csv(row) ?? col.value(row) ?? row[key]; solo testo e numeri
+const csvCell = (c, r) => {
+  const v = typeof c.csv === 'function' ? c.csv(r) : typeof c.value === 'function' ? c.value(r) : r[c.key];
+  if (typeof v === 'number') return Number.isFinite(v) ? Math.round(v * 1e6) / 1e6 : null; // niente rumore dei decimali (1126,0000000000005)
+  return v == null || typeof v === 'string' ? v : typeof v === 'boolean' ? (v ? 'sì' : 'no') : Array.isArray(v) ? v.join(', ') : '';
+};
+const cmpVal = (x, y) => (x == null && y == null ? 0 : x == null ? 1 : y == null ? -1 : x < y ? -1 : x > y ? 1 : 0);
+
 /**
  * Tabella con ordinamento, ricerca esterna e paginazione.
- * cols: [{key, label, render(row), sort(row), align:'r', width, className}]
+ * cols: [{key, label, render(row), sort(row), align:'r', width, className, csv(row)|false, csvLabel}]
+ * exportName: mostra il pulsante «CSV» che esporta tutte le righe (nell'ordine corrente) con le colonne visibili.
  */
-export function Table({ rows, cols, onRow, rowKey = r => r.id, pageSize = 50, initialSort, selected, foot, caption, empty = 'Nessun elemento' }) {
+export function Table({ rows, cols, onRow, rowKey = r => r.id, pageSize = 50, initialSort, selected, foot, caption, empty = 'Nessun elemento', exportName }) {
   const [sort, setSort] = useState(initialSort || null); // {key, dir}
   const [page, setPage] = useState(0);
   useEffect(() => { setPage(0); }, [rows.length]);
+  const col = sort ? cols.find(x => x.key === sort.key) : null;
+  const sortFn = col ? col.sort || null : null; // una funzione sort scritta in linea ricalcola a ogni disegno; senza, conta solo la chiave
   const sorted = useMemo(() => {
-    if (!sort) return rows;
-    const c = cols.find(x => x.key === sort.key);
-    if (!c) return rows;
-    const f = c.sort || (r => r[c.key]);
-    return [...rows].sort((a, b) => {
-      const x = f(a), y = f(b);
-      if (x == null && y == null) return 0; if (x == null) return 1; if (y == null) return -1;
-      return (x < y ? -1 : x > y ? 1 : 0) * (sort.dir === 'desc' ? -1 : 1);
-    });
-  }, [rows, sort, cols]);
+    if (!sort || !col) return rows;
+    const f = sortFn || (r => r[col.key]), k = sort.dir === 'desc' ? -1 : 1;
+    return rows.map(r => [f(r), r]).sort((a, b) => cmpVal(a[0], b[0]) * (a[0] == null || b[0] == null ? 1 : k)).map(x => x[1]);
+  }, [rows, sort?.key, sort?.dir, sortFn, !!col]);
   const pages = Math.max(1, Math.ceil(sorted.length / pageSize));
   const view = sorted.slice(page * pageSize, page * pageSize + pageSize);
   const toggle = k => setSort(s => !s || s.key !== k ? { key: k, dir: 'asc' } : s.dir === 'asc' ? { key: k, dir: 'desc' } : null);
+  const exportCsv = () => {
+    const ec = cols.filter(c => c.csv !== false && (typeof c.label === 'string' ? c.label : c.csvLabel)).map(c => ({ label: typeof c.label === 'string' ? c.label : c.csvLabel, value: r => csvCell(c, r) }));
+    download(`${exportName}-${stamp()}.csv`, toCSV(sorted, ec), 'text/csv;charset=utf-8');
+  };
   return (
     <div>
       <div className="tw">
@@ -177,12 +211,13 @@ export function Table({ rows, cols, onRow, rowKey = r => r.id, pageSize = 50, in
           {foot && <tfoot><tr>{foot}</tr></tfoot>}
         </table>
       </div>
-      {pages > 1 && (
+      {(pages > 1 || exportName) && (
         <div className="pager">
-          <span>{nf(sorted.length)} righe · pagina {page + 1} di {pages}</span>
+          <span>{nf(sorted.length)} righe{pages > 1 && ` · pagina ${page + 1} di ${pages}`}</span>
           <span className="row gap-s">
-            <Btn small kind="ghost" disabled={page === 0} onClick={() => setPage(p => p - 1)}>Precedente</Btn>
-            <Btn small kind="ghost" disabled={page >= pages - 1} onClick={() => setPage(p => p + 1)}>Successiva</Btn>
+            {pages > 1 && <Btn small kind="ghost" disabled={page === 0} onClick={() => setPage(p => p - 1)}>Precedente</Btn>}
+            {pages > 1 && <Btn small kind="ghost" disabled={page >= pages - 1} onClick={() => setPage(p => p + 1)}>Successiva</Btn>}
+            {exportName && <Btn small kind="ghost" icon={LuDownload} onClick={exportCsv} disabled={!sorted.length} title="Esporta le righe in CSV (separatore punto e virgola)">CSV</Btn>}
           </span>
         </div>
       )}
@@ -202,7 +237,7 @@ export function Drawer({ title, sub, children, actions, wide, onClose = closeDra
   useEffect(() => {
     const prev = document.activeElement;
     ref.current?.focus();
-    const k = e => { if (e.key === 'Escape') onClose(); };
+    const k = e => { if (e.key === 'Escape' && !e.defaultPrevented && !uiStore.get().modal) onClose(); }; // con una finestra aperta, Esc chiude solo quella
     window.addEventListener('keydown', k);
     return () => { window.removeEventListener('keydown', k); try { prev?.focus?.(); } catch { /* ignora */ } };
   }, []);
@@ -222,19 +257,29 @@ export function Drawer({ title, sub, children, actions, wide, onClose = closeDra
   );
 }
 
+/** Finestra di conferma: Esc o Annulla chiudono senza confermare; con opt.danger il fuoco parte da Annulla. */
 export function Modal() {
   const m = useUi(s => s.modal);
+  const box = useRef(null);
+  const close = () => { uiStore.set({ modal: null }); m?.onCancel?.(); };
+  useEffect(() => {
+    if (!m) return;
+    const prev = document.activeElement;
+    box.current?.querySelector(m.danger ? '[data-cancel]' : '[data-ok]')?.focus();
+    const k = e => { if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); uiStore.set({ modal: null }); m.onCancel?.(); } };
+    window.addEventListener('keydown', k, true); // in cattura: il cassetto sotto non riceve Esc
+    return () => { window.removeEventListener('keydown', k, true); try { if (prev && document.contains(prev)) prev.focus?.(); } catch { /* ignora */ } };
+  }, [m]);
   if (!m) return null;
-  const close = () => uiStore.set({ modal: null });
   return (
     <>
       <div className="scrim" onClick={close} />
-      <div className="modal" role="dialog" aria-modal="true" aria-label={m.title}>
+      <div className="modal" role="dialog" aria-modal="true" aria-label={m.title} ref={box}>
         <div className="hd"><h3>{m.title}</h3></div>
         <div className="bd">{m.body}</div>
         <div className="ft">
-          <Btn onClick={close}>{m.cancel || 'Annulla'}</Btn>
-          <Btn kind={m.danger ? 'danger' : 'primary'} onClick={() => { close(); m.onOk?.(); }} autoFocus>{m.ok || 'Conferma'}</Btn>
+          <Btn onClick={close} data-cancel="">{m.cancel || 'Annulla'}</Btn>
+          <Btn kind={m.danger ? 'danger' : 'primary'} onClick={() => { uiStore.set({ modal: null }); m.onOk?.(); }} data-ok="">{m.ok || 'Conferma'}</Btn>
         </div>
       </div>
     </>

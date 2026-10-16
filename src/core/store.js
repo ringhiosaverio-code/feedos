@@ -1,16 +1,18 @@
-/* FeedOS 16 · Stato dell'applicazione: dati per collezioni immutabili, cronologia (annulla/ripeti),
- * registro delle modifiche, salvataggio automatico. */
+/* FeedOS 17 · Stato dell'applicazione: dati per collezioni immutabili, cronologia (annulla/ripeti),
+ * registro delle modifiche, salvataggio automatico, avvio sicuro (migrazioni, mai il demo sopra un archivio salvato). */
 import { useSyncExternalStore, useCallback, useRef } from 'react';
 import { loadData, saveData, saveSnapshot, storageMode } from './persist.js';
-import { iso, uid } from './util.js';
+import { uid, todayLocal } from './util.js';
+import { getPrefs, seedPrefs } from './prefs.js';
+import { applyOpsTo, revertOp, reapplyOp, CLOSED_MSG } from './ops.js';
 
-import { COLLECTIONS, emptyData } from './schema.js';
+import { COLLECTIONS, SCHEMA_VERSION, emptyData, migrateData, schemaOf, schemaErrorText, ensureCollections, validateShape } from './schema.js';
 export { COLLECTIONS, emptyData };
 
-let state = { data: emptyData(), ready: false, saving: 'idle', saveMode: 'idb', lastSaved: null };
+let state = { data: emptyData(), ready: false, saving: 'idle', saveMode: 'idb', lastSaved: null, readOnly: false, loadError: null, otherTab: false };
 const listeners = new Set();
 const history = { past: [], future: [] };
-let saveTimer = null, lastSnapDay = null;
+let saveTimer = null, upgradeFn = d => d;
 
 function emit() { for (const l of listeners) l(); }
 function set(patch) { state = { ...state, ...patch }; emit(); }
@@ -25,103 +27,148 @@ export function useStore(selector = s => s) {
 }
 export const useData = () => useStore(s => s.data);
 
-export async function initStore(makeDefault, upgrade = d => d) {
-  const saved = await loadData();
-  if (saved && saved.settings?.schema === 16) set({ data: upgrade(migrate(saved)), ready: true, saveMode: storageMode() });
-  else set({ data: makeDefault ? await makeDefault() : emptyData(), ready: true, saveMode: storageMode(), fresh: true });
-  if (!saved) scheduleSave();
-}
-function migrate(d) { for (const c of COLLECTIONS) if (!Array.isArray(d[c])) d[c] = []; d.settings ||= {}; d.settings.signalState ||= {}; d.esgManual ||= {}; d.survey ||= {}; return d; }
+const NEWER = 'Archivio creato da una versione più recente di FeedOS: sola lettura';
 
+/**
+ * Avvio: carica l'archivio salvato e lo porta allo schema corrente (istantanea prima di migrare).
+ * makeDefault() (il demo) parte SOLO se non c'è niente di salvato; uno schema più recente si apre in sola lettura.
+ */
+export async function initStore(makeDefault, upgrade = d => d) {
+  upgradeFn = upgrade;
+  let saved = null;
+  try { saved = await loadData(); }
+  catch (e) { set({ data: emptyData(), ready: true, readOnly: true, loadError: e?.message || 'Archivio non leggibile', saveMode: storageMode() }); startLifecycle(); return; }
+  if (saved) {
+    const from = schemaOf(saved);
+    if (from != null && from > SCHEMA_VERSION) { set({ data: ensureCollections(saved), ready: true, readOnly: true, loadError: NEWER, saveMode: storageMode() }); startLifecycle(); return; }
+    let m;
+    try {
+      if (from != null && from < SCHEMA_VERSION) await saveSnapshot(saved, `Prima della migrazione allo schema ${SCHEMA_VERSION}`, false);
+      m = migrateData(saved);
+    } catch (e) {
+      set({ data: emptyData(), ready: true, readOnly: true, loadError: schemaErrorText(e) + ' L’archivio salvato non viene toccato.', saveMode: storageMode() });
+      startLifecycle(); return;
+    }
+    seedPrefs(m.prefsSeed);
+    let data = upgradeFn(m.data);
+    const dirty = m.applied.length > 0 || data !== m.data;
+    if (m.applied.length) data = logEvent(data, 'Archivio aggiornato: ' + m.applied.join(' · '), 'archivio');
+    const shape = validateShape(data);
+    set({ data, ready: true, saveMode: storageMode(), shapeErrors: shape.ok ? null : shape.errors });
+    if (dirty) scheduleSave();
+  } else {
+    let data = makeDefault ? await makeDefault() : emptyData();
+    try { const m = migrateData(data); data = m.data; seedPrefs(m.prefsSeed); } catch { data = emptyData(); }
+    set({ data, ready: true, saveMode: storageMode(), fresh: true });
+    scheduleSave();
+  }
+  startLifecycle();
+}
+
+// ---------- salvataggio ----------
+const SNAP_DAY_KEY = 'feedos16.lastSnapDay';
+let memSnapDay = null;
 function scheduleSave() {
+  if (state.readOnly) return; // sola lettura: niente scritture
   clearTimeout(saveTimer);
   set({ saving: 'pending' });
-  saveTimer = setTimeout(async () => {
-    const res = await saveData(state.data);
-    const day = iso(new Date());
-    if (!res.startsWith('error') && lastSnapDay !== day && res === 'idb') { lastSnapDay = day; saveSnapshot(state.data, 'Istantanea automatica', true); }
-    set({ saving: res.startsWith('error') ? 'error' : 'saved', saveError: res.startsWith('error') ? res.slice(6) : null, saveMode: storageMode(), lastSaved: new Date().toISOString() });
-  }, 500);
+  saveTimer = setTimeout(doSave, 500);
+}
+async function doSave() {
+  saveTimer = null;
+  const res = await saveData(state.data);
+  const err = res.startsWith('error');
+  if (!err && res === 'idb') dailySnapshot();
+  set({ saving: err ? 'error' : 'saved', saveError: err ? res.slice(6) : null, saveMode: storageMode(), lastSaved: new Date().toISOString() });
+  return res;
+}
+/** Un'istantanea automatica per giorno locale, anche tra più aperture della pagina. */
+function dailySnapshot() {
+  const day = todayLocal();
+  let last = memSnapDay;
+  try { last = localStorage.getItem(SNAP_DAY_KEY) ?? memSnapDay; } catch { /* memoria */ }
+  if (last === day) return;
+  memSnapDay = day;
+  try { localStorage.setItem(SNAP_DAY_KEY, day); } catch { /* memoria */ }
+  saveSnapshot(state.data, 'Istantanea automatica', true);
+}
+/** Salva subito se c'è un salvataggio in attesa (chiusura o scheda nascosta). */
+export function flushSave() {
+  if (!saveTimer || state.readOnly) return null;
+  clearTimeout(saveTimer);
+  return doSave();
+}
+
+let lifecycle = false;
+function startLifecycle() {
+  if (lifecycle || typeof window === 'undefined') return;
+  lifecycle = true;
+  window.addEventListener('pagehide', () => { flushSave(); });
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') flushSave(); });
+  try { const s = navigator.storage; if (s?.persist) Promise.resolve(s.persisted?.()).then(p => p || s.persist()).catch(() => {}); } catch { /* ignora */ }
+  // altre schede aperte sullo stesso archivio: vince l'ultimo salvataggio, quindi lo si segnala
+  try {
+    const ch = new BroadcastChannel('feedos16'), me = uid('tab'), peers = new Set();
+    const upd = () => set({ otherTab: peers.size > 0 });
+    ch.onmessage = e => {
+      const m = e.data || {};
+      if (!m.id || m.id === me) return;
+      if (m.t === 'hello') { peers.add(m.id); ch.postMessage({ t: 'here', id: me }); upd(); }
+      else if (m.t === 'here') { peers.add(m.id); upd(); }
+      else if (m.t === 'bye') { peers.delete(m.id); upd(); }
+    };
+    ch.postMessage({ t: 'hello', id: me });
+    window.addEventListener('pagehide', () => ch.postMessage({ t: 'bye', id: me }));
+    window.addEventListener('pageshow', e => { if (e.persisted) ch.postMessage({ t: 'hello', id: me }); });
+  } catch { /* BroadcastChannel non disponibile */ }
 }
 
 function logEvent(d, label, coll, id) {
-  const ev = { id: uid('ev'), at: new Date().toISOString(), role: d.settings?.role || 'direzione', label, coll, entity: id };
+  const ev = { id: uid('ev'), at: new Date().toISOString(), role: getPrefs().role || 'direzione', label, coll, entity: id };
   const events = [ev, ...(d.events || [])].slice(0, 800);
   return { ...d, events };
 }
 
-/** Applica un insieme di operazioni come un unico passo annullabile. */
-function applyOps(ops, label, record = true) {
-  let d = state.data;
-  const done = [];
-  for (const op of ops) {
-    if (op.kind === 'settings') {
-      const before = d.settings;
-      d = { ...d, settings: typeof op.value === 'function' ? op.value(d.settings) : { ...d.settings, ...op.value } };
-      done.push({ kind: 'settings', before, after: d.settings });
-      continue;
-    }
-    if (op.kind === 'esg') {
-      const before = d.esgManual;
-      d = { ...d, esgManual: { ...d.esgManual, ...op.value } };
-      done.push({ kind: 'esg', before, after: d.esgManual });
-      continue;
-    }
-    if (op.kind === 'survey') {
-      const before = d.survey || {};
-      d = { ...d, survey: { ...before, ...op.value } };
-      done.push({ kind: 'survey', before, after: d.survey });
-      continue;
-    }
-    const arr = d[op.coll] || [];
-    if (op.kind === 'add') {
-      const obj = { ...op.obj, id: op.obj.id || uid(op.coll.slice(0, 2)) };
-      d = { ...d, [op.coll]: [obj, ...arr] };
-      done.push({ kind: 'add', coll: op.coll, id: obj.id, after: obj });
-    } else if (op.kind === 'update') {
-      const i = arr.findIndex(x => x.id === op.id);
-      if (i < 0) continue;
-      const before = arr[i];
-      const after = typeof op.patch === 'function' ? op.patch(before) : { ...before, ...op.patch };
-      const next = arr.slice(); next[i] = after;
-      d = { ...d, [op.coll]: next };
-      done.push({ kind: 'update', coll: op.coll, id: op.id, before, after });
-    } else if (op.kind === 'remove') {
-      const i = arr.findIndex(x => x.id === op.id);
-      if (i < 0) continue;
-      const before = arr[i];
-      d = { ...d, [op.coll]: arr.filter(x => x.id !== op.id) };
-      done.push({ kind: 'remove', coll: op.coll, id: op.id, before, index: i });
-    } else if (op.kind === 'replace') {
-      const before = d[op.coll];
-      d = { ...d, [op.coll]: op.value };
-      done.push({ kind: 'replace', coll: op.coll, before, after: op.value });
-    }
-  }
-  if (!done.length) return null;
-  const first = done.find(x => x.coll);
-  if (label) d = logEvent(d, label, first?.coll || done[0].kind, first?.id);
+/**
+ * Applica un insieme di operazioni come un unico passo annullabile (vedi core/ops.js).
+ * opts.silent: niente cronologia né registro · opts.force: ammette i mesi chiusi.
+ * → false se rifiutato (mese chiuso), null se non cambia niente, altrimenti i passi eseguiti.
+ */
+function applyOps(ops, label, { silent = false, force = false } = {}) {
+  const r = applyOpsTo(state.data, ops, { force });
+  if (r.refused) { toast(CLOSED_MSG, 'err'); return false; }
+  if (!r.done.length) return null;
+  let d = r.data;
+  const first = r.done.find(x => x.coll);
+  if (label && !silent) d = logEvent(d, label, first?.coll || r.done[0].kind, first?.id);
   set({ data: d });
-  if (record) { history.past.push({ label, ops: done }); if (history.past.length > 60) history.past.shift(); history.future = []; }
+  if (!silent) { history.past.push({ label, ops: r.done }); if (history.past.length > 60) history.past.shift(); history.future = []; }
   scheduleSave();
-  return done;
+  return r.done;
 }
 
 export const store = {
-  add: (coll, obj, label) => applyOps([{ kind: 'add', coll, obj }], label)?.[0]?.id,
-  update: (coll, id, patch, label) => applyOps([{ kind: 'update', coll, id, patch }], label),
-  remove: (coll, id, label) => applyOps([{ kind: 'remove', coll, id }], label),
-  replace: (coll, value, label) => applyOps([{ kind: 'replace', coll, value }], label),
-  settings: (value, label) => applyOps([{ kind: 'settings', value }], label),
+  add: (coll, obj, label, opts) => applyOps([{ kind: 'add', coll, obj }], label, opts)?.[0]?.id,
+  update: (coll, id, patch, label, opts) => applyOps([{ kind: 'update', coll, id, patch }], label, opts),
+  remove: (coll, id, label, opts) => applyOps([{ kind: 'remove', coll, id }], label, opts),
+  replace: (coll, value, label, opts) => applyOps([{ kind: 'replace', coll, value }], label, opts),
+  settings: (value, label, opts) => applyOps([{ kind: 'settings', value }], label, opts),
   esg: (value, label) => applyOps([{ kind: 'esg', value }], label),
   survey: (value, label) => applyOps([{ kind: 'survey', value }], label),
-  batch: (ops, label) => applyOps(ops, label),
-  /** Sostituisce l'intero archivio (demo, importazione, ripristino). Non annullabile, ma salva un'istantanea prima. */
+  /** ops: add, addMany, update, upsertMany, remove, removeMany, replace, settings, esg, survey. opts: {silent, force}. */
+  batch: (ops, label, opts) => applyOps(ops, label, opts),
+  /** Sostituisce l'intero archivio (demo, importazione, ripristino) portandolo allo schema corrente.
+   *  Non annullabile, ma salva un'istantanea prima. → true se caricato, false se rifiutato. */
   async load(data, label) {
+    if (state.readOnly) { toast('Archivio in sola lettura: niente è stato sostituito.', 'err'); return false; }
+    let m;
+    try { m = migrateData(data); } catch (e) { toast(schemaErrorText(e), 'err'); return false; }
     try { if (state.data && (state.data.formulas?.length || state.data.customers?.length)) await saveSnapshot(state.data, 'Prima di: ' + label, false); } catch { /* ignora */ }
+    seedPrefs(m.prefsSeed);
     history.past = []; history.future = [];
-    set({ data: migrate(logEvent(data, label, 'archivio')) });
+    set({ data: logEvent(upgradeFn(m.data), label, 'archivio'), shapeErrors: null });
     scheduleSave();
+    return true;
   },
   canUndo: () => history.past.length > 0,
   canRedo: () => history.future.length > 0,
@@ -129,7 +176,7 @@ export const store = {
   undo() {
     const h = history.past.pop(); if (!h) return;
     let d = state.data;
-    for (const op of [...h.ops].reverse()) d = revert(d, op);
+    for (const op of [...h.ops].reverse()) d = revertOp(d, op);
     history.future.push(h);
     set({ data: logEvent(d, 'Annullato: ' + (h.label || 'modifica'), h.ops[0].coll) });
     scheduleSave();
@@ -138,37 +185,14 @@ export const store = {
   redo() {
     const h = history.future.pop(); if (!h) return;
     let d = state.data;
-    for (const op of h.ops) d = reapply(d, op);
+    for (const op of h.ops) d = reapplyOp(d, op);
     history.past.push(h);
     set({ data: logEvent(d, 'Ripristinato: ' + (h.label || 'modifica'), h.ops[0].coll) });
     scheduleSave();
     return h.label;
   },
-  saveNow: () => { clearTimeout(saveTimer); return saveData(state.data); },
+  saveNow: () => { if (state.readOnly) return Promise.resolve('readonly'); clearTimeout(saveTimer); saveTimer = null; return saveData(state.data); },
 };
-
-function revert(d, op) {
-  if (op.kind === 'settings') return { ...d, settings: op.before };
-  if (op.kind === 'esg') return { ...d, esgManual: op.before };
-  if (op.kind === 'survey') return { ...d, survey: op.before };
-  const arr = d[op.coll];
-  if (op.kind === 'add') return { ...d, [op.coll]: arr.filter(x => x.id !== op.id) };
-  if (op.kind === 'update') return { ...d, [op.coll]: arr.map(x => x.id === op.id ? op.before : x) };
-  if (op.kind === 'remove') { const next = arr.slice(); next.splice(Math.min(op.index, next.length), 0, op.before); return { ...d, [op.coll]: next }; }
-  if (op.kind === 'replace') return { ...d, [op.coll]: op.before };
-  return d;
-}
-function reapply(d, op) {
-  if (op.kind === 'settings') return { ...d, settings: op.after };
-  if (op.kind === 'esg') return { ...d, esgManual: op.after };
-  if (op.kind === 'survey') return { ...d, survey: op.after };
-  const arr = d[op.coll];
-  if (op.kind === 'add') return { ...d, [op.coll]: [op.after, ...arr] };
-  if (op.kind === 'update') return { ...d, [op.coll]: arr.map(x => x.id === op.id ? op.after : x) };
-  if (op.kind === 'remove') return { ...d, [op.coll]: arr.filter(x => x.id !== op.id) };
-  if (op.kind === 'replace') return { ...d, [op.coll]: op.after };
-  return d;
-}
 
 // ---------- stato dell'interfaccia (non salvato) ----------
 let ui = { drawer: null, toast: [], palette: false, tour: null, modal: null };
@@ -187,7 +211,8 @@ let toastId = 0;
 export function toast(text, kind = 'ok', action) {
   const id = ++toastId;
   uiStore.set(u => ({ toast: [...u.toast, { id, text, kind, action }] }));
-  setTimeout(() => uiStore.set(u => ({ toast: u.toast.filter(t => t.id !== id) })), action ? 6500 : 3800);
+  const t = setTimeout(() => uiStore.set(u => ({ toast: u.toast.filter(t => t.id !== id) })), action ? 6500 : 3800);
+  t?.unref?.(); // nei test node non tiene vivo il processo
 }
 export function openDrawer(kind, id, extra) { uiStore.set({ drawer: { kind, id, ...extra } }); }
 export function closeDrawer() { uiStore.set({ drawer: null }); }

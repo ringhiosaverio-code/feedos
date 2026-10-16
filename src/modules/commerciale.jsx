@@ -22,7 +22,7 @@ export function Commerciale({ route }) {
   const tab = route.tab || 'clienti';
   return (
     <>
-      <PageHead title="Commerciale" lead="Clienti con il margine vero (prezzo meno costo pieno di oggi), offerte che mostrano il prezzo minimo mentre le scrivi, listino allineato ai costi, visite tecniche con il reddito sul costo alimentare."
+      <PageHead title="Commerciale" lead="Clienti con il margine vero (costo effettivo dei lotti consegnati, dopo le provvigioni), offerte che mostrano il prezzo minimo mentre le scrivi, listino allineato ai costi, visite tecniche con il reddito sul costo alimentare."
         actions={<Btn kind="primary" icon={LuPlus} onClick={() => go('commerciale', 'offerte', 'nuova')}>Nuova offerta</Btn>}
         tabs={NAV.commerciale.tabs} tab={tab} onTab={t => go('commerciale', t)} />
       {tab === 'clienti' && <Clienti d={d} sel={route.id} />}
@@ -42,7 +42,7 @@ function useCustomerRows(d) {
     const t90 = {}, tPrev = {};
     for (const s of d.shipments) { if (s.date > from90) t90[s.customerId] = (t90[s.customerId] || 0) + s.tonnes; else if (s.date > from180) tPrev[s.customerId] = (tPrev[s.customerId] || 0) + s.tonnes; }
     return d.customers.map(c => { const s = S[c.id] || {}; return { ...c, ...s, agent: I.agent[c.agentId]?.name, marginT: s.tonnes ? s.margin / s.tonnes : null, idle: s.last ? daysBetween(s.last, today) : null, trend: tPrev[c.id] ? (t90[c.id] || 0) / tPrev[c.id] - 1 : null }; });
-  }, [S, d.customers, today]);
+  }, [S, d.customers, today, I]);
 }
 
 function Clienti({ d, sel }) {
@@ -57,7 +57,7 @@ function Clienti({ d, sel }) {
       <div className="kpis">
         <Kpi label="Clienti attivi (90 giorni)" value={active.length} foot={`su ${rows.length} in anagrafica`} />
         <Kpi label="Consegnato in 12 mesi" value={nf(sum(rows, r => r.tonnes || 0))} unit="t" foot={`${nf(sum(rows, r => r.revenue || 0) / 1e6, 2)} M€ di ricavi`} />
-        <Kpi label="Margine medio" value={nf(sum(rows, r => r.margin || 0) / Math.max(1, sum(rows, r => r.tonnes || 0)), 1)} unit="€/t" foot="prezzo meno costo pieno di oggi" />
+        <Kpi label="Margine medio" value={nf(sum(rows, r => r.margin || 0) / Math.max(1, sum(rows, r => r.tonnes || 0)), 1)} unit="€/t" foot="costo effettivo, dopo le provvigioni" />
         <Kpi label="Clienti fermi da oltre 30 giorni" value={rows.filter(r => r.idle > 30).length} foot="con consegne nei 12 mesi" />
       </div>
       {sigs.length > 0 && <Panel title="Clienti da richiamare" flush><SignalList items={sigs} limit={3} /></Panel>}

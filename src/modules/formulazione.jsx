@@ -14,6 +14,7 @@ import { Frontier, Bars, StackBar, SERIES } from '../ui/charts.jsx';
 import { SignalList } from './shared.jsx';
 import { NAV } from '../app/nav.js';
 import { ROLE } from '../core/roles.js';
+import { getPrefs } from '../core/prefs.js';
 
 /** Arrotonda a 0,1 kg e riporta il totale a 1.000 kg sulla riga più grande. */
 export function roundLines(lines) {
@@ -144,8 +145,8 @@ function Editor({ d, id }) {
     {Math.abs(total - 1000) > 0.5 && <p className="note crit">Il totale è {nf(total, 1)} kg invece di 1.000 kg.</p>}
     <p className="small muted">Resta nel registro chi ha approvato e quando. I prodotti collegati useranno la nuova versione dalla prossima produzione.</p></>, () => {
       const lines = draft.map(({ ing, kg }) => ({ ing, kg: +kg }));
-      const version = f.version + 1;
-      store.update('formulas', f.id, x => ({ ...x, lines, draft: null, version, status: 'approvata', approvedAt: appToday(d), approvedCost: round(cost, 2), history: [...(x.history || []), { version, date: appToday(d), lines, cost: round(cost, 2), note: 'Approvata in FeedOS', author: ROLE[d.settings.role]?.label || 'Direzione', approvedBy: ROLE[d.settings.role]?.label || 'Direzione' }] }), `Formula approvata: ${f.name} v${version}`);
+      const version = f.version + 1, by = ROLE[getPrefs().role]?.label || 'Direzione';
+      store.update('formulas', f.id, x => ({ ...x, lines, draft: null, version, status: 'approvata', approvedAt: appToday(d), approvedCost: round(cost, 2), history: [...(x.history || []), { version, date: appToday(d), lines, cost: round(cost, 2), note: 'Approvata in FeedOS', author: by, approvedBy: by }] }), `Formula approvata: ${f.name} v${version}`);
       toast(`Versione ${version} approvata`);
     }, { ok: 'Approva' });
   const setLine = (ing, patch) => setDraft(ds => ds.map(l => l.ing === ing ? { ...l, ...patch } : l));

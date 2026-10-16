@@ -21,8 +21,17 @@ const STYLES = path.join(ROOT, 'src/styles');
 const css = ['app.css', ...fs.readdirSync(STYLES).filter(f => f.endsWith('.css') && f !== 'app.css').sort()]
   .map(f => `/* ${f} */\n` + fs.readFileSync(path.join(STYLES, f), 'utf8')).join('\n');
 
+// versione pubblica: chi importa data/thesis.js riceve un modulo vuoto, così i dati della tesi non vengono nemmeno letti
+const noThesis = {
+  name: 'senza-tesi',
+  setup(b) {
+    b.onResolve({ filter: /(^|[\\/])data[\\/]thesis\.js$/ }, () => ({ path: 'thesis-pubblica', namespace: 'vuoto' }));
+    b.onLoad({ filter: /.*/, namespace: 'vuoto' }, () => ({ contents: 'export const THESIS = null;', loader: 'js' }));
+  },
+};
 async function bundle(full) {
   const r = await esbuild.build({
+    plugins: full ? [] : [noThesis],
     entryPoints: [path.join(ROOT, 'src/main.jsx')], bundle: true, minify: true, format: 'iife', write: false, jsx: 'automatic', target: ['es2020'],
     define: { 'process.env.NODE_ENV': '"production"', __FULL__: String(full) }, nodePaths: [path.join(ROOT, 'node_modules')], legalComments: 'none', metafile: true,
     logLevel: 'error',
@@ -45,3 +54,6 @@ console.log(`build in ${Date.now() - t0} ms · completa ${kb('FeedOS-16.html')} 
 if (process.argv.includes('--meta')) console.log(await esbuild.analyzeMetafile(full.meta, { verbose: false }));
 const leak = ['Galtieri', 'Modugno', '89.450', '58.759.661'].filter(w => pub.js.includes(w));
 if (leak.length) { console.error('ATTENZIONE: la versione pubblica contiene', leak); process.exitCode = 1; }
+// il modulo con i dati della tesi non deve entrare nella versione pubblica (controllo sugli ingressi del bundle, non solo sul testo)
+const thesisIn = Object.keys(pub.meta.inputs).filter(f => /(^|[\\/])src[\\/]data[\\/]thesis\.js$/.test(f));
+if (thesisIn.length) { console.error('ATTENZIONE: la versione pubblica include', thesisIn.join(', ')); process.exitCode = 1; }

@@ -1,15 +1,16 @@
-/* FeedOS 16 · elementi condivisi tra i moduli: elenco dei segnali, azioni sulle decisioni, piccoli formattatori. */
+/* FeedOS 17 · elementi condivisi tra i moduli: elenco dei segnali, azioni sulle decisioni, sezione in preparazione, piccoli formattatori. */
 import React, { useState } from 'react';
-import { LuCircleAlert, LuTriangleAlert, LuInfo, LuArrowRight, LuListChecks, LuClock, LuEyeOff } from 'react-icons/lu';
+import { LuCircleAlert, LuTriangleAlert, LuInfo, LuArrowRight, LuListChecks, LuClock, LuEyeOff, LuHourglass } from 'react-icons/lu';
 import { store, toast, useData } from '../core/store.js';
 import { go } from '../core/router.js';
 import { appToday } from '../core/derived.js';
+import { getPrefs } from '../core/prefs.js';
 import { addDays, dateIt, nf } from '../core/util.js';
-import { Btn, Sev, Empty, confirm } from '../ui/ui.jsx';
+import { Btn, Sev, Empty, Panel, confirm } from '../ui/ui.jsx';
 import { NAV } from '../app/nav.js';
 
 const ICON = { critico: LuCircleAlert, attenzione: LuTriangleAlert, info: LuInfo };
-const OWNER = { acquisti: 'Acquisti', formulazione: 'Formulazione', produzione: 'Produzione', qualita: 'Qualità', commerciale: 'Commerciale', economia: 'Direzione', esg: 'Direzione', oggi: 'Direzione' };
+const OWNER = { acquisti: 'Acquisti', formulazione: 'Formulazione', produzione: 'Produzione', qualita: 'Qualità', commerciale: 'Commerciale', economia: 'Direzione', esg: 'Direzione', oggi: 'Direzione', direzione: 'Direzione', finanza: 'Amministrazione', dati: 'Direzione' };
 
 export function signalActions(s, d) {
   const today = appToday(d);
@@ -27,7 +28,7 @@ export function signalActions(s, d) {
       toast('Rimandato di 7 giorni', 'ok', { label: 'Annulla', fn: () => store.undo() });
     },
     dismiss: () => confirm('Ignorare questo segnale?', <p>«{s.title}» non comparirà più. La scelta resta nel registro delle modifiche e si può annullare.</p>, () => {
-      store.settings(st => ({ ...st, signalState: { ...(st.signalState || {}), [s.key]: { status: 'ignorato', at: today, role: st.role } } }), 'Segnale ignorato: ' + s.title);
+      store.settings(st => ({ ...st, signalState: { ...(st.signalState || {}), [s.key]: { status: 'ignorato', at: today, role: getPrefs().role } } }), 'Segnale ignorato: ' + s.title);
       toast('Segnale ignorato', 'ok', { label: 'Annulla', fn: () => store.undo() });
     }, { ok: 'Ignora' }),
   };
@@ -69,3 +70,8 @@ export function SignalList({ items, limit = 8, compact, emptyText = 'Nessuna dec
 export const T = v => v == null ? '—' : nf(v, v < 10 ? 1 : 0) + ' t';
 export const E = (v, dcm = 2) => v == null ? '—' : nf(v, dcm) + ' €/t';
 export function when(d, s) { return dateIt(s, 'dm'); }
+
+/** Scheda non ancora realizzata: riquadro neutro con lo scopo della sezione (lo sostituisce il pacchetto che possiede la scheda). */
+export function SectionPlaceholder({ title, children }) {
+  return <Panel title={title}><Empty icon={LuHourglass} title="Sezione in preparazione">{children}</Empty></Panel>;
+}

@@ -1,5 +1,6 @@
-/* FeedOS 16 · schede laterali: prodotto, materia prima, cliente, offerta, reclamo, lotto di prodotto, lotto di materia prima.
- * Ogni scheda mostra i collegamenti (formula, lotti, clienti) e le azioni tipiche del reparto. */
+/* FeedOS 17 · schede laterali: prodotto, materia prima, cliente, offerta, reclamo, lotto di prodotto, lotto di materia prima,
+ * più quelle dei pacchetti (slots.jsx: agente, fornitore, componente). Ogni scheda mostra i collegamenti (formula, lotti, clienti)
+ * e le azioni tipiche del reparto; cliente e prodotto ospitano le sezioni dei pacchetti (CUSTOMER_SECTIONS, PRODUCT_SECTIONS). */
 import React, { useMemo, useState } from 'react';
 import { LuFlaskConical, LuShieldAlert, LuShieldCheck, LuLock, LuArrowRight, LuPlus, LuCheck, LuX, LuLeaf, LuTag, LuUser, LuWheat, LuBoxes, LuMessageSquare, LuFileText } from 'react-icons/lu';
 import { useData, useUi, store, toast, closeDrawer, openDrawer } from '../core/store.js';
@@ -15,14 +16,18 @@ import { Drawer, Btn, Chip, Kv, Table, Field, NumInput, Select, confirm } from '
 import { StackBar, Legend, SERIES } from '../ui/charts.jsx';
 import { lotChip, declaredFor, lotCheck, PARAMS } from './qualita.jsx';
 import { OCHECK } from './commerciale.jsx';
+import { EXTRA_DRAWERS, CUSTOMER_SECTIONS, PRODUCT_SECTIONS, SlotGuard } from './slots.jsx';
 
 export function DrawerHost() {
   const dr = useUi(s => s.drawer);
   const d = useData();
   if (!dr) return null;
-  const C = { product: ProductD, ingredient: IngredientD, customer: CustomerD, offer: OfferD, complaint: ComplaintD, lot: LotD, ingLot: IngLotD }[dr.kind];
-  return C ? <C key={dr.kind + dr.id} d={d} id={dr.id} /> : null;
+  const C = { ...EXTRA_DRAWERS, product: ProductD, ingredient: IngredientD, customer: CustomerD, offer: OfferD, complaint: ComplaintD, lot: LotD, ingLot: IngLotD }[dr.kind];
+  return C ? <SlotGuard key={dr.kind + dr.id} fallback={<Broken />}><C d={d} id={dr.id} /></SlotGuard> : null;
 }
+/** Sezioni dei pacchetti dentro una scheda, ciascuna isolata dagli errori. */
+const Sections = ({ list, d, id }) => list.map((S, i) => <SlotGuard key={i}><S d={d} id={id} /></SlotGuard>);
+const Broken = () => <Drawer title="Questa scheda non si è aperta"><p className="muted">Probabilmente mancano dei dati che la scheda si aspetta. I dati salvati non sono stati toccati.</p></Drawer>;
 const nav = (...a) => { closeDrawer(); go(...a); };
 const Missing = () => <Drawer title="Elemento non trovato"><p className="muted">Potrebbe essere stato eliminato o appartenere a un altro archivio.</p></Drawer>;
 
@@ -44,6 +49,7 @@ function ProductD({ d, id }) {
       </div>
       <Kv items={[['Prezzo di listino', `${nf(p.listPrice)} €/t`], ['Margine a listino', `${nf(c.margin, 1)} €/t (${nf(c.marginPct * 100, 1)}%)`], ['Prezzo minimo', `${nf(c.minPrice, 1)} €/t · margine ${p.minMarginPct}%`], ['Prezzo obiettivo', `${nf(c.targetPrice, 1)} €/t · margine ${p.targetMarginPct}%`]]} />
       {c.price < c.minPrice && <div className="note crit">Il listino è sotto il prezzo minimo: rivedere il prezzo o la formula.</div>}
+      <Sections list={PRODUCT_SECTIONS} d={d} id={id} />
       <div className="dsec"><div className="eyebrow">Clienti principali</div>
         {top.map(r => <button key={r.x.id} className="dlink" onClick={() => openDrawer('customer', r.x.id)}><span>{r.x.name}</span><span className="muted">{nf(r.t)} t</span></button>)}
       </div>
@@ -100,8 +106,9 @@ function CustomerD({ d, id }) {
       actions={<><Btn onClick={() => nav('commerciale', 'visite')}>Visite</Btn><Btn kind="primary" icon={LuPlus} onClick={() => nav('commerciale', 'offerte', 'nuova')}>Nuova offerta</Btn></>}>
       <div className="kpis two">
         <div className="kpi"><span className="lbl">Consegnato in 12 mesi</span><span className="val">{nf(S.tonnes || 0)}<small>t</small></span><span className="foot">{nf((S.revenue || 0) / 1000)} mila € di ricavi</span></div>
-        <div className="kpi"><span className="lbl">Margine</span><span className="val">{S.tonnes ? nf(S.margin / S.tonnes, 1) : '—'}<small>€/t</small></span><span className="foot">ultima consegna {S.last ? relDays(S.last, today) : '—'}</span></div>
+        <div className="kpi"><span className="lbl">Margine (costo effettivo)</span><span className="val">{S.tonnes ? nf(S.margin / S.tonnes, 1) : '—'}<small>€/t</small></span><span className="foot">ultima consegna {S.last ? relDays(S.last, today) : '—'}</span></div>
       </div>
+      <Sections list={CUSTOMER_SECTIONS} d={d} id={id} />
       <Kv items={[['Comune', `${c.city} (${c.province})`], ['Agente', I.agent[c.agentId]?.name], ['Specie', (c.species || []).join(', ')], ['Capi', c.heads ? nf(c.heads) : '—'], ['Prodotti abituali', (c.products || []).map(code => d.products.find(p => p.code === code)?.name || code).join(', ')], ['Pagamento', `${c.paymentDays} giorni · sconto abituale ${nf(c.discountPct, 1)}%`], ['Cliente dal', c.since]]} />
       {iofc.length > 0 && <div className="note good">Reddito sul costo alimentare (IOFC) nelle ultime visite tecniche: {iofc.map(v => `${nf(v.iofc, 2)} €`).join(' · ')} per capo al giorno.</div>}
       <div className="dsec"><div className="eyebrow">Ultime consegne</div>

@@ -1,5 +1,5 @@
-/* FeedOS 16 · Tracciabilità a monte e a valle (Reg. CE 178/2002 art. 18, Reg. CE 183/2005)
- * e simulazione di richiamo con bilancio di massa. */
+/* FeedOS 17 · Tracciabilità a monte e a valle (Reg. CE 178/2002 art. 18, Reg. CE 183/2005)
+ * e simulazione di richiamo con bilancio di massa (ricevuto − usato − residuo − rettificato). */
 
 export function buildIndex(d) {
   const usedIn = new Map();      // lotto materia prima -> [{lot, kg}]
@@ -14,7 +14,9 @@ export function buildIndex(d) {
   }
   const lotById = new Map(d.lots.map(l => [l.id, l]));
   const ingLotById = new Map(d.ingLots.map(l => [l.id, l]));
-  return { usedIn, shipped, lotById, ingLotById };
+  const adjByIngLot = new Map(); // lotto materia prima -> Σ rettifiche (t, negative quando tolgono giacenza)
+  for (const a of d.adjustments || []) if (a.ingLotId) adjByIngLot.set(a.ingLotId, (adjByIngLot.get(a.ingLotId) || 0) + (+a.tonnes || 0));
+  return { usedIn, shipped, lotById, ingLotById, adjByIngLot };
 }
 
 /** A monte: da un lotto di prodotto ai lotti di materia prima e ai fornitori. */
@@ -59,11 +61,13 @@ export function recall(ix, { ingLots = [], lots = [] }) {
   lotRows.sort((a, b) => (a.lot.date < b.lot.date ? -1 : 1));
   const received = ingLots.reduce((s, id) => s + (+ix.ingLotById.get(id)?.tonnes || 0), 0);
   const remainingIng = ingLots.reduce((s, id) => s + (+ix.ingLotById.get(id)?.remaining || 0), 0);
+  // rettificato = giacenza tolta dalle rettifiche inventariali (un aumento la riduce)
+  const adjusted = -ingLots.reduce((s, id) => s + (ix.adjByIngLot?.get(id) || 0), 0);
   return {
     lots: lotRows,
     customers: [...customers.values()].sort((a, b) => b.tonnes - a.tonnes),
     producedT, shippedT, inStockT: Math.max(0, producedT - shippedT),
-    massBalance: ingLots.length ? { received, used: ingKgUsed / 1000, remaining: remainingIng, gap: received - ingKgUsed / 1000 - remainingIng } : null,
+    massBalance: ingLots.length ? { received, used: ingKgUsed / 1000, remaining: remainingIng, adjusted, gap: received - ingKgUsed / 1000 - remainingIng - adjusted } : null,
     first: lotRows[0]?.lot.date, last: lotRows[lotRows.length - 1]?.lot.date,
   };
 }

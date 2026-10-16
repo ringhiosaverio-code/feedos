@@ -2,6 +2,7 @@
  * Si importa ciò che ha un corrispondente certo; il resto viene elencato e non inventato. */
 import { emptyData } from './schema.js';
 import { uid, round } from './util.js';
+import { getPrefs } from './prefs.js';
 
 const NUT_MAP = { protein: 'PG', proteina: 'PG', pg: 'PG', cp: 'PG', fat: 'GG', grassi: 'GG', gg: 'GG', ee: 'GG', fiber: 'FG', fibre: 'FG', fibra: 'FG', fg: 'FG', cf: 'FG', ash: 'CE', ceneri: 'CE', ce: 'CE',
   starch: 'AM', amido: 'AM', ndf: 'NDF', ufl: 'UFL', en: 'EN', ne: 'EN', me: 'EM', em: 'EM', de: 'ED', ed: 'ED', lys: 'LYS', lysine: 'LYS', lisina: 'LYS', met: 'MET', methionine: 'MET', metionina: 'MET',
@@ -54,7 +55,7 @@ export function migrateF15(j, base = emptyData()) {
   }
   if (ws) for (const [k, label] of [['products', 'prodotti del listino'], ['quotes', 'preventivi'], ['production', 'registrazioni di produzione'], ['offers', 'offerte dei fornitori'], ['actions', 'azioni del piano ESG']]) if (Array.isArray(ws[k]) && ws[k].length) skipped.push(`${ws[k].length} ${label}`);
   if (unmapped.size) skipped.push(`parametri senza corrispondenza: ${[...unmapped].slice(0, 8).join(', ')}`);
-  d.events = [{ id: uid('ev'), at: new Date().toISOString(), role: base.settings?.role || 'direzione', label: 'Importazione da FeedOS 15', coll: 'archivio' }];
+  d.events = [{ id: uid('ev'), at: new Date().toISOString(), role: getPrefs().role || 'direzione', label: 'Importazione da FeedOS 15', coll: 'archivio' }];
   return { data: d, report, skipped, kind };
 }
 function guessCat(n) {

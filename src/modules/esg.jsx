@@ -9,7 +9,7 @@ import { idx, appToday, kpis, period12, volumes, shippedByLot } from '../core/de
 import { nf, sf, sum, dateIt, addDays, monthLabel, mean, norm } from '../core/util.js';
 import { download, stamp, num } from '../core/io.js';
 import { computeKpis, vsmeCoverage } from '../engine/esg.js';
-import { ESG_REGISTRY, PILLARS, CLASSES, VSME_BASIC } from '../data/esgRegistry.js';
+import { ESG_REGISTRY, PILLARS, VSME_BASIC } from '../data/esgRegistry.js';
 import { THESIS } from '../data/thesis.js';
 import { balance, aggregate, intensityAt, scope1PerKg, DEFAULTS, GRID_FACTORS } from '../engine/energy.js';
 import { formulaCO2, coProductShare, afb1Check } from '../engine/formulation.js';
@@ -30,10 +30,10 @@ const KPI_Q = Object.fromEntries(SURVEY_QUESTIONS.filter(q => q.kpi && q.type !=
 
 export function Esg({ route }) {
   const d = useData();
-  const tab = route.tab || 'cruscotto';
+  const tab = NAV.esg.tabs.some(t => t.id === route.tab) ? route.tab : 'cruscotto'; // la scheda «tesi» c'è solo nella versione completa
   return (
     <>
-      <PageHead title="ESG e tesi" lead="Quanto è sostenibile lo stabilimento, misurato con i dati di ogni giorno: energia, emissioni Scope 1-2-3, acqua, rifiuti, persone e filiera. Il questionario guidato completa ciò che i dati non dicono e alimenta i 49 indicatori della tesi, il passaporto di prodotto e la bozza del VSME."
+      <PageHead title={FULL ? 'ESG e tesi' : 'ESG'} lead={`Quanto è sostenibile lo stabilimento, misurato con i dati di ogni giorno: energia, emissioni Scope 1-2-3, acqua, rifiuti, persone e filiera. Il questionario guidato completa ciò che i dati non dicono e alimenta i 49 indicatori ${FULL ? 'della tesi' : 'ESG'}, il passaporto di prodotto e la bozza del VSME.`}
         tabs={NAV.esg.tabs} tab={tab} onTab={t => go('esg', t)} />
       {tab === 'cruscotto' && <Cruscotto d={d} />}
       {tab === 'questionario' && <Questionario d={d} sec={route.id} />}
@@ -43,7 +43,7 @@ export function Esg({ route }) {
       {tab === 'energia' && <Energia d={d} />}
       {tab === 'passaporto' && <Passaporto d={d} sel={route.id} />}
       {tab === 'vsme' && <Vsme d={d} />}
-      {tab === 'tesi' && (TH ? <TesiFull d={d} T={TH} /> : <TesiMetodo d={d} />)}
+      {FULL && tab === 'tesi' && <TesiFull d={d} T={TH} />}
     </>
   );
 }
@@ -66,7 +66,7 @@ function Indicatori({ d }) {
         <Kpi label="Inseriti a mano" value={R.kpis.filter(k => k.source === 'manuale').length} foot="con data e vista nel registro" onClick={() => setSrc('manuale')} />
         <Kpi label="Senza valore" value={R.kpis.filter(k => k.value == null).length} foot="da acquisire o da costruire" onClick={() => setSrc('vuoto')} />
       </div>
-      <Panel title="Registro degli indicatori" sub="Classe A calcolabile · B da acquisire o consolidare · C nuova rilevazione (Appendice A della tesi) · i valori «dai dati» non si modificano a mano" flush id="esg-kpi"
+      <Panel title="Registro degli indicatori" sub={`Classe A calcolabile · B da acquisire o consolidare · C nuova rilevazione${FULL ? ' (Appendice A della tesi)' : ''} · i valori «dai dati» non si modificano a mano`} flush id="esg-kpi"
         actions={<>
           <Seg options={[{ id: '', label: 'Tutti' }, ...Object.entries(PILLARS).map(([k, l]) => ({ id: k, label: l }))]} value={pil} onChange={setPil} label="Pilastro" />
           <Seg options={[{ id: '', label: 'Ogni fonte' }, { id: 'auto', label: 'Dai dati' }, { id: 'questionario', label: 'Questionario' }, { id: 'manuale', label: 'Inseriti' }, { id: 'vuoto', label: 'Vuoti' }]} value={src} onChange={setSrc} label="Fonte" />
@@ -151,7 +151,7 @@ function Energia({ d }) {
           <Columns cols={months.map(m => ({ label: monthLabel(m.month), parts: [{ key: 'g', value: M(m.kwhGrid) }, { key: 's', value: M(Math.max(0, m.kwhPV - m.kwhExport)) }] }))} keys={[{ key: 'g', label: 'Rete', color: 'var(--s1)' }, { key: 's', label: 'Fotovoltaico autoconsumato', color: 'var(--s4)' }]} unit="MWh" height={230} ariaLabel="Elettricità mensile" />
           <Legend items={[{ label: 'Rete', color: 'var(--s1)' }, { label: 'Fotovoltaico autoconsumato', color: 'var(--s4)' }]} />
         </Panel>
-        <Panel title="Il modello della tesi" sub="I(s) = [E·(1−s)·FE + m·f] / Q: intensità in funzione della copertura fotovoltaica s" id="esg-model">
+        <Panel title={FULL ? 'Il modello della tesi' : 'Modello dell’intensità per tonnellata'} sub="I(s) = [E·(1−s)·FE + m·f] / Q: intensità in funzione della copertura fotovoltaica s" id="esg-model">
           <LineChart labels={ss.map(s => nf(s * 100) + '%')} height={200} unit="kg/t" decimals={2} markLast={false}
             series={[{ key: 'i', label: 'Intensità', color: 'var(--s3)', values: ss.map(s => intensityAt(s, model)) }]}
             refs={[{ y: intensityAt(s0, model), label: `oggi ${nf(s0 * 100)}%`, kind: 'muted' }]} ariaLabel="Intensità in funzione della copertura fotovoltaica" />
@@ -289,7 +289,7 @@ Rapporto redatto secondo lo standard volontario VSME (EFRAG), modulo Basic, su b
 Bozza generata automaticamente: verificare ogni valore e completare le parti narrative prima della pubblicazione.`;
   return (
     <div className="split">
-      <Panel title="Copertura del modulo Basic del VSME" sub="Un requisito è coperto se almeno un indicatore collegato è di classe A o B (regola della tesi, §2.8)" flush id="esg-vsme">
+      <Panel title="Copertura del modulo Basic del VSME" sub={`Un requisito è coperto se almeno un indicatore collegato è di classe A o B${FULL ? ' (regola della tesi, §2.8)' : ''}`} flush id="esg-vsme">
         <Table rows={cov} rowKey={r => r.id} pageSize={20} cols={[
           { key: 'id', label: 'Req.', render: r => <span className="code">{r.id}</span> },
           { key: 'name', label: 'Requisito', render: r => <><b>{r.name}</b><span className="sub">{r.text}</span></> },
@@ -306,28 +306,6 @@ Bozza generata automaticamente: verificare ogni valore e completare le parti nar
 }
 
 /* ---------------- dalla tesi all'azienda ---------------- */
-function TesiMetodo({ d }) {
-  const R = kpis(d, period12(d));
-  const byCls = c => ESG_REGISTRY.filter(k => k.cls === c).length;
-  const auto = R.kpis.filter(k => k.source === 'auto');
-  return (
-    <>
-      <div className="note maize">Questa versione dimostrativa non contiene i dati dell’impresa studiata nella tesi: mostra il metodo applicato al mangimificio di fantasia.</div>
-      <div className="grid g3 start">
-        {['A', 'B', 'C'].map(c => <Panel key={c} title={<span className="row gap-s"><Cls c={c} />{CLASSES[c].label}</span>} sub={CLASSES[c].text}><div className="hero-fig">{byCls(c)}</div><p className="small muted">indicatori del registro · {R.kpis.filter(k => k.cls === c && k.source === 'auto').length} calcolati da FeedOS</p></Panel>)}
-      </div>
-      <Panel title="Dal registro ai dati di ogni giorno" sub="Come la tesi diventa uno strumento di lavoro">
-        <ul className="steplist">
-          <li><span><b>Un registro unico di 49 indicatori</b> in quattro pilastri, ognuno con formula, unità, fonte, frequenza e classe informativa: niente numeri senza definizione.</span></li>
-          <li><span><b>{auto.length} indicatori si calcolano da soli</b> dalle registrazioni di produzione, dalle letture di energia, dai lotti, dai reclami e dalle consegne: {auto.map(k => k.code).join(', ')}.</span></li>
-          <li><span><b>Gli altri si inseriscono una volta</b> e restano nel registro delle modifiche, con data e vista: la provenienza di ogni valore è sempre visibile.</span></li>
-          <li><span><b>Energia e CO₂ usano il modello della tesi</b> (Scope 1 dal GPL con CH₄ e N₂O, Scope 2 location-based, intensità per tonnellata in funzione della copertura fotovoltaica).</span></li>
-          <li><span><b>Il VSME Basic si compone dai dati</b>: copertura dei requisiti e bozza di report con i valori aggiornati.</span></li>
-        </ul>
-      </Panel>
-    </>
-  );
-}
 
 function TesiFull({ d, T }) {
   const model = { E: T.electricity, Q: T.production, m: T.gpl, FE: T.feGrid, f: T.feGpl };

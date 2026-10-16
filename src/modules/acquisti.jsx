@@ -11,7 +11,7 @@ import { receivePurchaseOps } from '../engine/operations.js';
 import { forecast, backtest } from '../engine/forecast.js';
 import { PageHead, Panel, Btn, Table, Chip, Kpi, Field, Select, NumInput, Empty, SearchBox, filterRows, confirm, Seg, Kv } from '../ui/ui.jsx';
 import { LineChart, Legend } from '../ui/charts.jsx';
-import { SignalList } from './shared.jsx';
+import { SignalList, SectionPlaceholder } from './shared.jsx';
 import { NAV } from '../app/nav.js';
 
 const STATUS = { rottura: { kind: 'crit', label: 'Rottura' }, sotto: { kind: 'warn', label: 'Sotto sicurezza' }, ok: { kind: 'good', label: 'Coperto' } };
@@ -26,6 +26,8 @@ export function Acquisti({ route }) {
       {tab === 'fabbisogni' && <Fabbisogni d={d} sel={route.id} />}
       {tab === 'scorte' && <Scorte d={d} sel={route.id} />}
       {tab === 'ordini' && <Ordini d={d} sel={route.id} />}
+      {tab === 'fornitori' && <SectionPlaceholder title="Fornitori">Fornitori qualificati per materia prima con punteggio di puntualità, qualità, prezzo e documenti, certificati e condizioni.</SectionPlaceholder>}
+      {tab === 'varianze' && <SectionPlaceholder title="Varianze">Varianza di prezzo d’acquisto e di materiale rispetto agli standard, premio sul mercato ed effetto dei tempi d’acquisto.</SectionPlaceholder>}
       {tab === 'mercati' && <Mercati d={d} sel={route.id} />}
     </>
   );

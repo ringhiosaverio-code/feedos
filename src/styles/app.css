@@ -167,6 +167,16 @@ button.kpi:hover { border-color: var(--line-2); }
 .delta { font-weight: 700; font-size: 12px; }
 .delta.up.good, .delta.down.good { color: var(--good-ink); }
 .delta.up.bad, .delta.down.bad { color: var(--crit-ink); }
+/* stato rispetto all'obiettivo e confronto col periodo */
+.kpi .lbl { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.kpi .kdot { width: 8px; height: 8px; border-radius: 50%; flex: none; background: var(--muted); }
+.kpi-ok .kdot { background: var(--good); }
+.kpi-warn .kdot { background: var(--warn); }
+.kpi-bad .kdot { background: var(--crit); }
+.kpi.kpi-bad { border-color: color-mix(in srgb, var(--crit) 38%, var(--line)); }
+.kpi.kpi-warn { border-color: color-mix(in srgb, var(--warn) 45%, var(--line)); }
+.kpi .cmp-l, .kpi .tgt { color: var(--muted); }
+.kpi .foot .chip { height: 18px; padding: 0 6px; font-size: 10.5px; }
 .hero-fig { font-size: 52px; font-weight: 700; letter-spacing: -.02em; line-height: 1; }
 
 /* ---------- pulsanti e controlli ---------- */
@@ -697,3 +707,53 @@ td .linkish.xs { display: block; text-align: right; }
   .esg-hero, .tile { box-shadow: none; }
 }
 @media (prefers-reduced-motion: reduce) { .tile:hover, button.kpi:hover { transform: none; } }
+
+/* ---------- barra del periodo ---------- */
+.pbar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; min-width: 0; }
+.pbar .p-seg { display: inline-flex; min-width: 0; max-width: 100%; }
+.pbar .p-seg .seg { overflow-x: auto; max-width: 100%; scrollbar-width: none; }
+.pbar .p-seg .seg::-webkit-scrollbar { display: none; }
+.pbar .seg button { white-space: nowrap; padding: 5px 9px; }
+.pbar .select.slim, .select.slim { height: 30px; padding: 0 8px; border-radius: 7px; width: auto; font-size: 12.5px; }
+.pbar .p-sel { display: none; max-width: 190px; }
+.pbar .p-dates { display: inline-flex; align-items: center; gap: 4px; }
+.pbar .p-dates .input { width: 140px; height: 30px; }
+.pbar .p-cmp { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); white-space: nowrap; }
+.pbar .plabel { font-size: 12.5px; color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 260px; }
+.pbar .plabel.cmp { color: var(--muted); }
+@media (max-width: 1180px) {
+  .pbar .p-seg { display: none; }
+  .pbar .p-sel { display: inline-block; }
+}
+@media (max-width: 720px) {
+  .pbar { width: 100%; gap: 6px; }
+  .pbar .plabel { max-width: 100%; }
+  .pbar .p-cmp > span { display: none; }
+  .pbar .p-dates { width: 100%; }
+  .pbar .p-dates .input { flex: 1; width: auto; min-width: 0; }
+}
+
+/* ---------- guscio 17: salto al contenuto, avvisi d'archivio, barra del periodo e dell'agente ---------- */
+.skip { position: fixed; left: 12px; top: -60px; z-index: 120; padding: 9px 14px; border-radius: 8px; background: var(--ink); color: var(--bg); font-weight: 700; text-decoration: none; transition: top .15s var(--ease); }
+.skip:focus { top: 10px; outline: 2px solid var(--maize); outline-offset: 2px; }
+.content:focus { outline: none; }
+.subbar { display: flex; align-items: center; gap: 10px 18px; flex-wrap: wrap; padding: 8px 20px; border-bottom: 1px solid var(--line); background: var(--surface); min-width: 0; }
+.subbar .pbar { flex: 1 1 auto; }
+.agent-pick { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--muted); white-space: nowrap; }
+.agent-pick svg { width: 15px; height: 15px; }
+.agent-pick .select { max-width: 200px; }
+.banners { display: grid; gap: 6px; padding: 10px 20px 0; }
+.banner { display: flex; align-items: flex-start; gap: 10px; padding: 9px 12px; border-radius: 9px; border: 1px solid var(--line); font-size: 13px; line-height: 1.4; }
+.banner > svg { width: 17px; height: 17px; flex: none; margin-top: 1px; }
+.banner > span { flex: 1; min-width: 0; }
+.banner .btn { margin: -4px -6px -4px 0; }
+.banner.crit { background: var(--crit-soft); border-color: color-mix(in srgb, var(--crit) 35%, transparent); color: var(--crit-ink); }
+.banner.warn { background: var(--warn-soft); border-color: color-mix(in srgb, var(--warn) 45%, transparent); color: var(--warn-ink); }
+.note.warn { background: var(--warn-soft); border-color: color-mix(in srgb, var(--warn) 45%, transparent); color: var(--warn-ink); }
+.side-state { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-width: 0; }
+@media (max-width: 720px) {
+  .subbar { padding: 8px 12px; gap: 8px; }
+  .banners { padding: 8px 12px 0; }
+  .agent-pick .select { max-width: 160px; }
+}
+@media print { .skip, .subbar, .banners { display: none !important; } }

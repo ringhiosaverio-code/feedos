@@ -8,6 +8,8 @@ import { formulaCO2, formulaCost } from '../engine/formulation.js';
 import { balance, DEFAULTS } from '../engine/energy.js';
 import { PageHead, Panel, Seg, Kpi, Btn } from '../ui/ui.jsx';
 
+const FULL = __FULL__; // versione completa (con i riferimenti alla tesi) o pubblica
+
 function useTwin(d, period) {
   const I = idx(d); const C = costs(d);
   return useMemo(() => {
@@ -81,7 +83,7 @@ export function Gemello() {
         <Kpi label="Costo pieno medio" value={nf(T.cost.total, 1)} unit="€/t" foot={T.price ? `prezzo medio ${nf(T.price, 1)} €/t` : ''} onClick={() => go('economia', 'margini')} />
         <Kpi label="CO₂ dei vettori energetici" value={nf(T.b.co2PerT, 2)} unit="kg/t" foot={`FV ${nf((T.b.coverage || 0) * 100, 1)}% dell’elettricità`} onClick={() => go('esg', 'energia')} />
       </div>
-      <p className="small muted">Costi calcolati con la ricetta in vigore e i prezzi di oggi; energia dalle letture mensili dei contatori; CO₂ dei vettori energetici con il metodo della tesi (elettricità location-based e GPL). Periodo: {dateIt(T.from)} – {dateIt(T.to)}.</p>
+      <p className="small muted">Costi calcolati con la ricetta in vigore e i prezzi di oggi; energia dalle letture mensili dei contatori; CO₂ dei vettori energetici con il metodo {FULL ? 'della tesi' : 'documentato in ESG'} (elettricità location-based e GPL). Periodo: {dateIt(T.from)} – {dateIt(T.to)}.</p>
     </>
   );
 }

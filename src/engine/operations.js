@@ -74,7 +74,8 @@ export function registerRunOps(d, r) {
   const runId = uid('r');
   const lot = { id: 'lt-' + runId, code: lotCode(line, r.date, n), runId, productId: product.id, date: r.date, tonnes: round(tonnes, 2), comp, status: 'in attesa', analyses: [] };
   const run = { id: runId, date: r.date, lineId: line.id, productId: product.id, formulaId: formula.id, formulaVersion: formula.version, tonnes: round(tonnes, 2),
-    hours: +r.hours || null, kwh: +r.kwh || null, gplKg: +r.gplKg || 0, waste: +r.waste || 0, lotId: lot.id, shift: r.shift || '', note: r.note || '' };
+    hours: +r.hours || null, kwh: +r.kwh || null, gplKg: +r.gplKg || 0, waste: +r.waste || 0, lotId: lot.id, shift: r.shift || '', note: r.note || '',
+    estimated: r.estimated && typeof r.estimated === 'object' ? { ...r.estimated } : null }; // valori stimati (ore, kWh, GPL) non misurati
   const ops = [{ kind: 'add', coll: 'runs', obj: run }, { kind: 'add', coll: 'lots', obj: lot }];
   const byIng = {};
   for (const [id, t] of Object.entries(lotTake)) {

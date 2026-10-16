@@ -77,3 +77,12 @@ export function backtest(y, h = 1, m = 12, minTrain = 8) {
     points: errs,
   };
 }
+
+/**
+ * Scelta automatica del modello (contratto della fondazione; il pacchetto WP3 aggiunge naive, MA4, SES, Holt smorzato e
+ * Holt-Winters con selezione a origine mobile). Per ora: Holt senza stagionalità, senza misure d'errore.
+ * → {model, points: [{k, value, lo, hi}], mape, holdoutMape, benchmarkMape, candidates}
+ */
+export function forecastAuto(y, h, opts = {}) {
+  return { model: 'holt', points: [], ...(forecast(y, h, 1) || {}), mape: null, holdoutMape: null, benchmarkMape: null, candidates: [] };
+}

@@ -10,12 +10,16 @@ export function download(filename, content, mime = 'text/plain;charset=utf-8') {
   setTimeout(() => URL.revokeObjectURL(url), 1500);
 }
 
+// celle che un foglio di calcolo interpreterebbe come formula (= + - @, tabulazione, a capo iniziale)
+const RISKY = /^[=+\-@\t\r]/, NUMERIC = /^[+-]?\d+(?:[.,]\d+)*$/;
 const q = v => {
   if (v == null) return '';
-  const s = typeof v === 'number' ? String(v).replace('.', ',') : String(v);
+  let s = typeof v === 'number' ? String(v).replace('.', ',') : String(v);
+  if (typeof v !== 'number' && RISKY.test(s) && !NUMERIC.test(s)) s = "'" + s;
   return /[;"\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
 };
-/** CSV con separatore «;» e BOM, leggibile da Excel in italiano. cols: [{key|value(row), label}] */
+/** CSV con separatore «;» e BOM, leggibile da Excel in italiano. cols: [{key|value(row), label}]
+ *  Le celle di testo che iniziano con = + - @ ricevono un apice davanti (niente formule eseguite all'apertura). */
 export function toCSV(rows, cols) {
   const head = cols.map(c => q(c.label)).join(';');
   const body = rows.map(r => cols.map(c => q(c.value ? c.value(r) : r[c.key])).join(';'));

@@ -8,13 +8,17 @@ import { idx, appToday } from '../core/derived.js';
 import { ROLES, ROLE } from '../core/roles.js';
 import { nf, sf, dateIt, round, norm } from '../core/util.js';
 import { download, toCSV, parseCSV, num, readFile, stamp } from '../core/io.js';
-import { listSnapshots, getSnapshot, deleteSnapshot, saveSnapshot, quota, storageMode } from '../core/persist.js';
+import { listSnapshots, getSnapshot, deleteSnapshot, saveSnapshot, quota, storageMode, markBackup } from '../core/persist.js';
+import { usePrefs, setPrefs } from '../core/prefs.js';
 import { demoData, starterData } from '../data/demo/index.js';
 import { migrateF15, detectF15 } from '../core/migrate.js';
 import { GRID_FACTORS } from '../engine/energy.js';
 import { PageHead, Panel, Btn, Table, Chip, Kpi, Field, Select, NumInput, Empty, SearchBox, filterRows, confirm, Seg, Kv } from '../ui/ui.jsx';
 import { NAV } from '../app/nav.js';
 import { VERSION } from '../app/version.js';
+import { SectionPlaceholder } from './shared.jsx';
+
+const FULL = __FULL__; // versione completa (con i riferimenti alla tesi) o pubblica
 
 export function Dati({ route }) {
   const d = useData();
@@ -25,6 +29,8 @@ export function Dati({ route }) {
         tabs={NAV.dati.tabs} tab={tab} onTab={t => go('dati', t)} />
       {tab === 'archivio' && <Archivio d={d} hi={route.id} />}
       {tab === 'importa' && <Importa d={d} />}
+      {tab === 'anagrafiche' && <SectionPlaceholder title="Anagrafiche">Clienti, agenti, prodotti, linee, materie prime, fornitori e centri di costo: inserimento, modifica e controllo dei riferimenti.</SectionPlaceholder>}
+      {tab === 'qualita' && <SectionPlaceholder title="Qualità dei dati">Punteggio della qualità dei dati, regole di controllo con i record da correggere e il loro andamento.</SectionPlaceholder>}
       {tab === 'registro' && <Registro d={d} />}
       {tab === 'impostazioni' && <Impostazioni d={d} />}
     </>
@@ -39,7 +45,7 @@ function Archivio({ d, hi }) {
   const refresh = () => listSnapshots().then(setSnaps);
   useEffect(() => { refresh(); quota().then(setQ); }, [d]);
   const counts = [['Materie prime', d.ingredients], ['Formule', d.formulas], ['Prodotti', d.products], ['Clienti', d.customers], ['Lotti di prodotto', d.lots], ['Lotti di materie prime', d.ingLots], ['Registrazioni di produzione', d.runs], ['Consegne', d.shipments], ['Reclami', d.complaints], ['Offerte', d.offers]];
-  const backup = () => { download(`feedos16-backup-${stamp()}.json`, JSON.stringify({ format: 'feedos16', version: VERSION, exportedAt: new Date().toISOString(), data: getState().data }), 'application/json'); toast('Backup esportato: conservalo fuori dal browser'); };
+  const backup = () => { download(`feedos16-backup-${stamp()}.json`, JSON.stringify({ format: 'feedos16', version: VERSION, exportedAt: new Date().toISOString(), data: getState().data }), 'application/json'); markBackup(); toast('Backup esportato: conservalo fuori dal browser'); };
   const restore = async e => {
     const f = e.target.files?.[0]; e.target.value = '';
     if (!f) return;
@@ -49,15 +55,15 @@ function Archivio({ d, hi }) {
       if (/"(?:__proto__|constructor|prototype)"\s*:/.test(raw)) throw new Error('Il file contiene chiavi non ammesse.');
       const j = JSON.parse(raw);
       if (detectF15(j)) { toast('È un file di FeedOS 15: usa «Importa › Da FeedOS 15»', 'err'); go('dati', 'importa'); return; }
-      const data = j.format === 'feedos16' ? j.data : j.settings?.schema === 16 ? j : null;
+      const data = j.format === 'feedos16' ? j.data : j.settings?.schema != null || Array.isArray(j.formulas) ? j : null;
       if (!data || !Array.isArray(data.formulas)) throw new Error('Formato non riconosciuto: serve un backup di FeedOS 16.');
-      confirm('Ripristinare il backup?', <p>L’archivio attuale verrà sostituito dal backup del {j.exportedAt ? dateIt(j.exportedAt.slice(0, 10)) : 'file scelto'}. Prima viene salvata un’istantanea dei dati attuali.</p>, async () => { await store.load(data, 'Ripristino da backup'); toast('Backup ripristinato'); refresh(); }, { ok: 'Ripristina' });
+      confirm('Ripristinare il backup?', <p>L’archivio attuale verrà sostituito dal backup del {j.exportedAt ? dateIt(j.exportedAt.slice(0, 10)) : 'file scelto'}. Prima viene salvata un’istantanea dei dati attuali.</p>, async () => { if (await store.load(data, 'Ripristino da backup')) toast('Backup ripristinato'); refresh(); }, { ok: 'Ripristina' });
     } catch (err) { toast('Ripristino non riuscito: ' + err.message, 'err'); }
   };
-  const regenerate = () => confirm('Rigenerare il mangimificio dimostrativo?', <p>Il mangimificio di fantasia viene ricreato con la data di oggi. L’archivio attuale viene prima salvato in un’istantanea.</p>, async () => { await store.load(demoData(), 'Demo rigenerata'); toast('Dati dimostrativi rigenerati'); go('oggi'); }, { ok: 'Rigenera' });
-  const fresh = () => confirm('Iniziare con i tuoi dati?', <><p>L’archivio riparte vuoto, con le materie prime e le specifiche di esempio da verificare e completare. Nessun cliente, lotto o movimento.</p><p className="small muted">Prima viene salvata un’istantanea dei dati attuali: si possono sempre ripristinare.</p></>, async () => { await store.load(starterData(d.settings), 'Nuovo archivio aziendale'); toast('Archivio pronto: inizia da Formulazione › Materie prime'); go('formulazione', 'materie'); }, { ok: 'Inizia', danger: true });
+  const regenerate = () => confirm('Rigenerare il mangimificio dimostrativo?', <p>Il mangimificio di fantasia viene ricreato con la data di oggi. L’archivio attuale viene prima salvato in un’istantanea.</p>, async () => { if (await store.load(demoData(), 'Demo rigenerata')) { toast('Dati dimostrativi rigenerati'); go('oggi'); } }, { ok: 'Rigenera' });
+  const fresh = () => confirm('Iniziare con i tuoi dati?', <><p>L’archivio riparte vuoto, con le materie prime e le specifiche di esempio da verificare e completare. Nessun cliente, lotto o movimento.</p><p className="small muted">Prima viene salvata un’istantanea dei dati attuali: si possono sempre ripristinare.</p></>, async () => { if (await store.load(starterData(), 'Nuovo archivio aziendale')) { toast('Archivio pronto: inizia da Formulazione › Materie prime'); go('formulazione', 'materie'); } }, { ok: 'Inizia', danger: true });
   const snapshot = async () => { const ok = await saveSnapshot(getState().data, 'Istantanea manuale', false); toast(ok ? 'Istantanea salvata' : 'Istantanea non riuscita', ok ? 'ok' : 'err'); refresh(); };
-  const restoreSnap = s => confirm('Ripristinare questa istantanea?', <p>«{s.label}» del {new Date(s.id).toLocaleString('it-IT')}. L’archivio attuale viene prima salvato.</p>, async () => { const x = await getSnapshot(s.id); if (!x) { toast('Istantanea non trovata', 'err'); return; } await store.load(x.data, 'Ripristino istantanea'); toast('Istantanea ripristinata'); refresh(); }, { ok: 'Ripristina' });
+  const restoreSnap = s => confirm('Ripristinare questa istantanea?', <p>«{s.label}» del {new Date(s.id).toLocaleString('it-IT')}. L’archivio attuale viene prima salvato.</p>, async () => { const x = await getSnapshot(s.id); if (!x) { toast('Istantanea non trovata', 'err'); return; } if (await store.load(x.data, 'Ripristino istantanea')) toast('Istantanea ripristinata'); refresh(); }, { ok: 'Ripristina' });
   return (
     <>
       <div className="kpis">
@@ -147,7 +153,7 @@ function Importa({ d }) {
     try {
       const raw = await readFile(f);
       if (/"(?:__proto__|constructor|prototype)"\s*:/.test(raw)) throw new Error('Il file contiene chiavi non ammesse.');
-      const r = migrateF15(JSON.parse(raw), starterData(d.settings));
+      const r = migrateF15(JSON.parse(raw), starterData());
       setMig({ ...r, fname: f.name });
     } catch (err) { toast(err.message, 'err'); }
   };
@@ -184,7 +190,7 @@ function Importa({ d }) {
             <>
               <div className="note good"><b>{mig.fname}</b> ({mig.kind === 'backup' ? 'backup completo' : 'progetto di formulazione'}): {mig.report.length ? mig.report.map(([k, n]) => `${n} ${k.toLowerCase()}`).join(' · ') : 'nessun dato importabile'}.</div>
               {mig.skipped.length > 0 && <div className="note maize">Non importati: {mig.skipped.join('; ')}.</div>}
-              <div className="row"><Btn kind="primary" icon={LuDatabase} onClick={() => confirm('Creare un archivio con i dati di FeedOS 15?', <p>L’archivio attuale viene salvato in un’istantanea e sostituito. Le formule importate restano in bozza finché non le approvi.</p>, async () => { await store.load(mig.data, 'Importazione da FeedOS 15'); setMig(null); toast('Dati di FeedOS 15 importati'); go('formulazione', 'formule'); }, { ok: 'Importa' })}>Crea l’archivio</Btn><Btn kind="ghost" onClick={() => setMig(null)}>Annulla</Btn></div>
+              <div className="row"><Btn kind="primary" icon={LuDatabase} onClick={() => confirm('Creare un archivio con i dati di FeedOS 15?', <p>L’archivio attuale viene salvato in un’istantanea e sostituito. Le formule importate restano in bozza finché non le approvi.</p>, async () => { if (await store.load(mig.data, 'Importazione da FeedOS 15')) { setMig(null); toast('Dati di FeedOS 15 importati'); go('formulazione', 'formule'); } }, { ok: 'Importa' })}>Crea l’archivio</Btn><Btn kind="ghost" onClick={() => setMig(null)}>Annulla</Btn></div>
             </>
           )}
         </div>
@@ -213,6 +219,7 @@ function Registro({ d }) {
 /* ---------------- impostazioni ---------------- */
 function Impostazioni({ d }) {
   const s = d.settings || {}; const c = s.company || {}; const en = s.energy || {};
+  const P = usePrefs();
   const setC = patch => store.settings(st => ({ ...st, company: { ...st.company, ...patch } }), 'Impostazioni dell’impresa');
   const setE = patch => store.settings(st => ({ ...st, energy: { ...st.energy, ...patch } }), 'Impostazioni dell’energia');
   const Txt = ({ label, k, hint }) => <Field label={label} hint={hint}><input className="input" defaultValue={c[k] || ''} onBlur={e => e.target.value !== (c[k] || '') && setC({ [k]: e.target.value })} /></Field>;
@@ -238,9 +245,9 @@ function Impostazioni({ d }) {
       <div className="stack">
         <Panel title="Aspetto">
           <div className="stack" style={{ gap: 12 }}>
-            <Field label="Tema"><Seg options={[{ id: 'auto', label: 'Automatico' }, { id: 'light', label: 'Chiaro' }, { id: 'dark', label: 'Scuro' }]} value={s.theme || 'auto'} onChange={v => store.settings({ theme: v })} label="Tema" /></Field>
-            <Field label="Dimensione del testo" hint="«Aula» ingrandisce tutto per proiettore e seduta di laurea"><Seg options={[{ id: 'normale', label: 'Normale' }, { id: 'aula', label: 'Aula' }]} value={s.size || 'normale'} onChange={v => store.settings({ size: v })} label="Dimensione" /></Field>
-            <Field label="Vista per ruolo"><Select value={s.role || 'direzione'} onChange={v => store.settings({ role: v }, 'Vista: ' + ROLE[v]?.label)} options={ROLES.map(r => ({ id: r.id, label: r.label }))} /></Field>
+            <Field label="Tema"><Seg options={[{ id: 'auto', label: 'Automatico' }, { id: 'light', label: 'Chiaro' }, { id: 'dark', label: 'Scuro' }]} value={P.theme} onChange={v => setPrefs({ theme: v })} label="Tema" /></Field>
+            <Field label="Dimensione del testo" hint={FULL ? '«Aula» ingrandisce tutto per proiettore e seduta di laurea' : '«Grande» ingrandisce tutto per la proiezione'}><Seg options={[{ id: 'normale', label: 'Normale' }, { id: 'aula', label: FULL ? 'Aula' : 'Grande' }]} value={P.size} onChange={v => setPrefs({ size: v })} label="Dimensione" /></Field>
+            <Field label="Vista per ruolo"><Select value={P.role} onChange={v => { setPrefs({ role: v }); toast('Vista: ' + ROLE[v]?.label); }} options={ROLES.map(r => ({ id: r.id, label: r.label }))} /></Field>
           </div>
         </Panel>
         <Panel title="Come funziona FeedOS 16">
@@ -248,7 +255,7 @@ function Impostazioni({ d }) {
             <li><span><b>Locale e privato:</b> un solo file HTML, funziona anche senza rete; i dati restano in questo browser (IndexedDB) finché non esporti un backup.</span></li>
             <li><span><b>Le viste non sono permessi:</b> cambiano ordine del menu e priorità di «Oggi»; chiunque usi questo browser vede tutti i dati.</span></li>
             <li><span><b>Ogni modifica è annullabile</b> (Ctrl Z) e resta nel registro; le sostituzioni dell’archivio salvano prima un’istantanea.</span></li>
-            <li><span><b>Calcoli trasparenti:</b> programmazione lineare con prezzi ombra per le formule, tolleranze di legge, metodo della tesi per energia e CO₂; nessuna scatola nera.</span></li>
+            <li><span><b>Calcoli trasparenti:</b> programmazione lineare con prezzi ombra per le formule, tolleranze di legge, {FULL ? 'metodo della tesi' : 'metodo documentato'} per energia e CO₂; nessuna scatola nera.</span></li>
           </ul>
           <p className="xs muted" style={{ marginTop: 10 }}>FeedOS {VERSION} · archivio schema {s.schema} · salvataggio {storageMode()}</p>
         </Panel>

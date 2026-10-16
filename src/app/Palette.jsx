@@ -1,40 +1,59 @@
-/* FeedOS 16 · barra comandi (Ctrl K): pagine, azioni e voci dell'archivio con ricerca tollerante. */
+/* FeedOS 17 · barra comandi (Ctrl K): pagine, azioni e voci dell'archivio con ricerca tollerante.
+ * La vista Agente non elenca pagine e azioni delle aree che non prevede (direzione, finanza, economia). */
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { LuSearch, LuArrowRight, LuFlaskConical, LuUsers, LuBoxes, LuWheat, LuTag, LuFileText, LuZap, LuSparkles, LuShieldCheck, LuHandshake, LuMessageSquare, LuDroplets, LuRecycle, LuClipboardList, LuLeaf } from 'react-icons/lu';
-import { useUi, uiStore, useData, store, toast, openDrawer } from '../core/store.js';
+import { LuSearch, LuArrowRight, LuFlaskConical, LuUsers, LuBoxes, LuWheat, LuTag, LuFileText, LuZap, LuSparkles, LuShieldCheck, LuHandshake, LuMessageSquare, LuDroplets, LuRecycle, LuClipboardList, LuLeaf, LuLandmark, LuWallet, LuGauge, LuCirclePause, LuCoins, LuDatabaseZap, LuUpload, LuPrinter, LuUserRound, LuTruck, LuWrench } from 'react-icons/lu';
+import { useUi, uiStore, useData, toast, openDrawer } from '../core/store.js';
 import { go } from '../core/router.js';
-import { ROLES } from '../core/roles.js';
+import { ROLES, AGENT_HIDDEN } from '../core/roles.js';
+import { setPrefs, usePrefs } from '../core/prefs.js';
 import { norm, nf } from '../core/util.js';
 import { NAV } from './nav.js';
 import { kpis, esgOverview } from '../core/derived.js';
 
-function buildIndex(d) {
+const FULL = __FULL__; // versione completa (con i riferimenti alla tesi) o pubblica
+
+function buildIndex(d, role) {
   const items = [];
+  const hidden = role === 'agente' ? AGENT_HIDDEN : [];
   for (const [area, N] of Object.entries(NAV)) {
+    if (hidden.includes(area)) continue;
     items.push({ kind: 'Pagina', icon: N.icon, label: N.label, run: () => go(area) });
     for (const t of N.tabs) items.push({ kind: 'Pagina', icon: N.icon, label: `${N.label} › ${t.label}`, run: () => go(area, t.id) });
   }
-  const A = (label, run, icon = LuZap, extra = '') => items.push({ kind: 'Azione', icon, label, run, extra });
+  const A = (label, run, icon = LuZap, extra = '', area = null) => { if (!hidden.includes(area)) items.push({ kind: 'Azione', icon, label, run, extra }); };
   A('Nuova formula', () => go('formulazione', 'formule', 'nuova'), LuFlaskConical);
   A('Ottimizza una formula ai prezzi di oggi', () => go('formulazione', 'formule'), LuFlaskConical);
   A('Nuova offerta con margine in tempo reale', () => go('commerciale', 'offerte', 'nuova'), LuHandshake);
   A('Registra una produzione', () => go('produzione', 'registro', 'nuova'));
   A('Simula un richiamo di prodotto', () => go('qualita', 'richiamo'), LuShieldCheck);
-  A('Apri il simulatore «E se…»', () => go('economia', 'scenari'), LuSparkles);
+  A('Apri il simulatore «E se…»', () => go('economia', 'scenari'), LuSparkles, '', 'economia');
   A('Registra un reclamo', () => go('qualita', 'reclami', 'nuovo'), LuMessageSquare);
   A('Registra la lettura dell’acqua', () => go('esg', 'acqua', 'nuova'), LuDroplets);
   A('Registra un rifiuto (formulario)', () => go('esg', 'rifiuti', 'nuovo'), LuRecycle);
   A('Compila il questionario ESG', () => go('esg', 'questionario'), LuClipboardList);
+  // direzione, finanza e operations
+  A('Conto economico', () => go('direzione', 'conto'), LuLandmark, 'Direzione', 'direzione');
+  A('Budget vs consuntivo', () => go('direzione', 'budget'), LuLandmark, 'Direzione', 'direzione');
+  A('Report CdA del mese', () => go('direzione', 'report'), LuPrinter, 'Direzione', 'direzione');
+  A('Crediti scaduti', () => go('finanza', 'crediti'), LuWallet, 'Finanza', 'finanza');
+  A('Registra un incasso', () => go('finanza', 'crediti', 'incasso'), LuCoins, 'Finanza', 'finanza');
+  A('OEE delle linee', () => go('produzione', 'oee'), LuGauge, 'Produzione');
+  A('Registra un fermo linea', () => go('produzione', 'oee', 'nuovo'), LuCirclePause, 'Produzione');
+  A('Qualità dei dati', () => go('dati', 'qualita'), LuDatabaseZap, 'Dati');
+  A('Importa clienti o consegne', () => go('dati', 'importa'), LuUpload, 'Dati');
   A('Esporta un backup completo', () => go('dati', 'archivio', 'backup'));
   A('Carica il mangimificio dimostrativo', () => go('dati', 'archivio'));
   A('Presentazione guidata', () => uiStore.set({ tour: 0 }), LuSparkles);
-  A('Tema chiaro', () => store.settings({ theme: 'light' })); A('Tema scuro', () => store.settings({ theme: 'dark' })); A('Tema automatico', () => store.settings({ theme: 'auto' }));
-  A('Modalità aula (caratteri grandi)', () => store.settings({ size: d.settings?.size === 'aula' ? 'normale' : 'aula' }));
-  for (const r of ROLES) A(`Vista: ${r.label}`, () => { store.settings({ role: r.id }); toast('Vista: ' + r.label); });
+  A('Tema chiaro', () => setPrefs({ theme: 'light' })); A('Tema scuro', () => setPrefs({ theme: 'dark' })); A('Tema automatico', () => setPrefs({ theme: 'auto' }));
+  A(FULL ? 'Modalità aula (caratteri grandi)' : 'Caratteri grandi (proiezione)', () => setPrefs(p => ({ size: p.size === 'aula' ? 'normale' : 'aula' })));
+  for (const r of ROLES) A(`Vista: ${r.label}`, () => { setPrefs({ role: r.id }); toast('Vista: ' + r.label); });
   for (const f of d.formulas) items.push({ kind: 'Formula', icon: LuFlaskConical, label: f.name, extra: f.code, run: () => go('formulazione', 'formule', f.id) });
   for (const p of d.products) items.push({ kind: 'Prodotto', icon: LuBoxes, label: p.name, extra: p.code, run: () => openDrawer('product', p.id) });
   for (const i of d.ingredients) items.push({ kind: 'Materia prima', icon: LuWheat, label: i.name, extra: i.code, run: () => openDrawer('ingredient', i.id) });
   for (const c of d.customers) items.push({ kind: 'Cliente', icon: LuUsers, label: c.name, extra: `${c.city} (${c.province})`, run: () => openDrawer('customer', c.id) });
+  for (const a of d.agents || []) items.push({ kind: 'Agente', icon: LuUserRound, label: a.name, extra: a.zone || '', run: () => openDrawer('agent', a.id) });
+  for (const s of d.suppliers || []) items.push({ kind: 'Fornitore', icon: LuTruck, label: s.name, extra: s.code || '', run: () => openDrawer('supplier', s.id) });
+  for (const a of d.assets || []) items.push({ kind: 'Componente', icon: LuWrench, label: a.name, extra: a.code || '', run: () => openDrawer('asset', a.id) });
   for (const o of d.offers) items.push({ kind: 'Offerta', icon: LuFileText, label: o.code, extra: d.customers.find(c => c.id === o.customerId)?.name || '', run: () => openDrawer('offer', o.id) });
   for (const c of d.complaints) items.push({ kind: 'Reclamo', icon: LuMessageSquare, label: c.code, extra: c.description, run: () => openDrawer('complaint', c.id) });
   for (const l of d.lots) items.push({ kind: 'Lotto prodotto', icon: LuTag, label: l.code, extra: d.products.find(p => p.id === l.productId)?.name || '', run: () => openDrawer('lot', l.id), weak: true });
@@ -43,19 +62,19 @@ function buildIndex(d) {
 }
 
 /** Domande in linguaggio semplice, riconosciute da parole chiave (nessun servizio esterno). */
-function questions(q, d) {
+function questions(q, d, role) {
   const s = norm(q).trim();
   const out = [];
   const find = (arr, text, f) => { const t = norm(text); return arr.filter(x => norm(f(x)).includes(t)).slice(0, 3); };
   let m;
-  if ((m = s.match(/^(margin[ei]|margine di|guadagno)\s+(.+)/))) for (const p of find(d.products, m[2], p => p.name + ' ' + p.code)) out.push({ kind: 'Risposta', icon: LuSparkles, label: `Margine di ${p.name}`, extra: 'apre Economia › Margini', run: () => go('economia', 'margini', p.id) });
+  if (role !== 'agente' && (m = s.match(/^(margin[ei]|margine di|guadagno)\s+(.+)/))) for (const p of find(d.products, m[2], p => p.name + ' ' + p.code)) out.push({ kind: 'Risposta', icon: LuSparkles, label: `Margine di ${p.name}`, extra: 'apre Economia › Margini', run: () => go('economia', 'margini', p.id) });
   if ((m = s.match(/^(scort[ae]|giacenz[ae]|magazzino)\s+(.+)/))) for (const i of find(d.ingredients, m[2], i => i.name)) out.push({ kind: 'Risposta', icon: LuSparkles, label: `Scorta di ${i.name}: ${nf(i.stock, 1)} t`, extra: 'apre le scorte', run: () => go('acquisti', 'scorte', i.id) });
   if ((m = s.match(/^(costo|prezzo|formula)\s+(.+)/))) for (const f of find(d.formulas, m[2], f => f.name + ' ' + f.code)) out.push({ kind: 'Risposta', icon: LuSparkles, label: `Costo della formula ${f.name}`, extra: 'apre la formula', run: () => go('formulazione', 'formule', f.id) });
   if ((m = s.match(/^(richiam[oa]|dove e finito|dove è finito)\s+(.+)/))) {
     for (const l of d.ingLots.filter(l => norm(l.code).includes(norm(m[2]))).slice(0, 3)) out.push({ kind: 'Risposta', icon: LuShieldCheck, label: `Richiamo del lotto ${l.code}`, extra: 'simula dove è finito', run: () => go('qualita', 'richiamo', l.id) });
     for (const l of d.lots.filter(l => norm(l.code).includes(norm(m[2]))).slice(0, 3)) out.push({ kind: 'Risposta', icon: LuShieldCheck, label: `Richiamo del lotto ${l.code}`, extra: 'simula dove è finito', run: () => go('qualita', 'richiamo', l.id) });
   }
-  if ((m = s.match(/^(e se|se)\s+(.+?)\s*([+-]\s*\d+)\s*%?/))) for (const i of find(d.ingredients, m[2], i => i.name)) out.push({ kind: 'Risposta', icon: LuSparkles, label: `E se ${i.name.toLowerCase()} ${m[3].replace(/\s/g, '')}%?`, extra: 'apre il simulatore con questo scenario', run: () => { uiStore.set({ scenarioSeed: { byIngredient: { [i.id]: +m[3].replace(/\s/g, '') } } }); go('economia', 'scenari'); } });
+  if (role !== 'agente' && (m = s.match(/^(e se|se)\s+(.+?)\s*([+-]\s*\d+)\s*%?/))) for (const i of find(d.ingredients, m[2], i => i.name)) out.push({ kind: 'Risposta', icon: LuSparkles, label: `E se ${i.name.toLowerCase()} ${m[3].replace(/\s/g, '')}%?`, extra: 'apre il simulatore con questo scenario', run: () => { uiStore.set({ scenarioSeed: { byIngredient: { [i.id]: +m[3].replace(/\s/g, '') } } }); go('economia', 'scenari'); } });
   if (/^(acqua|consumo idrico|prelievo idrico)\b/.test(s)) { const W = kpis(d).water; out.push({ kind: 'Risposta', icon: LuDroplets, label: W.nMonths ? `Acqua: ${nf(W.m3)} m³ in 12 mesi · ${nf(W.intensity * 1000, 1)} litri/t` : 'Acqua: nessuna lettura registrata', extra: 'apre ESG › Acqua', run: () => go('esg', 'acqua') }); }
   if (/^(rifiuti|spazzatura|recupero)\b/.test(s)) { const S = kpis(d).waste; out.push({ kind: 'Risposta', icon: LuRecycle, label: S.n ? `Rifiuti: ${nf(S.kg / 1000, 1)} t in 12 mesi · ${nf(S.recovery * 100)}% a recupero` : 'Rifiuti: nessun formulario registrato', extra: 'apre ESG › Rifiuti', run: () => go('esg', 'rifiuti') }); }
   if (/^(esg|sostenibilita|maturita|punteggio esg)\b/.test(s)) { const o = esgOverview(d); out.push({ kind: 'Risposta', icon: LuLeaf, label: `Maturità ESG ${nf(o.score.score)}/100 · ${o.score.level}`, extra: 'apre il cruscotto ESG', run: () => go('esg', 'cruscotto') }); }
@@ -66,14 +85,15 @@ function questions(q, d) {
 export function Palette() {
   const open = useUi(s => s.palette);
   const d = useData();
+  const role = usePrefs(p => p.role);
   const [q, setQ] = useState('');
   const [sel, setSel] = useState(0);
   const ref = useRef(null);
-  const index = useMemo(() => open ? buildIndex(d) : [], [open, d]);
+  const index = useMemo(() => open ? buildIndex(d, role) : [], [open, d, role]);
   useEffect(() => { if (open) { setQ(''); setSel(0); setTimeout(() => ref.current?.focus(), 10); } }, [open]);
   const results = useMemo(() => {
     const s = norm(q).trim();
-    const qs = s ? questions(q, d) : [];
+    const qs = s ? questions(q, d, role) : [];
     if (!s) return index.filter(i => i.kind === 'Pagina' && !i.label.includes('›')).concat(index.filter(i => i.kind === 'Azione').slice(0, 8));
     const parts = s.split(/\s+/);
     const hits = index.filter(i => parts.every(p => i.hay.includes(p)));

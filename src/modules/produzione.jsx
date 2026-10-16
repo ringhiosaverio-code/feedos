@@ -10,7 +10,7 @@ import { download, toCSV, stamp } from '../core/io.js';
 import { registerRunOps } from '../engine/operations.js';
 import { PageHead, Panel, Btn, Table, Chip, Kpi, Field, Select, NumInput, Empty, SearchBox, filterRows, confirm, Seg, Kv } from '../ui/ui.jsx';
 import { LineChart, Columns, Legend, SERIES } from '../ui/charts.jsx';
-import { SignalList } from './shared.jsx';
+import { SignalList, SectionPlaceholder } from './shared.jsx';
 import { NAV } from '../app/nav.js';
 
 const UTIL = 0.9; // quota utile della capacità teorica (cambi prodotto, pulizie, fermi brevi)
@@ -28,7 +28,10 @@ export function Produzione({ route }) {
       {sigs.length > 0 && tab !== 'energia' && <Panel title="Da decidere in produzione" flush><SignalList items={sigs} limit={2} compact /></Panel>}
       {tab === 'piano' && <Piano d={d} />}
       {tab === 'registro' && <Registro d={d} nuova={route.id === 'nuova'} />}
+      {tab === 'oee' && <SectionPlaceholder title="OEE e fermi">Disponibilità, prestazioni e qualità di ogni linea, albero delle perdite in ore e in euro, fermi per causa, turni e cambi prodotto.</SectionPlaceholder>}
       {tab === 'energia' && <Energia d={d} sel={route.id} sigs={sigs} />}
+      {tab === 'manutenzione' && <SectionPlaceholder title="Manutenzione">Componenti delle linee con contatori di tonnellate e ore, scadenze, guasti, costo per tonnellata e rientro della sostituzione.</SectionPlaceholder>}
+      {tab === 'bilancio' && <SectionPlaceholder title="Bilancio di massa">Arrivi, consumi, rettifiche e inventari fisici per materia prima, calo effettivo e valore non spiegato.</SectionPlaceholder>}
     </>
   );
 }

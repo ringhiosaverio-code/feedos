@@ -51,6 +51,40 @@ export function addDays(s, n) { return iso(new Date(parse(s).getTime() + n * DAY
 export function daysBetween(a, b) { return Math.round((parse(b) - parse(a)) / DAY); }
 export function mondayOf(s) { const d = parse(s); const wd = (d.getUTCDay() + 6) % 7; return iso(new Date(d.getTime() - wd * DAY)); }
 export function monthOf(s) { return String(s).slice(0, 7); }
+/** Oggi nel fuso orario locale (iso() resta in UTC per l'aritmetica delle date): 'YYYY-MM-DD'. */
+export function todayLocal(now = new Date()) { const p = n => String(n).padStart(2, '0'); return `${now.getFullYear()}-${p(now.getMonth() + 1)}-${p(now.getDate())}`; }
+const p2 = n => String(n).padStart(2, '0');
+const ymOf = s => String(s instanceof Date ? iso(s) : s).slice(0, 7).split('-').map(Number);
+const lastDay = (y, m) => new Date(Date.UTC(y, m, 0)).getUTCDate(); // m da 1 a 12
+/** Primo giorno del mese: '2026-02-17' → '2026-02-01'. */
+export function monthStart(s) { const [y, m] = ymOf(s); return `${y}-${p2(m)}-01`; }
+/** Ultimo giorno del mese: '2028-02-03' → '2028-02-29'. Accetta anche 'YYYY-MM'. */
+export function endOfMonth(s) { const [y, m] = ymOf(s); return `${y}-${p2(m)}-${p2(lastDay(y, m))}`; }
+/** Somma n mesi (anche negativi). Il giorno resta nel mese: 31/01 + 1 → 28/02 (29 negli anni bisestili).
+ *  Con 'YYYY-MM' restituisce 'YYYY-MM'. */
+export function addMonths(s, n) {
+  const str = String(s instanceof Date ? iso(s) : s).slice(0, 10), [y, m, d] = str.split('-').map(Number);
+  const t = y * 12 + (m - 1) + n, Y = Math.floor(t / 12), M = t - Y * 12 + 1;
+  return str.length <= 7 ? `${Y}-${p2(M)}` : `${Y}-${p2(M)}-${p2(Math.min(d, lastDay(Y, M)))}`;
+}
+/** Trimestre solare: '2026-08-14' → '2026-Q3'. */
+export function quarterOf(s) { const [y, m] = ymOf(s); return `${y}-Q${Math.ceil(m / 3)}`; }
+/** Giorni del mese: daysInMonth('2028-02') → 29 (accetta anche una data). */
+export function daysInMonth(ym) { const [y, m] = ymOf(ym); return lastDay(y, m); }
+/** Mesi 'YYYY-MM' da from a to compresi; accetta anche un periodo {from, to}. */
+export function monthsIn(from, to) {
+  if (from && typeof from === 'object') ({ from, to } = from);
+  if (!from || !to) return [];
+  const out = [], end = String(to).slice(0, 7);
+  for (let m = String(from).slice(0, 7); m <= end; m = addMonths(m, 1)) out.push(m);
+  return out;
+}
+/** Quota dei giorni del mese ym che cade nel periodo P {from, to}: 0…1 (16/31 per un mese tagliato al 16). */
+export function monthFraction(ym, P) {
+  const a = String(ym).slice(0, 7) + '-01', b = endOfMonth(ym);
+  const lo = P.from > a ? P.from : a, hi = P.to < b ? P.to : b;
+  return lo > hi ? 0 : (daysBetween(lo, hi) + 1) / daysInMonth(ym);
+}
 export function dayOfYear(s) { const d = parse(s); return Math.floor((d - Date.UTC(d.getUTCFullYear(), 0, 1)) / DAY) + 1; }
 export function isoWeek(s) {
   const d = parse(s); const t = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));

@@ -1,17 +1,32 @@
-/* FeedOS 16 · Generatore del mangimificio dimostrativo.
+/* FeedOS 17 · Generatore del mangimificio dimostrativo.
  * Dati SINTETICI, deterministici (stesso seme → stessi dati), coerenti tra loro:
  * le formule sono calcolate dal motore di formulazione, i lotti di prodotto contengono lotti di materia prima
- * assegnati in ordine di arrivo (FIFO), le spedizioni esauriscono i lotti, l'energia deriva dalla produzione. */
+ * assegnati in ordine di arrivo (FIFO), le spedizioni esauriscono i lotti, l'energia deriva dalla produzione,
+ * le giacenze tagliate a mano sono registrate come rettifiche inventariali (bilancio di massa chiuso).
+ * I dati dei pacchetti (costi fissi, fatture, budget…) li aggiungono gli estensori di extend.js. */
 import { INGREDIENTS, SPECS } from './catalog.js';
 import { AGENTS, TOWNS, FARM_NAMES, RETAIL_NAMES } from './people.js';
 import { optimize } from '../../engine/formulation.js';
 import { profile, SPECIES, AFB1_LIMITS } from '../../engine/nutrients.js';
 import { PV_PROFILE } from '../../engine/energy.js';
-import { productCost } from '../../engine/costing.js';
 import { demoSustainability } from './sustainability.js';
 import { rng, iso, addDays, mondayOf, monthOf, parse, round, byId, sum, dayOfYear } from '../../core/util.js';
+import { COLLECTIONS, DEFAULT_SETTINGS } from '../../core/schema.js';
 
-export const DEMO_VERSION = 2;
+export const DEMO_VERSION = 3;
+// versione completa (con i riferimenti alla tesi) o pubblica; nei test in node __FULL__ non esiste
+const FULL = typeof __FULL__ !== 'undefined' && !!__FULL__;
+
+/* Costo pieno di oggi con la formula della versione 16, congelato qui: le modifiche del costing dei pacchetti
+ * (calo, quota fissa, prodotti senza formula) non devono spostare i prezzi del demo. */
+function legacyProductCost(product, formula, ingById, line, energy) {
+  let raw = 0;
+  for (const l of formula?.lines || []) { const i = ingById[l.ing]; if (i) raw += (+i.price || 0) * (+l.kg) / 1000; }
+  const shrink = raw * (+product.shrinkPct || 0) / 100;
+  const en = (+line?.kwhPerT || 0) * (+energy?.kwhPrice || 0) + (+line?.gplKgPerT || 0) * (+energy?.gplPrice || 0);
+  const total = raw + shrink + en + (+product.processCost || 0) + (+product.packCost || 0) + (+product.logisticsCost || 0);
+  return { raw, shrink, energy: en, total };
+}
 
 const PRODUCTS = [
   // code, name, spec, form, packaging, line, share, processCost, packCost, logistics, minMargin, targetMargin
@@ -102,7 +117,7 @@ export function generateDemo({ today = iso(new Date()), seed = 16 } = {}) {
       listPrice: 0, active: true, species: spec.species,
     });
   }
-  // listino: costo pieno ai prezzi di 8 settimane fa + margine obiettivo, arrotondato a 5 €/t
+  // listino: costo pieno ai prezzi della settimana corrente + margine obiettivo, arrotondato a 5 €/t
   const energySet = { kwhPrice: 0.19, gplPrice: 0.98 };
   for (const p of products) {
     const f = formulas.find(x => x.id === p.formulaId);
@@ -362,11 +377,18 @@ export function generateDemo({ today = iso(new Date()), seed = 16 } = {}) {
   // ---------- scorte correnti, ordini aperti ----------
   for (const i of ingredients) i.stock = round(queue[i.id].reduce((s, l) => s + l.remaining, 0), 1);
   // alcune materie prime lasciate volutamente basse per mostrare il calcolo dei fabbisogni
+  // il taglio è registrato come rettifica inventariale per lotto: il bilancio di massa dei lotti resta chiuso
   const low = { soia48: 0.35, lisina: 0.3, orzo: 0.5 };
   const prodById2 = byId(products);
+  const adjustments = [];
   for (const [id, f] of Object.entries(low)) {
     const q = queue[id];
-    for (const l of q) l.remaining = round(l.remaining * f, 2);
+    for (const l of q) {
+      const before = l.remaining;
+      l.remaining = round(l.remaining * f, 2);
+      const cut = round(before - l.remaining, 4);
+      if (cut > 0) adjustments.push({ id: 'adj-' + (adjustments.length + 1), date: today, ingId: id, ingLotId: l.id, tonnes: -cut, reason: 'inventario', note: 'Rettifica inventariale (dato dimostrativo)' });
+    }
     ingById[id].stock = round(q.reduce((s, l) => s + l.remaining, 0), 1);
   }
   const purchases = [];
@@ -475,7 +497,7 @@ export function generateDemo({ today = iso(new Date()), seed = 16 } = {}) {
     for (const o of [...offers].sort((a, b) => (a.date < b.date ? 1 : -1))) {
       if (o.status !== 'bozza' && o.status !== 'inviata') continue;
       const p = products.find(x => x.id === o.productId), f = formulas.find(x => x.id === p.formulaId);
-      const c = productCost(p, f, ingById, lineById[p.lineId], energySet);
+      const c = legacyProductCost(p, f, ingById, lineById[p.lineId], energySet);
       const minP = c.total / (1 - p.minMarginPct / 100);
       if (o.price < minP && ++below > 2) o.price = Math.ceil(minP * 1.015 / 5) * 5;
     }
@@ -483,7 +505,7 @@ export function generateDemo({ today = iso(new Date()), seed = 16 } = {}) {
 
   // ---------- attività e decisioni già registrate ----------
   const tasks = [
-    { id: 't-1', createdAt: addDays(today, -20), title: 'Installare un contatore dedicato dell’autoconsumo fotovoltaico', area: 'esg', owner: 'Manutenzione', due: addDays(today, 25), status: 'in corso', priority: 'alta', source: 'manuale', detail: 'Senza la misura dell’autoconsumo la CO₂ per tonnellata resta un intervallo (lezione della tesi).' },
+    { id: 't-1', createdAt: addDays(today, -20), title: 'Installare un contatore dedicato dell’autoconsumo fotovoltaico', area: 'esg', owner: 'Manutenzione', due: addDays(today, 25), status: 'in corso', priority: 'alta', source: 'manuale', detail: 'Senza la misura dell’autoconsumo la CO₂ per tonnellata resta un intervallo' + (FULL ? ' (lezione della tesi).' : '.') },
     { id: 't-2', createdAt: addDays(today, -9), title: 'Rinnovare il contratto soia per il primo trimestre', area: 'acquisti', owner: 'Acquisti', due: addDays(today, 12), status: 'aperto', priority: 'media', source: 'manuale', detail: 'Copertura attuale fino a dicembre.' },
     { id: 't-3', createdAt: addDays(today, -40), title: 'Taratura del condizionatore linea pellet 1', area: 'produzione', owner: 'Produzione', due: addDays(today, -25), status: 'fatto', priority: 'media', source: 'manuale', detail: '', doneAt: addDays(today, -26) },
   ];
@@ -495,21 +517,26 @@ export function generateDemo({ today = iso(new Date()), seed = 16 } = {}) {
   const esgManual = { E16: 4.2, C2: null, C4: 3.8, C5: 2.4, C6: 420000, C7: 36 };
 
   const settings = {
-    schema: 16, dataset: 'demo', demoVersion: DEMO_VERSION, demoAnchor: today,
-    company: { name: 'Mangimificio Dimostrativo S.p.A.', short: 'Mangimificio Demo', site: 'Stabilimento di Valle Verde', approval: 'αIT000000CS', address: 'Zona industriale, Valle Verde (dati di fantasia)' },
+    schema: 17, dataset: 'demo', demoVersion: DEMO_VERSION, demoAnchor: today,
+    company: { name: 'Mangimificio Dimostrativo S.p.A.', short: 'Mangimificio Demo', site: 'Stabilimento di Valle Verde', approval: 'αIT000000CS', address: 'Zona industriale, Valle Verde (dati di fantasia)', lat: null, lon: null },
     energy: { ...energySet, feGrid: 0.2347, feGpl: 3.0115, gridFactor: 'ita23' }, // mix nazionale ISPRA 2023 (location-based)
     milkPrice: 0.54,
     priceUnit: 't',
+    ...JSON.parse(JSON.stringify(DEFAULT_SETTINGS)),
   };
-  return {
+  // stopAfterWeek serve solo a generare il cliente fermo: non entra nei dati
+  for (const c of customers) delete c.stopAfterWeek;
+  const out = {
     settings, ingredients, specs, formulas, products, lines: LINES.map(l => ({ ...l })), customers, agents: AGENTS.map(a => ({ ...a })),
-    ingLots, lots, runs, shipments, complaints, market, purchases, plan, energy, water, waste, visits, offers, tasks,
+    ingLots, lots, runs, shipments, complaints, market, purchases, plan, energy, water, waste, visits, offers, tasks, adjustments,
     esgManual, survey, scenarios: [
       { id: 'sc-1', name: 'Mais +10%', byIngredient: { mais: 10 }, byCategory: {}, reoptimize: true },
       { id: 'sc-2', name: 'Tutta la soia senza deforestazione', byIngredient: {}, byCategory: {}, reoptimize: true, swapSoy: true },
     ],
     events: [],
   };
+  for (const c of COLLECTIONS) if (!Array.isArray(out[c])) out[c] = []; // raccolte dello schema 17 ancora vuote
+  return out;
 }
 
 function fixTotal(lines) {

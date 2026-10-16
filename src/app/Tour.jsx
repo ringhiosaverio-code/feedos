@@ -1,10 +1,13 @@
-/* FeedOS 16 · presentazione guidata: dieci passi attraverso lo stabilimento dimostrativo, con evidenziazione
- * dell'area di schermo e testo breve. Frecce ← → per spostarsi, Esc per uscire. Pensata anche per la seduta di laurea. */
+/* FeedOS 17 · presentazione guidata: dieci passi attraverso lo stabilimento dimostrativo, con evidenziazione
+ * dell'area di schermo e testo breve. Frecce ← → per spostarsi, Esc per uscire. I riferimenti alla tesi
+ * (indicatori, seduta di laurea, aula) compaiono solo nella versione completa. */
 import React, { useEffect, useLayoutEffect, useState } from 'react';
 import { LuArrowLeft, LuArrowRight, LuX } from 'react-icons/lu';
 import { useUi, uiStore, useData, closeDrawer } from '../core/store.js';
 import { go } from '../core/router.js';
 import { Btn } from '../ui/ui.jsx';
+
+const FULL = __FULL__; // versione completa (con i riferimenti alla tesi) o pubblica
 
 const hotLot = d => { const hot = d.ingLots.filter(l => (l.analyses?.AFB1 ?? 0) >= 10 && l.status === 'accettato'); const used = hot.filter(l => l.ingId === 'mais' && l.remaining < l.tonnes - 0.5).sort((a, b) => b.analyses.AFB1 - a.analyses.AFB1); return (used[0] || hot[0])?.id; };
 const MESI = ['gennaio', 'febbraio', 'marzo', 'aprile', 'maggio', 'giugno', 'luglio', 'agosto', 'settembre', 'ottobre', 'novembre', 'dicembre'];
@@ -20,7 +23,7 @@ export const STEPS = [
   { to: d => ['qualita', 'richiamo', hotLot(d)], sel: '#q-recall-kpi', wait: 400, title: 'Richiamo in millisecondi', text: 'Da un lotto di mais con aflatossina alta ai lotti di mangime che lo contengono, ai clienti che li hanno ricevuti, con il bilancio di massa chiuso. Il Regolamento 178/2002 chiede di saperlo in fretta: qui serve meno di un millisecondo.' },
   { to: ['commerciale', 'offerte', 'nuova'], sel: '#com-offer', title: 'Offerte con il margine vero', text: 'Mentre l’agente scrive il prezzo, FeedOS mostra costo pieno di oggi, prezzo minimo e obiettivo. Le offerte sotto il minimo diventano un segnale per la direzione, prima dell’invio.' },
   { to: ['economia', 'scenari'], before: () => uiStore.set({ scenarioSeed: { byIngredient: { mais: 10 } } }), sel: '#eco-results', wait: 500, title: 'E se il mais sale del 10%?', text: 'Lo scenario si propaga su formule, costi, margini e CO₂. La ri-ottimizzazione assorbe una parte dell’aumento; il risparmio già disponibile oggi è tenuto separato, per non attribuirlo allo scenario.' },
-  { to: ['esg', 'indicatori'], sel: '#esg-kpi', title: 'I 49 indicatori della tesi, dai dati', text: 'Il registro della tesi (ambiente, sociale, economia, governance) è alimentato dai dati di ogni giorno: ogni valore dichiara se viene dai dati, se è stato inserito o se manca. Da qui nascono energia e CO₂, il passaporto di prodotto e la bozza del VSME.' },
+  { to: ['esg', 'indicatori'], sel: '#esg-kpi', title: FULL ? 'I 49 indicatori della tesi, dai dati' : 'I 49 indicatori ESG, dai dati', text: (FULL ? 'Il registro della tesi' : 'Il registro degli indicatori') + ' (ambiente, sociale, economia, governance) è alimentato dai dati di ogni giorno: ogni valore dichiara se viene dai dati, se è stato inserito o se manca. Da qui nascono energia e CO₂, il passaporto di prodotto e la bozza del VSME.' },
   { to: ['esg', 'passaporto'], sel: '#esg-passport', title: 'Il passaporto di prodotto', text: 'Per ogni mangime: impronta stimata dalla culla al cancello, origine delle materie prime, co-prodotti, soia certificata, conformità dei lotti. Uno strumento per parlare di sostenibilità con numeri verificabili.' },
 ];
 
