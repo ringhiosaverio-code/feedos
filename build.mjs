@@ -16,7 +16,10 @@ fs.mkdirSync(dist('artifact'), { recursive: true });
 const FONTS = [['FeedOS Sans', 'sans-400', 400, 'normal'], ['FeedOS Sans', 'sans-700', 700, 'normal'], ['FeedOS Sans', 'sans-400i', 400, 'italic'],
   ['FeedOS Display', 'display-700', 700, 'normal'], ['FeedOS Display', 'display-400', 400, 'normal'], ['FeedOS Mono', 'mono-400', 400, 'normal'], ['FeedOS Mono', 'mono-700', 700, 'normal']];
 const fontCss = FONTS.map(([fam, f, w, st]) => `@font-face{font-family:'${fam}';src:url(data:font/woff;base64,${fs.readFileSync(path.join(ROOT, 'fonts', f + '.woff')).toString('base64')}) format('woff');font-weight:${w};font-style:${st};font-display:swap}`).join('\n');
-const css = fs.readFileSync(path.join(ROOT, 'src/styles/app.css'), 'utf8');
+// app.css per primo (variabili e componenti di base), poi i fogli dei singoli moduli in ordine alfabetico
+const STYLES = path.join(ROOT, 'src/styles');
+const css = ['app.css', ...fs.readdirSync(STYLES).filter(f => f.endsWith('.css') && f !== 'app.css').sort()]
+  .map(f => `/* ${f} */\n` + fs.readFileSync(path.join(STYLES, f), 'utf8')).join('\n');
 
 async function bundle(full) {
   const r = await esbuild.build({
