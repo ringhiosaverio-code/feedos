@@ -371,7 +371,7 @@ export function CustomerCredit({ d, id }) {
       </div>
       <div className="form">
         <Field label="Fido accordato €"><NumInput value={c.creditLimit ?? null} decimals={0} min={0} step={5000} onChange={v => upd({ creditLimit: v }, `Fido di ${c.name}: ${v == null ? 'non fissato' : eur(v)}`)} ariaLabel="Fido accordato" /></Field>
-        <Field label="Giorni di pagamento" hint={t.endOfMonth ? 'data fattura fine mese' : 'data fattura'}><NumInput value={t.days} decimals={0} min={0} max={365} onChange={v => v != null && upd({ terms: { ...t, days: v } }, `Termini di ${c.name}: ${v} giorni`)} ariaLabel="Giorni di pagamento" /></Field>
+        <Field label={`Giorni di pagamento ${t.endOfMonth ? '(d.f.f.m.)' : '(d.f.)'}`}><NumInput value={t.days} decimals={0} min={0} max={365} onChange={v => v != null && upd({ terms: { ...t, days: v } }, `Termini di ${c.name}: ${v} giorni`)} ariaLabel="Giorni di pagamento" /></Field>
         <Field label="Mezzo"><Select value={t.method} onChange={v => upd({ terms: { ...t, method: v } }, `Mezzo di pagamento di ${c.name}: ${METHOD[v]}`)} options={METHODS} ariaLabel="Mezzo di pagamento" /></Field>
       </div>
       {rows.length ? (
@@ -417,11 +417,13 @@ function Circolante({ d }) {
     { key: 'fg', label: 'Prodotto finito', value: w.fg, color: SERIES[6], abs: eur(w.fg) },
   ];
   const maxD = Math.max(1, (w.dio || 0) + (w.dso || 0), w.dpo || 0);
+  const from12 = addDays(today, -364);
+  const t12 = sum(ctx.facts.filter(f => f.date >= from12 && f.date <= today), f => f.tonnes);
   const firstMonth = hist.findIndex(h => h.ar > 0);
   const levers = [
-    ['DSO', w.dso, w.perDay.dso, 'giorni di vendite lorde (IVA compresa)', 'down'],
-    ['DIO', w.dio, w.perDay.dio, 'giorni di costo del venduto industriale', 'down'],
-    ['DPO', w.dpo, w.perDay.dpo, 'giorni di acquisti di materie prime (IVA compresa)', 'up'],
+    ['DSO', w.dso, w.perDay.dso, 'incasso dai clienti', 'un giorno di vendite lorde (IVA compresa)', 'incassando 5 giorni prima'],
+    ['DIO', w.dio, w.perDay.dio, 'giacenza in magazzino', 'un giorno di costo del venduto industriale', 'con 5 giorni di scorta in meno'],
+    ['DPO', w.dpo, w.perDay.dpo, 'pagamento ai fornitori', 'un giorno di acquisti di materie prime (IVA compresa)', 'pagando 5 giorni dopo'],
   ];
   return (
     <>
@@ -434,7 +436,7 @@ function Circolante({ d }) {
         <Kpi label="Costo annuo" value={mila(w.costPerYear, 1)} unit="mila €" foot={`al ${nf(w.rate, 1)}% di costo del denaro`} title="Capitale circolante × costo del denaro (Parametri)" />
         <Kpi label="Ciclo di cassa" value={gg(w.ccc)} unit="giorni" raw={w.ccc} cmp={cmp(w.ccc, wc?.ccc, 'down', 'ratio', 'gg')} foot={`DSO ${gg(w.dso)} + DIO ${gg(w.dio)} − DPO ${gg(w.dpo)}`} title="Giorni tra il pagamento delle materie prime e l’incasso dai clienti" />
       </div>
-      <div className="split">
+      <div className="grid g2 start fin-wc">
         <Panel title="Dove sta il capitale" sub={`Impieghi ${eur(w.ar + w.mp + w.fg)} · finanziati dai fornitori per ${eur(w.ap)} (${pct(w.ap / Math.max(1, w.ar + w.mp + w.fg), 0)})`}>
           <StackBar parts={parts} height={26} ariaLabel="Composizione degli impieghi del capitale circolante" />
           <Legend items={parts.map(p => ({ label: `${p.label} ${mila(p.value)} mila`, color: p.color }))} />
@@ -445,16 +447,26 @@ function Circolante({ d }) {
             <span className="tot"><small>Capitale circolante</small><b>{mila(w.nwc)}</b></span>
             <em className="small muted">mila €</em>
           </div>
+          <div className="fin-wc-stats">
+            <span title="Capitale circolante ÷ vendite lorde (IVA compresa) degli ultimi 12 mesi chiusi"><small>Sulle vendite annue</small><b>{w.gross12 > 0 ? pct(w.nwc / w.gross12, 1) : '—'}</b></span>
+            <span title="Costo annuo del capitale circolante ÷ 365"><small>Costo al giorno</small><b>{eur(w.costPerYear / 365)}</b></span>
+            <span title="Costo annuo del capitale circolante ÷ tonnellate consegnate negli ultimi 12 mesi"><small>Costo per tonnellata venduta</small><b>{t12 > 0 ? nf(w.costPerYear / t12, 2) + ' €/t' : '—'}</b></span>
+          </div>
         </Panel>
         <Panel title="Il ciclo in giorni" sub="Dal pagamento delle materie prime all’incasso dai clienti">
           <div className="fin-ccc" role="img" aria-label={`Magazzino ${gg(w.dio)} giorni più incasso ${gg(w.dso)} giorni, meno pagamento fornitori ${gg(w.dpo)} giorni: ciclo di cassa ${gg(w.ccc)} giorni`}>
             <div className="lane"><span className="lbl">Materia prima → incasso</span><div className="bar"><i className="dio" style={{ width: (w.dio || 0) / maxD * 100 + '%' }}>DIO {gg(w.dio)}</i><i className="dso" style={{ width: (w.dso || 0) / maxD * 100 + '%' }}>DSO {gg(w.dso)}</i></div></div>
-            <div className="lane"><span className="lbl">Materia prima → pagamento</span><div className="bar"><i className="dpo" style={{ width: (w.dpo || 0) / maxD * 100 + '%' }}>DPO {gg(w.dpo)}</i>{w.ccc > 0 && <i className="gap" style={{ width: w.ccc / maxD * 100 + '%' }}>da finanziare {gg(w.ccc)} gg</i>}</div></div>
+            <div className="lane"><span className="lbl">Materia prima → pagamento</span><div className="bar"><i className="dpo" style={{ width: (w.dpo || 0) / maxD * 100 + '%' }}>DPO {gg(w.dpo)}</i>{w.ccc > 0 && <i className="gap" style={{ width: w.ccc / maxD * 100 + '%' }} title={`Ciclo di cassa: ${gg(w.ccc)} giorni da finanziare`}>{gg(w.ccc)} gg</i>}</div></div>
+            {w.ccc > 0 && <span className="small muted fin-ccc-key"><i className="gap" aria-hidden="true" /> giorni da finanziare: il ciclo di cassa ({gg(w.ccc)} gg)</span>}
           </div>
-          <table className="t fin-mini" style={{ marginTop: 12 }}>
-            <thead><tr><th>Leva</th><th className="r">Oggi</th><th className="r">1 giorno vale</th><th className="r">5 giorni migliori liberano</th></tr></thead>
-            <tbody>{levers.map(([k, v, perDay, hint]) => <tr key={k} title={'Un giorno = ' + hint}><td><b>{k}</b><span className="sub">{hint}</span></td><td className="r">{gg(v)} gg</td><td className="r">{eur(perDay)}</td><td className="r">{eur(perDay * 5)}</td></tr>)}</tbody>
-          </table>
+          <div className="tw fin-tw"><table className="t fin-mini fin-lev">
+            <thead><tr><th>Leva</th><th className="r">Oggi</th><th className="r">Un giorno vale</th><th className="r">5 giorni liberano</th></tr></thead>
+            <tbody>{levers.map(([k, v, perDay, hint, basis, how]) => (
+              <tr key={k} title={`Un giorno di ${k} = ${basis}`}>
+                <td><b>{k}</b><span className="sub">{hint}</span></td><td className="r">{gg(v)} gg</td><td className="r">{eur(perDay)}</td>
+                <td className="r">{eur(perDay * 5)}<span className="sub">{how}</span></td>
+              </tr>))}</tbody>
+          </table></div>
         </Panel>
       </div>
       <Panel title="Andamento a fine mese" sub={`Ultimi 12 mesi, mila € · il mese in corso è al ${dateIt(today, 'dm')}${firstMonth > 0 || hist[0]?.ar < hist[hist.length - 1]?.ar * 0.5 ? ' · i primi mesi crescono perché lo storico dei dati è più breve dei termini di pagamento' : ''}`}>
@@ -523,7 +535,8 @@ function Rimanenze({ d, sel }) {
           cmp={mpC ? { cur: mp.value, value: mpC.value, kind: 'flow', good: 'down', label: 'al ' + dateIt(cTo, 'dm'), cov } : undefined}
           foot={mpM === 'fifo' ? `${nf(mp.t)} t · sostituzione ${mila(iv.mp.replacement, 1)} mila` : `FIFO ${mila(iv.mp.fifo, 1)} mila · Δ ${mila(mp.value - iv.mp.fifo, 1)}`} title={MP_METHODS.find(m => m.id === mpM).title} />
         <Kpi label={`Prodotto finito · costo ${fgM}`} value={mila(fgVal, 1)} unit="mila €" foot={`${nf(iv.fg.t)} t in ${sum(iv.fg.byProduct, r => r.lots)} lotti`} title="Lotti prodotti e non ancora spediti (esclusi i bloccati), al costo effettivo del lotto" />
-        <Kpi label="Giorni di magazzino" value={gg(sumy.dio)} unit="giorni" foot={`rotazione ${nf(sumy.turnover, 1)} volte · MP ${gg(mpDays)} + PF ${gg(fgDays)}`} title="DIO = (MP al FIFO + PF al costo pieno) ÷ (costo del venduto industriale dei 12 mesi ÷ 365)" />
+        <Kpi label="Giorni di magazzino" value={gg(sumy.dio)} unit="giorni" foot={`rotazione ${nf(sumy.turnover, 1)} volte · MP ${gg(sumy.dioMp)} gg di consumo`}
+          title={`DIO = (MP al FIFO + PF al costo pieno) ÷ (costo del venduto industriale dei 12 mesi ÷ 365) = ${gg(mpDays)} gg di MP + ${gg(fgDays)} gg di PF.\nLe sole materie prime coprono ${gg(sumy.dioMp)} giorni di consumo: MP al FIFO ÷ (materie prime consumate nei 12 mesi ÷ 365).`} />
         <Kpi label="Capitale in eccesso" value={mila(sumy.excessValue, 1)} unit="mila €" status={sumy.excessValue > 50000 ? 'warn' : 'ok'} foot={`mantenerlo costa ${eur(sumy.excessCarryingCost)}/anno`} title="Giacenza oltre fabbisogno a 8 settimane + scorta di sicurezza delle materie prime lente o in eccesso, ai prezzi dei lotti più recenti" />
         <Kpi label="Costo di mantenimento" value={mila(sumy.carryingCost, 1)} unit="mila €/anno" foot={`${nf(rate, 1)}% annuo su ${mila(iv.mp.fifo + iv.fg.valueFull)} mila`} title="Oneri finanziari, magazzino, assicurazione e cali sul valore delle rimanenze (tasso nei Parametri)" />
       </div>
@@ -549,7 +562,13 @@ function Rimanenze({ d, sel }) {
               </React.Fragment>
             ))}
           </div>
-          <p className="small muted">A {ABC_HINT.A}, B {ABC_HINT.B}, C {ABC_HINT.C}. X {XYZ_HINT.X}, Y {XYZ_HINT.Y}, Z {XYZ_HINT.Z}. Le AX si gestiscono con riordini regolari; le Z con scorte di sicurezza più alte o acquisti su ordine.</p>
+          <div className="tw fin-tw"><table className="t fin-mini fin-abc-sum">
+            <thead><tr><th>Classe</th><th className="r">Voci</th><th className="r">Consumato</th><th className="r">Giacenza</th><th className="r" title="Giacenza ÷ consumo medio giornaliero del periodo">Copertura</th></tr></thead>
+            <tbody>{['A', 'B', 'C'].map(a => { const rs = rows.filter(r => r.abc === a), v = sum(rs, r => r.value), s = sum(rs, r => r.stockV); return (
+              <tr key={a}><td><b>{a}</b><span className="sub">{ABC_HINT[a]}</span></td><td className="r">{rs.length}</td><td className="r">{eur(v)}<span className="sub">{pct(v / totV, 0)}</span></td><td className="r">{eur(s)}</td>
+                <td className="r">{v > 0 ? `${nf(s / (v / P.days))} gg` : '—'}</td></tr>); })}</tbody>
+          </table></div>
+          <p className="small muted">X {XYZ_HINT.X}, Y {XYZ_HINT.Y}, Z {XYZ_HINT.Z}. Le AX si gestiscono con riordini regolari e scorte basse; le Z con scorte di sicurezza più alte o acquisti su ordine; le C con lotti di riordino più grandi e meno frequenti.</p>
         </Panel>
         <Panel title={cell ? `Materie prime ${cell}` : 'Materie prime per classe'} sub={cell ? <button className="linkish" onClick={() => setCell(null)}>mostra tutte</button> : 'Ordinate per valore consumato'} flush>
           <Table rows={view} rowKey={r => r.id} onRow={r => openDrawer('ingredient', r.id)} selected={sel} initialSort={{ key: 'value', dir: 'desc' }} pageSize={12} exportName="classi-abc-xyz"
@@ -565,15 +584,15 @@ function Rimanenze({ d, sel }) {
       <Panel title="Lenti ed eccedenze" sub={`Copertura oltre il necessario, nessun fabbisogno nelle 8 settimane del piano, lotti vecchi o in scadenza · mantenimento al ${nf(rate, 1)}% annuo`} flush id="fin-slow">
         <Table rows={slow} rowKey={r => r.ingId} onRow={r => openDrawer('ingredient', r.ingId)} initialSort={{ key: 'excessValue', dir: 'desc' }} exportName="lenti-ed-eccedenze" empty="Nessuna materia prima lenta o in eccesso"
           cols={[
-            { key: 'name', label: 'Materia prima', render: r => <><b>{r.name}</b><span className="sub">{[r.flags.noNeed && 'senza fabbisogno', r.flags.cover && 'copertura alta', r.flags.old && 'lotto vecchio', r.flags.expiring && 'in scadenza'].filter(Boolean).join(' · ')}</span></> },
-            { key: 'value', label: 'Giacenza', align: 'r', render: r => <>{eur(r.value)}<span className="sub">{nf(r.t, 1)} t</span></> },
-            { key: 'coverDays', label: 'Copertura', align: 'r', csv: r => (r.coverDays == null ? '' : Math.round(r.coverDays)), render: r => r.coverDays == null ? <span className="chip warn">nessun uso</span> : <>{nf(r.coverDays)} gg<span className="sub">ne bastano {r.coverMax}</span></> },
-            { key: 'needT8w', label: 'Fabbisogno 8 sett.', align: 'r', render: r => nf(r.needT8w, r.needT8w < 10 ? 1 : 0) + ' t' },
-            { key: 'oldestLotDays', label: 'Lotto più vecchio', align: 'r', render: r => r.oldestLotDays == null ? '—' : <span title={r.oldestLotCode}>{r.oldestLotDays > 90 ? <b className="fin-red">{r.oldestLotDays} gg</b> : `${r.oldestLotDays} gg`}<span className="sub">{dateIt(r.oldestLotDate, 'dm')}</span></span> },
-            { key: 'expiryDays', label: 'Scadenza', align: 'r', csv: r => r.expiryDate || '', render: r => (r.expiryDays == null ? '—' : <span className={r.expiryDays <= 30 ? 'chip crit' : ''}>{dateIt(r.expiryDate, 'dm')}</span>) },
-            { key: 'excessValue', label: 'Capitale in eccesso', align: 'r', render: r => <>{eur(r.excessValue)}<span className="sub">{nf(r.excessT, 1)} t</span></> },
-            { key: 'carryingCost', label: 'Mantenimento/anno', align: 'r', render: r => eur(r.carryingCost) },
-            { key: 'action', label: 'Azione suggerita', className: 'fin-actcol', render: r => r.action },
+            { key: 'name', label: 'Materia prima', className: 'fin-namecol', render: r => <><b>{r.name}</b><span className="sub">{[r.flags.noNeed && 'senza fabbisogno', r.flags.cover && 'copertura alta', r.flags.old && 'lotto vecchio', r.flags.expiring && 'in scadenza'].filter(Boolean).join(' · ')}</span></> },
+            { key: 'value', label: 'Giacenza', align: 'r', csv: r => Math.round(r.value), render: r => <>{eur(r.value)}<span className="sub">{nf(r.t, 1)} t</span></> },
+            { key: 'coverDays', label: 'Copertura', align: 'r', csv: r => (r.coverDays == null ? '' : Math.round(r.coverDays)),
+              render: r => <>{r.coverDays == null ? <span className="chip warn">nessun uso</span> : <>{nf(r.coverDays)} gg</>}<span className="sub" title="Fabbisogno delle prossime 8 settimane dal piano e copertura che basta: max(60, 3 × (consegna + sicurezza)) giorni">8 sett. {nf(r.needT8w, r.needT8w < 10 ? 1 : 0)} t{r.coverDays != null ? ` · ne bastano ${r.coverMax}` : ''}</span></> },
+            { key: 'oldestLotDays', label: 'Lotto più vecchio', align: 'r', csv: r => r.oldestLotDays ?? '',
+              render: r => r.oldestLotDays == null ? '—' : <span title={r.oldestLotCode}>{r.oldestLotDays > 90 ? <b className="fin-red">{r.oldestLotDays} gg</b> : `${r.oldestLotDays} gg`}<span className="sub">{dateIt(r.oldestLotDate, 'dm')}{r.expiryDate ? <> · <span className={r.expiryDays <= 30 ? 'fin-red' : ''}>scade {dateIt(r.expiryDate, 'dm')}</span></> : ''}</span></span> },
+            { key: 'excessValue', label: 'Capitale in eccesso', align: 'r', csv: r => Math.round(r.excessValue), render: r => <>{eur(r.excessValue)}<span className="sub">{nf(r.excessT, 1)} t · {eur(r.excessCarryingCost)}/anno</span></> },
+            { key: 'carryingCost', label: 'Mantenimento/anno', align: 'r', csv: r => Math.round(r.carryingCost), render: r => eur(r.carryingCost) },
+            { key: 'action', label: 'Azione suggerita', className: 'fin-actcol', nosort: true, render: r => r.action },
           ]} />
       </Panel>
       <Panel title="Rimanenze a una data" sub="Elenco stampabile per materia prima e prodotto finito, con il metodo scelto sopra"

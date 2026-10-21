@@ -27,7 +27,8 @@ table.t.fin-mini td .key { width: 10px; height: 10px; border-radius: 3px; margin
 .fin-bullet { display: grid; gap: 0; min-width: 110px; }
 .fin-bullet .sub { text-align: right; }
 .fin-act { justify-content: flex-end; flex-wrap: nowrap; }
-td.fin-actcol { min-width: 220px; white-space: normal; font-size: 12.5px; color: var(--ink-2); }
+td.fin-actcol { min-width: 220px; max-width: 340px; white-space: normal; font-size: 12.5px; line-height: 1.4; color: var(--ink-2); }
+td.fin-namecol { min-width: 160px; max-width: 240px; white-space: normal; }
 
 /* definizioni richiudibili */
 details.fin-defs { padding: 0; }
@@ -83,6 +84,10 @@ details.fin-defs dd, dl.fin-hyp dd { margin: 0; color: var(--ink-2); }
 .fin-bridge i { font-style: normal; font-size: 18px; color: var(--muted); padding-bottom: 2px; }
 .fin-bridge .tot b { color: var(--accent); }
 .fin-bridge em { padding-bottom: 4px; }
+.fin-wc-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-top: 14px; }
+.fin-wc-stats span { display: grid; gap: 2px; padding: 8px 10px; border-radius: 9px; background: var(--surface-2); border: 1px solid var(--line); cursor: help; }
+.fin-wc-stats small { font-size: 11.5px; color: var(--muted); }
+.fin-wc-stats b { font-size: 15px; font-variant-numeric: tabular-nums; }
 .fin-ccc { display: grid; gap: 10px; }
 .fin-ccc .lane { display: grid; grid-template-columns: 170px minmax(0, 1fr); gap: 10px; align-items: center; }
 .fin-ccc .lbl { font-size: 12px; color: var(--ink-2); font-weight: 600; }
@@ -92,6 +97,11 @@ details.fin-defs dd, dl.fin-hyp dd { margin: 0; color: var(--ink-2); }
 .fin-ccc .dso { background: color-mix(in srgb, var(--s1) 34%, var(--surface)); }
 .fin-ccc .dpo { background: color-mix(in srgb, var(--s7) 30%, var(--surface)); }
 .fin-ccc .gap { background: repeating-linear-gradient(135deg, var(--maize-soft) 0 6px, transparent 6px 10px); border: 1px dashed color-mix(in srgb, var(--maize) 60%, transparent); color: var(--maize-ink) !important; }
+.fin-ccc-key { display: flex; align-items: center; gap: 6px; justify-self: end; }
+.fin-ccc-key i.gap { display: inline-block; width: 18px; height: 10px; border-radius: 3px; }
+table.t.fin-lev { margin-top: 14px; }
+table.t.fin-lev td, table.t.fin-lev th { white-space: nowrap; }
+table.t.fin-lev td:first-child { white-space: normal; }
 
 /* rimanenze */
 .fin-tools { gap: 10px; }
@@ -105,14 +115,17 @@ details.fin-defs dd, dl.fin-hyp dd { margin: 0; color: var(--ink-2); }
 .fin-grid .cell[disabled] { cursor: default; color: var(--muted); }
 .fin-grid .cell:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 #fin-abc p { margin-top: 12px; }
+table.t.fin-abc-sum { margin-top: 14px; }
+table.t.fin-abc-sum td.r, table.t.fin-abc-sum th { white-space: nowrap; }
 
 /* cassa a 13 settimane */
 .fin-cash-tw { max-width: 100%; }
-table.t.fin-cash { min-width: 1100px; font-size: 12.5px; }
+table.t.fin-cash { min-width: 980px; font-size: 12.5px; font-variant-numeric: tabular-nums; }
 table.t.fin-cash th .sub { display: block; font-weight: 500; text-transform: none; letter-spacing: 0; color: var(--muted); font-size: 11px; }
-table.t.fin-cash th.lbl, table.t.fin-cash td.lbl { position: sticky; left: 0; z-index: 1; background: var(--surface); min-width: 210px; max-width: 260px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+table.t.fin-cash th.lbl, table.t.fin-cash td.lbl { position: sticky; left: 0; z-index: 1; background: var(--surface); min-width: 180px; max-width: 230px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; box-shadow: 1px 0 0 var(--line); }
 table.t.fin-cash th.lbl { z-index: 2; background: var(--surface-2); }
-table.t.fin-cash td { padding: 6px 8px; }
+table.t.fin-cash td, table.t.fin-cash th { padding: 6px 6px; }
+table.t.fin-cash td.lbl, table.t.fin-cash th.lbl { padding-left: 12px; }
 table.t.fin-cash tr.grp td { font-weight: 700; background: var(--surface-2); cursor: pointer; }
 table.t.fin-cash tr.grp td.lbl { background: var(--surface-2); }
 table.t.fin-cash tr.cat { cursor: pointer; }
@@ -140,6 +153,12 @@ table.t.fin-cash td.crit { color: var(--crit-ink); background: var(--crit-soft);
 #fin-cash-inputs .bd > .btn { justify-self: start; }
 
 @media (max-width: 720px) {
+  table.t.fin-lev td, table.t.fin-lev th { white-space: normal; padding: 6px 5px; }
+  table.t.fin-lev th { font-size: 10.5px; }
+  table.t.fin-abc-sum td, table.t.fin-abc-sum th { padding: 6px 5px; }
+  table.t.fin-abc-sum td .sub { display: none; }
+  .fin-wc-stats { grid-template-columns: minmax(0, 1fr); }
+  .fin-wc-stats span { grid-template-columns: minmax(0, 1fr) auto; align-items: baseline; }
   .fin-aging { grid-template-columns: minmax(0, 1fr); }
   .fin-classes { grid-template-columns: repeat(4, minmax(0, 1fr)); }
   .fin-cc-top { grid-template-columns: minmax(0, 1fr); }

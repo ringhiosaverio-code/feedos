@@ -13,6 +13,8 @@ import { LineChart, Legend, niceTicks } from '../ui/charts.jsx';
 const mila = (v, dd = 0) => (v == null || !Number.isFinite(+v) ? '—' : nf(v / 1000, dd));
 const eur = v => (v == null || !Number.isFinite(+v) ? '—' : nf(v) + ' €');
 const dm = s => dateIt(s, 'dm');
+/** Flusso con segno in migliaia: «+508», «−126», «0» sotto i 500 €. */
+const signed = v => (Math.abs(v) < 500 ? '0' : (v > 0 ? '+' : '−') + mila(Math.abs(v)));
 const Est = () => <Chip kind="maize" title="Previsione del modello: incassi, pagamenti e costi stimati dai dati dell’archivio">stimato</Chip>;
 const LINE_TYPES = ['fido di cassa', 'anticipo fatture', 'salvo buon fine', 'finanziamento a breve', 'altro'];
 
@@ -47,14 +49,14 @@ export function Cassa({ d }) {
         <Kpi label="Margine sulle linee" value={mila(lp.headroom)} unit="mila €" status={lp.belowLines ? 'bad' : lp.headroom < F.lines * 0.25 ? 'warn' : 'ok'} foot={`linee per ${mila(F.lines)} mila`} title="Saldo minimo + linee di credito accordate: quanto resta prima di superare i fidi" />
         <Kpi label={<>Entrate 13 settimane <Est /></>} value={mila(F.totals.in)} unit="mila €" foot={`dal piano ${mila(sum(W, w => w.in.previsti))} mila`} />
         <Kpi label={<>Uscite 13 settimane <Est /></>} value={mila(F.totals.out)} unit="mila €" foot={`materie prime ${mila(sum(W, w => w.out.fornitori + w.out.ordini + w.out.pianificati))} mila`} />
-        <Kpi label="Saldo finale" value={mila(F.totals.closing)} unit="mila €" foot={`al ${dm(F.end)} · Δ ${mila(F.totals.closing - F.opening)} mila`} />
+        <Kpi label="Saldo finale" value={mila(F.totals.closing)} unit="mila €" foot={`al ${dm(F.end)} · Δ ${signed(F.totals.closing - F.opening)} mila`} />
       </div>
       {!hasFlows ? (
         <Panel><Empty icon={LuLandmark} title="Nessun movimento previsto">Senza consegne, fatture, ordini o costi fissi non ci sono incassi e pagamenti da prevedere: la cassa resta al saldo iniziale.</Empty></Panel>
       ) : <>
         <div className="split">
           <Panel title="Saldo di fine settimana" sub={`mila € · linea rossa: linee di credito esaurite (−${mila(F.lines)} mila)`} id="fin-cash-line">
-            <LineChart labels={W.map(w => w.from)} formatX={dm} unit="mila €" decimals={0} height={240} ariaLabel="Saldo di cassa previsto a fine settimana"
+            <LineChart labels={W.map(w => w.from)} formatX={dm} unit="mila €" decimals={0} height={240} area={false} ariaLabel="Saldo di cassa previsto a fine settimana"
               series={[{ key: 'c', label: 'Saldo previsto', color: 'var(--s1)', values: W.map(w => w.closing / 1000) }]}
               refs={[{ y: 0, label: 'zero' }, ...(F.lines > 0 ? [{ y: -F.lines / 1000, label: '− linee', kind: 'crit' }] : [])]} />
           </Panel>
@@ -202,7 +204,7 @@ function WeekTable({ F, weekLbl, firstBad }) {
                 })}
               </React.Fragment>
             ))}
-            <tr className="net"><td className="lbl">Flusso netto</td>{W.map((w, i) => <td key={i} className={'r ' + cls(i)}>{w.net >= 0 ? '+' : '−'}{mila(Math.abs(w.net))}</td>)}<td className="r">{F.totals.in - F.totals.out >= 0 ? '+' : '−'}{mila(Math.abs(F.totals.in - F.totals.out))}</td></tr>
+            <tr className="net"><td className="lbl">Flusso netto</td>{W.map((w, i) => <td key={i} className={'r ' + cls(i)}>{signed(w.net)}</td>)}<td className="r">{signed(F.totals.in - F.totals.out)}</td></tr>
             <tr className="bal end"><td className="lbl">Saldo finale</td>{W.map((w, i) => <td key={i} className={`r ${cls(i)} ${w.closing < -F.lines ? 'crit' : w.closing < 0 ? 'neg' : ''}`}>{mila(w.closing)}</td>)}<td className="r">{mila(F.totals.closing)}</td></tr>
             <tr className="head"><td className="lbl">Margine sulle linee</td>{W.map((w, i) => <td key={i} className={`r ${cls(i)} ${w.headroom < 0 ? 'crit' : ''}`}>{mila(w.headroom)}</td>)}<td /></tr>
           </tbody>
