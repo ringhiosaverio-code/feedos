@@ -51,6 +51,9 @@ Ogni numero ha una sola definizione e si ritrova uguale in tutte le pagine, nei 
 - **Anagrafiche** di clienti, agenti, prodotti, linee, materie prime, fornitori e centri di costo, con i controlli dei campi; non si cancella un record in uso.
 - **Importazione guidata** dal gestionale: clienti, agenti, prodotti, consegne, costi fissi, fatture, incassi, energia; colonne italiane riconosciute da sole, numeri e date all'italiana, chili in tonnellate, anteprima con nuovi, modificati ed errori per cella, un solo passo annullabile.
 
+**ESG**
+- **Acqua per tonnellata** e tendenza solo sui mesi con la produzione registrata per intero: un mese in cui il registro delle lavorazioni comincia o finisce a metà non gonfia più la media (la lettura del contatore resta nel prelievo e il mese escluso è indicato sotto il grafico).
+
 ## Dati dimostrativi
 
 Il mangimificio dimostrativo (sempre inventato) ha ora due anni di venduto (un anno di storico mensile e un anno di consegne), un anno di fatture e incassi, costi fissi e budget, 17 fornitori con ordini storici, un anno di fermi, dieci componenti delle linee con i loro interventi, conte fisiche mensili e gli obiettivi dei KPI. Un archivio dimostrativo salvato con la 16 riceve i nuovi dati all'apertura senza perdere nulla.

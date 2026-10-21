@@ -49,6 +49,9 @@ export function LineChart({ series, labels, height = 220, unit = '', decimals = 
   const y = v => padT + (hi - v) / (hi - lo || 1) * (height - padT - padB);
   const path = vals => { let d = '', pen = false; vals.forEach((v, i) => { if (v == null || !Number.isFinite(v)) { pen = false; return; } d += (pen ? 'L' : 'M') + x(i).toFixed(1) + ' ' + y(v).toFixed(1); pen = true; }); return d; };
   const every = xEvery || Math.max(1, Math.ceil(n / Math.max(2, Math.floor((W - padL - padR) / 64))));
+  // etichette a destra: il valore dell'ultimo punto ha la precedenza, l'etichetta di un riferimento troppo vicina si sposta sopra o sotto
+  const endYs = markLast && series.length <= 3 ? series.map(s => lastIdx(s.values)).map((i, k) => (i === n - 1 ? y(series[k].values[i]) : null)).filter(v => v != null) : [];
+  const refY = r => { let ty = y(r.y); for (const ey of endYs) if (Math.abs(ty - ey) < 12) ty = ty >= ey ? ey + 12 : ey - 12; return Math.min(height - padB, Math.max(padT, ty)); };
   const onMove = e => {
     const r = box.current.getBoundingClientRect();
     const px = e.clientX - r.left;
@@ -68,7 +71,7 @@ export function LineChart({ series, labels, height = 220, unit = '', decimals = 
         {labels.map((l, i) => (i % every === 0 || i === n - 1) && (i === n - 1 || n - 1 - i >= every * 0.6) ? <text key={'x' + i} x={x(i)} y={height - 6} textAnchor={i === 0 ? 'start' : i === n - 1 ? 'end' : 'middle'}>{formatX(l)}</text> : null)}
         {band && (() => { const ids = band.hi.map((v, i) => (v != null && band.lo[i] != null ? i : -1)).filter(i => i >= 0); if (ids.length < 2) return null;
           return <path d={ids.map((i, k) => (k ? 'L' : 'M') + x(i).toFixed(1) + ' ' + y(band.hi[i]).toFixed(1)).join('') + [...ids].reverse().map(i => 'L' + x(i).toFixed(1) + ' ' + y(band.lo[i]).toFixed(1)).join('') + 'Z'} fill={band.color || series[0]?.color || 'var(--s1)'} opacity=".14" />; })()}
-        {refs.map((r, i) => <g key={'r' + i}><line x1={padL} x2={W - padR} y1={y(r.y)} y2={y(r.y)} stroke={r.kind === 'crit' ? 'var(--crit)' : 'var(--ink-2)'} strokeWidth="1.2" opacity={r.kind === 'crit' ? .9 : .5} /><text x={W - padR + 4} y={y(r.y) + 3.5} className="lbl-ink" style={{ fill: r.kind === 'crit' ? 'var(--crit-ink)' : undefined }}>{r.label}</text></g>)}
+        {refs.map((r, i) => <g key={'r' + i}><line x1={padL} x2={W - padR} y1={y(r.y)} y2={y(r.y)} stroke={r.kind === 'crit' ? 'var(--crit)' : 'var(--ink-2)'} strokeWidth="1.2" opacity={r.kind === 'crit' ? .9 : .5} /><text x={W - padR + 4} y={refY(r) + 3.5} className="lbl-ink" style={{ fill: r.kind === 'crit' ? 'var(--crit-ink)' : undefined }}>{r.label}</text></g>)}
         {series.map((s, k) => (
           <g key={s.key || k}>
             {area && series.length === 1 && lastIdx(s.values) >= 0 && <path d={path(s.values) + `L${x(lastIdx(s.values))} ${height - padB}L${x(firstIdx(s.values))} ${height - padB}Z`} fill={s.color} opacity=".08" />}

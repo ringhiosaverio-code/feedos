@@ -2,8 +2,9 @@
  * Dati SINTETICI e deterministici, derivati dalla produzione del mangimificio di fantasia (nessun dato reale).
  * Racconto per la demo: negli ultimi tre mesi l'acquedotto preleva di più a parità di produzione (perdita sulla rete
  * dei servizi) e una parte degli imballaggi misti va ancora a smaltimento. */
-import { rng, monthOf, round, sum } from '../../core/util.js';
+import { rng, monthOf, round, sum, mean, daysInMonth } from '../../core/util.js';
 import { EER_BY_CODE, isHazardous } from '../eer.js';
+import { MIN_RUN_COVERAGE } from '../../engine/sustainability.js';
 
 export function demoSustainability({ today, runs, seed = 17 }) {
   const R = rng(seed);
@@ -15,9 +16,13 @@ export function demoSustainability({ today, runs, seed = 17 }) {
   // ---------- acqua: pozzo per caldaia e condizionamento a vapore, acquedotto per servizi e lavaggi ----------
   const water = [];
   let readA = 18420, readP = 52310;
+  // il registro delle lavorazioni comincia a metà del primo mese, ma lo stabilimento ha lavorato tutto il mese: il contatore lo conta intero
+  const first = runs.reduce((a, r) => (r.date < a ? r.date : a), runs[0]?.date || '9999');
+  const partialFirst = months[0] === monthOf(first) && (daysInMonth(months[0]) - +first.slice(8, 10) + 1) / daysInMonth(months[0]) < MIN_RUN_COVERAGE;
+  const fullPelletT = mean(months.filter((m, k) => !(k === 0 && partialFirst)).map(m => pelletT[m] || 0)) || 0;
   months.forEach((m, k) => {
     const leak = k >= months.length - 3 ? 1.48 : 1;                        // perdita sulla rete dei servizi
-    const process = round((pelletT[m] || 0) * 0.046 * R.range(0.95, 1.05), 0); // ≈ 46 litri per tonnellata pellettata
+    const process = round((k === 0 && partialFirst ? fullPelletT : pelletT[m] || 0) * 0.046 * R.range(0.95, 1.05), 0); // ≈ 46 litri per tonnellata pellettata
     const services = round(52 * R.range(0.9, 1.1) * leak, 0);
     readP += process; readA += services;
     water.push({ id: 'wa-' + m + '-p', month: m, source: 'Pozzo', m3: process, reading: readP, note: 'Caldaia e vapore di condizionamento (dati dimostrativi)' });

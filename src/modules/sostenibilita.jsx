@@ -412,7 +412,7 @@ export function Acqua({ d, nuova }) {
   const remove = w => { store.remove('water', w.id, `Lettura dell’acqua eliminata: ${w.month} ${w.source}`); toast('Lettura eliminata', 'ok', { label: 'Annulla', fn: () => store.undo() }); };
   const sources = Object.keys(W.bySource);
   const top = Object.entries(W.bySource).sort((x, y) => y[1] - x[1])[0];
-  const tByM = Object.fromEntries(W.months.map(m => [m.month, m.tonnes]));
+  const mByM = Object.fromEntries(W.months.map(m => [m.month, m]));
   const rows = [...d.water].sort((x, y) => (x.month < y.month ? 1 : x.month > y.month ? -1 : x.source < y.source ? -1 : 1));
   const avg = W.intensity != null ? W.intensity * 1000 : null;
   return (
@@ -435,7 +435,7 @@ export function Acqua({ d, nuova }) {
             </div>
             <Field label="Nota"><input className="input" value={f.note} onChange={e => set({ note: e.target.value })} placeholder="Es. sostituito il contatore" /></Field>
             <div className="row between">
-              <span className="small muted">{f.m3 > 0 && tByM[f.month] ? `${nf(f.m3 * 1000 / tByM[f.month], 1)} litri per tonnellata prodotta nel mese` : ''}</span>
+              <span className="small muted">{f.m3 > 0 && mByM[f.month]?.tonnes && !mByM[f.month].partial ? `${nf(f.m3 * 1000 / mByM[f.month].tonnes, 1)} litri per tonnellata prodotta nel mese` : ''}</span>
               <Btn kind="primary" icon={LuPlus} onClick={submit}>Registra</Btn>
             </div>
           </div>
@@ -447,6 +447,7 @@ export function Acqua({ d, nuova }) {
               <Legend items={sources.map(s => ({ label: s, color: SOURCE_COLOR[s] || 'var(--s5)' }))} />
               <div style={{ marginTop: 12 }}>
                 <LineChart labels={W.months.map(m => monthLabel(m.month))} height={150} unit="L/t" decimals={1} series={[{ key: 'l', label: 'Litri per tonnellata', color: 'var(--s1)', values: W.months.map(m => (m.perT != null ? m.perT * 1000 : null)) }]} refs={avg != null ? [{ y: avg, label: `media ${nf(avg, 1)}`, kind: 'muted' }] : []} ariaLabel="Litri per tonnellata" />
+                {W.partial.length > 0 && <p className="small muted" style={{ margin: '6px 0 0' }}>{W.partial.map(m => monthLabel(m, false)).join(', ')}: produzione registrata solo per una parte del mese, quindi niente litri per tonnellata; la lettura del contatore resta nel prelievo.</p>}
               </div>
             </>
           ) : <Empty icon={LuDroplets} title="Ancora nessuna lettura">Registra il consumo dell’ultimo mese: da lì nascono il prelievo idrico (E9) e i litri per tonnellata.</Empty>}
@@ -458,7 +459,7 @@ export function Acqua({ d, nuova }) {
           { key: 'source', label: 'Fonte', render: w => <span className="row gap-s"><i className="dot" style={{ background: SOURCE_COLOR[w.source] || 'var(--s5)' }} />{w.source}</span> },
           { key: 'reading', label: 'Lettura', align: 'r', render: w => (w.reading != null ? nf(w.reading) : '—') },
           { key: 'm3', label: 'Consumo m³', align: 'r', render: w => <b>{nf(w.m3)}</b> },
-          { key: 'lt', label: 'Litri/t del mese', align: 'r', sort: w => (tByM[w.month] ? sum(d.water.filter(x => x.month === w.month), x => x.m3) / tByM[w.month] : null), render: w => (tByM[w.month] ? nf(sum(d.water.filter(x => x.month === w.month), x => x.m3) * 1000 / tByM[w.month], 1) : '—') },
+          { key: 'lt', label: 'Litri/t del mese', align: 'r', sort: w => mByM[w.month]?.perT ?? null, render: w => (mByM[w.month]?.perT != null ? nf(mByM[w.month].perT * 1000, 1) : <span className="muted" title={mByM[w.month]?.partial ? 'Produzione registrata solo per una parte del mese' : undefined}>—</span>) },
           { key: 'note', label: 'Nota', render: w => <span className="small muted">{w.note}</span> },
           { key: 'x', label: '', nosort: true, align: 'r', render: w => <Btn small kind="ghost" icon={LuTrash2} title="Elimina la lettura" onClick={() => remove(w)} /> },
         ]} empty="Nessuna lettura registrata" />

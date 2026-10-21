@@ -23,6 +23,23 @@ test('acqua: dodici mesi chiusi, intensità plausibile, perdita degli ultimi tre
   assert.equal(Math.round(W.m3), Math.round(W.months.reduce((s, m) => s + m.m3, 0)));
 });
 
+test('acqua: un mese con la produzione registrata solo in parte non entra nei litri per tonnellata', () => {
+  const W = waterStats(d, P);
+  assert.deepEqual(W.partial, ['2025-10'], 'nel demo le lavorazioni sono registrate dal 20 ottobre 2025');
+  assert.equal(W.months[0].perT, null);
+  assert.ok(W.months[0].m3 > 0, 'la lettura del contatore resta nel prelievo');
+  const full = W.months.filter(m => !m.partial), tot = k => full.reduce((s, m) => s + m[k], 0);
+  assert.ok(Math.abs(W.intensity - tot('m3') / tot('tonnes')) < 1e-12);
+  // registro sintetico: lavorazioni dal 2 marzo al 18 maggio, letture di marzo, aprile e maggio
+  const runs = ['2026-03-02', '2026-04-15', '2026-05-18'].map((date, i) => ({ id: 'r' + i, date, tonnes: 1000 }));
+  const water = ['2026-03', '2026-04', '2026-05'].map(month => ({ id: 'w' + month, month, source: 'Pozzo', m3: 50 }));
+  const S = waterStats({ runs, water }, { from: '2026-03-01', to: '2026-06-30' });
+  assert.deepEqual(S.partial, ['2026-05'], 'maggio: lavorazioni registrate solo fino al 18');
+  assert.deepEqual(S.months.map(m => m.perT), [0.05, 0.05, null]);
+  assert.equal(S.m3, 150);
+  assert.equal(S.intensity, 0.05);
+});
+
 test('rifiuti: pericolosi dal codice EER, recupero, opportunità', () => {
   assert.ok(isHazardous('15 01 10*') && !isHazardous('15 01 01'));
   assert.equal(new Set(EER.map(e => e.code)).size, EER.length);

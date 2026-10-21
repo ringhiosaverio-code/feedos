@@ -4,7 +4,7 @@
 import { SURVEY_SECTIONS, SURVEY_QUESTIONS, QUESTION, visible, answered } from '../data/survey.js';
 import { EER_BY_CODE, isHazardous } from '../data/eer.js';
 import { DEFAULTS } from './energy.js';
-import { sum, addDays, nf } from '../core/util.js';
+import { sum, addDays, nf, daysInMonth } from '../core/util.js';
 
 // mesi del periodo per i registri mensili: da quello di inizio a quello di fine (il mese in corso non ha ancora la lettura)
 const inMonth = (P, m) => m >= P.from.slice(0, 7) && m <= P.to.slice(0, 7);
@@ -18,12 +18,28 @@ function tonnesByMonth(runs) {
   for (const r of runs) { const m = r.date.slice(0, 7); t[m] = (t[m] || 0) + (+r.tonnes || 0); }
   return t;
 }
+/** Quota di giorni del mese coperta dal registro di produzione: meno di 1 solo nel primo e nell'ultimo mese del registro,
+ * se comincia o finisce a metà (es. lavorazioni registrate dal 27 ottobre). Restituisce la funzione mese → quota. */
+function runCoverage(runs) {
+  let first = null, last = null;
+  for (const r of runs) { if (!first || r.date < first) first = r.date; if (!last || r.date > last) last = r.date; }
+  return m => {
+    if (!first || m < first.slice(0, 7) || m > last.slice(0, 7)) return 0;
+    const from = m === first.slice(0, 7) ? +first.slice(8, 10) : 1, to = m === last.slice(0, 7) ? +last.slice(8, 10) : daysInMonth(m);
+    return (to - from + 1) / daysInMonth(m);
+  };
+}
+/** Sotto questa quota la produzione registrata non rappresenta il mese: la lettura del contatore sì, i litri per tonnellata no. */
+export const MIN_RUN_COVERAGE = 0.9;
 
 /* ---------------- acqua ---------------- */
-/** Prelievi idrici del periodo dal registro (una riga per mese e fonte). Intensità solo sui mesi con lettura. */
+/** Prelievi idrici del periodo dal registro (una riga per mese e fonte). Litri per tonnellata, intensità e tendenza solo sui mesi
+ * con lettura e con la produzione registrata per intero: un mese in cui il registro comincia o finisce a metà ha la lettura
+ * di tutto il mese ma solo una parte delle tonnellate, e gonfierebbe il rapporto. */
 export function waterStats(d, P) {
   const rows = (d.water || []).filter(w => inMonth(P, w.month));
   const tByM = tonnesByMonth(d.runs || []);   // produzione dell'intero mese, per confrontarla con la lettura del mese
+  const cover = runCoverage(d.runs || []);
   const months = [...new Set(rows.map(w => w.month))].sort();
   const bySource = {};
   for (const r of rows) { const s = r.source || 'Acquedotto'; bySource[s] = (bySource[s] || 0) + (+r.m3 || 0); }
@@ -31,13 +47,14 @@ export function waterStats(d, P) {
     const rs = rows.filter(r => r.month === m);
     const src = {};
     for (const r of rs) { const s = r.source || 'Acquedotto'; src[s] = (src[s] || 0) + (+r.m3 || 0); }
-    const m3 = sum(rs, r => r.m3), t = tByM[m] || 0;
-    return { month: m, m3, bySource: src, tonnes: t, perT: t > 0 ? m3 / t : null };
+    const m3 = sum(rs, r => r.m3), t = tByM[m] || 0, coverage = cover(m), partial = t > 0 && coverage < MIN_RUN_COVERAGE;
+    return { month: m, m3, bySource: src, tonnes: t, coverage, partial, perT: t > 0 && !partial ? m3 / t : null };
   });
   const m3 = sum(rows, r => r.m3);
-  const tCovered = sum(byMonth, x => x.tonnes);
-  // tendenza: ultimi 3 mesi registrati contro i precedenti del periodo
-  const last = byMonth.slice(-3), prev = byMonth.slice(0, -3);
+  const full = byMonth.filter(x => x.perT != null);
+  const tCovered = sum(full, x => x.tonnes);
+  // tendenza: ultimi 3 mesi confrontabili contro i precedenti del periodo
+  const last = full.slice(-3), prev = full.slice(0, -3);
   const ratio = a => { const t = sum(a, x => x.tonnes); return t > 0 ? sum(a, x => x.m3) / t : null; };
   const recent = ratio(last), before = prev.length >= 3 ? ratio(prev) : null;
   const sourceDrift = {};
@@ -48,7 +65,8 @@ export function waterStats(d, P) {
   }
   return {
     m3, months: byMonth, bySource, nMonths: months.length, tonnes: tCovered,
-    intensity: tCovered > 0 ? m3 / tCovered : null,            // m³ per tonnellata prodotta
+    intensity: tCovered > 0 ? sum(full, x => x.m3) / tCovered : null,   // m³ per tonnellata prodotta, sui mesi confrontabili
+    partial: byMonth.filter(x => x.partial).map(x => x.month),
     recent, before, drift: recent != null && before ? recent / before - 1 : null, sourceDrift,
     lastMonth: months[months.length - 1] || null,
   };

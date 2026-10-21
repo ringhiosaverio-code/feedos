@@ -1,9 +1,9 @@
 44d786641f156474f38b8499240e357a776fd69af1676f5ee7e291b57a7b1c0d  ./.gitignore
 bc5afd74709cf5363f53fd6336c3ce30b96a5cf5879b3e9802f00b8133902e82  ./CHANGELOG_16.0.md
 bafa077e485cda4a6b26a43c534fc2d556b0572b25dafd03921673480c061373  ./CHANGELOG_16.1.md
-04ade720ebfe88d92f677f81a6a872aaed79c69a1104ee16e66b4b8c3d3ad8aa  ./CHANGELOG_17.0.md
+96abc2f16d487fa267324cf2f2b88b34bfe7390ce8166245c9b21d355591b971  ./CHANGELOG_17.0.md
 ec0d23dc877d328dbfad71d55095bd7a77d3e75346b4894bd7b9cec6f1297e7f  ./FeedOS-16-completa-RISERVATA.html
-30206b11c3e98a454d7eabef1dc9873841b537b1f205358da6254c8756989329  ./FeedOS-16-demo.html
+5d0ba31502cf523e381b11b42fa2aac0a6fd1ba2ba2acbbdf83d5a40d2778b69  ./FeedOS-16-demo.html
 a7655a553ae034f7deba5bcae01eab401cf0546ff6a4965637f09643429d1258  ./LEGGIMI.md
 2b9eb9012ae34eef79307933998e33dfd533a6f62987a8cae054051ebea6ecdc  ./LEGGIMI.txt
 a9a1b0b7463401b2233c71873c09c97cd66d330e6932cc4b6c76f7a163e1b0bc  ./README.md
@@ -16,7 +16,7 @@ ec733354b8ee5a8b66a7a57ec439013146ebf9952d8e352f085b9104720e69fa  ./fonts/mono-4
 dd92c0677e81b151c7ae43ae2e6138831321f7cc50be570a27b8a0f42ab4423b  ./fonts/sans-400.woff
 886bec12ec89a752c5600bee9cf8e9bf05316d0009781e1c5cfeaa6025b76447  ./fonts/sans-400i.woff
 78be11935c8bcf0acd7b81ead02e405da6eb493337cbb6b280d2e8dee2a27446  ./fonts/sans-700.woff
-30206b11c3e98a454d7eabef1dc9873841b537b1f205358da6254c8756989329  ./index.html
+5d0ba31502cf523e381b11b42fa2aac0a6fd1ba2ba2acbbdf83d5a40d2778b69  ./index.html
 7521726a7719afb32c109acea3fe1d2dd388b9f18dd812ae038d836037bb350a  ./package-lock.json
 9d0f00ebebcb55ddc919c76efa0a8d3d694279ea9e8cd18dc3bad23ea7543eae  ./package.json
 45a54819e15f1928eb8a1d99ad803f2a8295c767568ed2e6ce29a21b40487d93  ./src/app/App.jsx
@@ -54,7 +54,7 @@ fce5caf1bd9fa884abb43b10eac8cbe10e9c52d8109d10de2467fd11cacb8058  ./src/data/dem
 2c24d67bb443d5c7cefe398ec070e3f12d86e1325cce8aa00691377b804d824a  ./src/data/demo/piattaforma.js
 bc6ba7cf2c03a61bd217bab11a2bd1bbbb750dff2a64150a296354c753f84410  ./src/data/demo/produzione.js
 c3582a44bb6617c87b6d5c48ba025d9ace6090a01577d28a1d08ccc0f5b25a40  ./src/data/demo/redditivita.js
-5e34a7c916d8417cb22e48ade205dc72e71a84d426b86a6e2ea5f628a594d610  ./src/data/demo/sustainability.js
+879553aa852b8883b2c5dff8d6e6ffd2f0754b60b668b0c7934acc4d5ae90500  ./src/data/demo/sustainability.js
 ff619699d5e616b42398df9d3907078c7718ef9faf34426ea45c06c2546a1f1e  ./src/data/eer.js
 cb1dc4c194cf1ef6afefd35fe1a626b3fe9485625ca332315b0faef16aeaa5a2  ./src/data/esgRegistry.js
 e37e12d7cfe9b4205a243f3f7647ec6552db7046623f5f15c95d6e84c7e0fe8d  ./src/data/survey.js
@@ -94,7 +94,7 @@ c378413d0704916e43ab22ae93c03aac42456fc31ac19aa99548e429f309fbc3  ./src/engine/r
 98f6960791ec0e9374d04bc48ac100e9a4e75b32ab971b0bb9ed4d6a359f6ed0  ./src/engine/scenario.js
 9ea7be4353e5d4229276768456568cb04b2da166acb804936fa8150839d8dbb1  ./src/engine/signals.js
 26747ea2901193631bfa4d53be5d2f103c646ff6f4fb4da22b2aef9397c82293  ./src/engine/suppliers.js
-628fe0b5287feca7fa3f5236722b3d61904ed3b176c71af032613526a6fb4574  ./src/engine/sustainability.js
+c07c4a4d1cb4c8720eafcd9872d3b669f9ba411f6220b19a49ed1ec73193d8d8  ./src/engine/sustainability.js
 9a22d7ddc093266545a2a42ec6c50eff2f68b95af38768e06b484711f519cd97  ./src/engine/trace.js
 5f3b32cbf2e7178c403d1f239384fba3275ee414665cb017cec9b6b1f827ee09  ./src/main.jsx
 8671aa84b045e2fc4a76a50d105fe5e70fb283cd751bbd47544d91111c985d5f  ./src/modules/acquisti.jsx
@@ -127,7 +127,7 @@ cf33c0ed13018bb09170392bfac86f5e08cdfc177bb637083d1e55bcbdae3ab1  ./src/modules/
 a66e6a27bb5e8bfbf3e2dbc600ed7115ca3bf9442bf977bd3aa514ec48eea036  ./src/modules/redditivita.jsx
 5aafc7731fa0a0e75736ec108752331314d726545f74a41e010394e690a5db5c  ./src/modules/shared.jsx
 ec5bdcd463339cca4700c208a11c06a767efa43356f674afc0ccb91d4c2e2401  ./src/modules/slots.jsx
-272f6b49cc62de7fcd5407ab29ec3af893132c3584d6fcdf0579b5c63f07a15d  ./src/modules/sostenibilita.jsx
+36ec16b035d1a67384f5adc2d83b22025afc6369a22c9635de1b94116bb8fa8f  ./src/modules/sostenibilita.jsx
 59f2791378a1b132205534c82c979e5ca9358a2785b989d959fae0b7c1a0702b  ./src/modules/varianze.jsx
 dc31f2395bf817d46360c85237f6246f54b4bab0d3048c37f0e10e7304e32e3f  ./src/styles/acquisti.css
 cac3b41bc8ddf7ac52f5cd4550eb4ab3b2a708c49d42540f2dadfd0363d283b8  ./src/styles/app.css
@@ -136,7 +136,7 @@ aff5e3648ccf7796c4579e85e4d1bcf12c72bf79124315e3e20bc1ceba7fcc74  ./src/styles/f
 4cefad9eaa0fb2e462b4d1c0a4949abcb6ec3e8b9de960c86adf0bd2a6c11f00  ./src/styles/piattaforma.css
 efa4f242158d5b3c67920dad934ca61a586c692102f959698f101b4d355ec627  ./src/styles/print.css
 1949df3afea66c05f8800f9aabff4ac65923546f9b9ad150b1c672d1a6afa477  ./src/styles/produzione.css
-ce9d9b3506e98086afbaf92330c2f5fd68ba9113e00f59d350c8d01fe49f34ed  ./src/ui/charts.jsx
+54e66f8704f5be1bbda103c85fb4741c33eb82082812c447623ab2378b98b8be  ./src/ui/charts.jsx
 cd635f7923634b61edf307ee69f409a432e70645820c7d59553b5ed66e20c1b3  ./src/ui/forms.jsx
 b3801eeb216ed960d75653556f9eeffff26a42ada9236715e111b1c4e144d047  ./src/ui/period.jsx
 fb8bea1b702dd07d1f5a8a120315f675fe035b6642a8741dc68561f9b2f243f2  ./src/ui/print.jsx
@@ -172,5 +172,5 @@ f415d64d68bcdfa109de0b9efddee1092a559829f6a0ab1dc3958a7f72fa37ca  ./tests/engine
 d6b7ecb56f80023062d8e15ed1fa0ce0e3202934efc61f92bdb2eb2a31a6cb5b  ./tests/engine/pvm.test.mjs
 afb2a94026cfb8fbc729a36058552e27810690bd9103749385a59dacedf0830d  ./tests/engine/scenario.test.mjs
 7915d32c26867494ec2d60cb339bc1506546e0217e5b2d7825cfa67f3a88f7d1  ./tests/engine/signals.test.mjs
-d1c79bd117a2b03201316217f7a36bfc2ba4e5ea2a3c292af982c4eaded8f5c2  ./tests/engine/sustainability.test.mjs
+f84be6cc7c9337c09e13f35301ce497a59644c8a8b57d1fbd7c4731853dbd366  ./tests/engine/sustainability.test.mjs
 884cddfd45d8618471c459ee95f9dc1a86924ccf1bd9a658302a305c08424c2b  ./tools/make_fonts.py
