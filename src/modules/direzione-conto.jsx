@@ -6,8 +6,7 @@ import { LuInfo, LuChevronRight, LuSnowflake, LuTriangleAlert } from 'react-icon
 import { nf, sf, pct, monthLabel } from '../core/util.js';
 import { ctxOf } from '../core/derived.js';
 import { usePeriod } from '../ui/period.jsx';
-import { aggregateFacts } from '../engine/actuals.js';
-import { pnlFor, PNL_LINES, VAR_LINE, FIXED_LINE, compareLines, stockEffect, effectiveCoverage, keyLabel } from '../engine/pnl.js';
+import { pnlFor, aggregate, PNL_LINES, VAR_LINE, FIXED_LINE, compareLines, stockEffect, effectiveCoverage, keyLabel } from '../engine/pnl.js';
 import { budgetTotals, activeVersion } from '../engine/budget.js';
 import { Panel, Kpi, Table, Seg, Chip, Empty, useWidth } from '../ui/ui.jsx';
 import { niceTicks } from '../ui/charts.jsx';
@@ -195,9 +194,9 @@ export function Conto({ d }) {
   const [dim, setDim] = useState('productId');
   const [open, setOpen] = useState(() => new Set());
   const centers = d.costCenters || [];
-  // righe per chiave (periodo e confronto) per l'espansione delle voci variabili
-  const byKey = useMemo(() => aggregateFacts(ctx.facts, d.salesHistory || [], P, [dim]).rows, [ctx.facts, d.salesHistory, P, dim]);
-  const byKeyC = useMemo(() => (C && !C.budget ? Object.fromEntries(aggregateFacts(ctx.facts, d.salesHistory || [], C, [dim]).rows.map(r => [r[dim] ?? '', r])) : null), [ctx.facts, d.salesHistory, C, dim]);
+  // righe per chiave (periodo e confronto) per l'espansione delle voci variabili: stesse regole del totale (storico ripartito per giorni)
+  const byKey = useMemo(() => aggregate(ctx.facts, d.salesHistory || [], P, [dim]).rows, [ctx.facts, d.salesHistory, P, dim]);
+  const byKeyC = useMemo(() => (C && !C.budget ? Object.fromEntries(aggregate(ctx.facts, d.salesHistory || [], C, [dim]).rows.map(r => [r[dim] ?? '', r])) : null), [ctx.facts, d.salesHistory, C, dim]);
   if (!dir.hasData) return <Panel title="Conto economico"><Empty title="Nessuna consegna nel periodo">Il conto economico si costruisce dalle consegne (con i lotti e le lavorazioni) e dai costi fissi per centro. Registra o importa le consegne da Dati › Importa, oppure scegli un altro periodo.</Empty></Panel>;
   const lines = compareLines(cur, cmp);
   const t = cur.tonnes;

@@ -142,8 +142,25 @@ export function demoDirezione(d, { today, R = rng(16 + 201) } = {}) {
     closings.push(snap);
   }
 
+  // solo aggiunte: niente id già presenti, niente mesi o anni che l'archivio ha già (storico, budget, chiusure),
+  // impostazioni scritte solo se mancano (un demo già esteso o modificato dall'utente resta com'è)
+  const ids = coll => new Set((d[coll] || []).map(x => x.id));
+  const fresh = (coll, rows, skip = () => false) => { const s = ids(coll); return rows.filter(r => !s.has(r.id) && !skip(r)); };
+  const histMonths = new Set((d.salesHistory || []).map(h => String(h.month || '').slice(0, 7)));
+  const budYear = (d.budget || []).some(r => String(r.month || '').startsWith(`${year}-`) && (r.version || 'B') === 'B');
+  const fbKeys = new Set((d.fixedCosts || []).filter(f => f.kind === 'budget' && (f.version || 'B') === 'B').map(f => `${String(f.month).slice(0, 7)}|${f.centerId}`));
+  const closedMonths = new Set((d.closings || []).map(c => c.month || c.id));
+  const fin = d.settings?.finance || {};
+  const settings = {};
+  if (!fin.budget && !fin.budgetStatus?.[year]) settings.finance = { budget: status, budgetStatus: { [year]: status } };
+  if (!d.settings?.closedThrough) settings.closedThrough = lastClosed;
   return {
-    add: { salesHistory, budget, fixedCosts: fixedBudget, closings },
-    settings: { finance: { budget: status, budgetStatus: { [year]: status } }, closedThrough: lastClosed },
+    add: {
+      salesHistory: fresh('salesHistory', salesHistory, h => histMonths.has(h.month)),
+      budget: budYear ? [] : fresh('budget', budget),
+      fixedCosts: fresh('fixedCosts', fixedBudget, f => fbKeys.has(`${f.month}|${f.centerId}`)),
+      closings: fresh('closings', closings, c => closedMonths.has(c.month)),
+    },
+    settings,
   };
 }
