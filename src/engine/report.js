@@ -26,7 +26,8 @@ export const SECTION_TITLES = {
   kpi: 'Indicatori', redditivita: 'Redditività', commerciale: 'Commerciale', finanza: 'Finanza', acquisti: 'Acquisti', produzione: 'Produzione', dati: 'Qualità dei dati',
 };
 
-const vsText = C => (!C ? 'senza confronto' : C.budget ? 'sul budget' : C.compare === 'ap' ? 'sull’anno prima' : 'sul periodo prima');
+const vsText = C => (!C ? 'senza confronto' : C.budget ? 'sul budget' : C.compare === 'ap' ? 'sull’anno prima'
+  : C.months?.length === 1 && C.from?.slice(8) === '01' && C.to === endOfMonth(C.to) ? 'sul mese prima' : 'sul periodo prima');
 
 /** Basi del ponte per P e per il confronto C (budget o periodo). */
 export function bridgeFor(d, ctx, P, C, { level = 'mc2', by = 'productId' } = {}) {
@@ -132,19 +133,36 @@ export function buildReport(d, ctx, P, C, templateId = 'cda', { comments = {}, s
   const closed = P.from.slice(8) === '01' && P.to === endOfMonth(P.to) && months.every(m => !!closingOf(d, m));
   const own = { sintesi: () => sintesi(d, ctx, P, C, cur, cmp, signals), conto: () => conto(d, ctx, P, C, cur, cmp), ponte: () => ponte(d, ctx, P, C), budget: () => budgetSec(d, ctx, P) };
   const ext = Object.fromEntries(REPORT_SECTIONS.map(s => [s.id, s]));
-  const sections = [];
+  const sections = [], failed = [];
   for (const id of ids) {
     let s = null;
-    try { s = own[id] ? own[id]() : ext[id]?.build ? ext[id].build(d, ctx, P, C) : null; } catch { s = null; }
+    // una sezione che si interrompe si salta (e si segnala nell'intestazione), le altre restano
+    try { s = own[id] ? own[id]() : ext[id]?.build ? ext[id].build(d, ctx, P, C) : null; } catch (e) { s = null; failed.push({ id, title: SECTION_TITLES[id] || id, error: String(e?.message || e) }); }
     if (!s) continue;
-    sections.push({ kpis: [], narrative: [], ...s, id: s.id || id, title: s.title || SECTION_TITLES[id] || id, comment: comments?.[id] || '' });
+    sections.push({ ...normSection(s, id), comment: comments?.[id] || '' });
   }
   return {
     header: { company: d.settings?.company?.name || 'FeedOS', site: d.settings?.company?.site || '', periodLabel: P.label || `${dateIt(P.from)} – ${dateIt(P.to)}`, compareLabel: !C ? null : C.budget ? 'Budget' : C.label || '',
-      issuedAt: ctx?.today || todayLocal(), closed, dqScore, template: templateId, templateLabel: TEMPLATE_LABELS[templateId] || templateId },
+      issuedAt: ctx?.today || todayLocal(), closed, dqScore, template: templateId, templateLabel: TEMPLATE_LABELS[templateId] || templateId, failed },
     sections,
   };
 }
+
+/**
+ * Forma comune delle sezioni (anche di altri pacchetti): kpis come elenco, narrativa come elenco di frasi (anche da note),
+ * colonne della tabella con chiave (o funzione value(row), come per toCSV).
+ */
+export function normSection(s, id) {
+  const txt = x => (x == null || x === '' ? [] : Array.isArray(x) ? x.filter(t => t != null && t !== '').map(String) : [String(x)]);
+  const kpis = (Array.isArray(s.kpis) ? s.kpis : []).filter(k => k && k.label != null);
+  let table = null;
+  if (s.table && Array.isArray(s.table.cols) && Array.isArray(s.table.rows)) {
+    table = { ...s.table, cols: s.table.cols.filter(Boolean).map((c, i) => ({ ...c, key: c.key ?? `c${i}`, label: c.label ?? '' })) };
+  }
+  return { ...s, id: s.id || id, title: s.title || SECTION_TITLES[id] || id, kpis, table, narrative: [...txt(s.narrative), ...txt(s.note)] };
+}
+/** Valore di una cella: funzione value(row) della colonna, altrimenti row[key]. */
+export const cellValue = (row, col) => (typeof col.value === 'function' ? col.value(row) : row?.[col.key]);
 
 /** Testo di una cella secondo il formato della colonna. */
 export function fmtCell(v, fmt) {
@@ -162,10 +180,12 @@ export function fmtCell(v, fmt) {
 /** Testo di un indicatore: valore, unità e scostamento. */
 export function kpiText(k) {
   const scale = k.unit === '%' ? 100 : 1;
-  const v = k.value == null || !Number.isFinite(+k.value) ? '—' : nf(+k.value * scale, k.decimals ?? 0) + (k.unit ? (k.unit === '%' ? '%' : ' ' + k.unit) : '');
-  if (!k.cmp || k.cmp.value == null || k.value == null) return v;
+  // valore già formattato (sezioni di altri pacchetti): si riporta così com'è
+  if (typeof k.value === 'string' && k.value.trim() && !Number.isFinite(+k.value)) return k.value + (k.unit && !k.value.includes(k.unit) ? ' ' + k.unit : '');
+  const v = k.value == null || k.value === '' || !Number.isFinite(+k.value) ? '—' : nf(+k.value * scale, k.decimals ?? 0) + (k.unit ? (k.unit === '%' ? '%' : ' ' + k.unit) : '');
+  if (!k.cmp || k.cmp.value == null || k.value == null || !Number.isFinite(+k.value) || !Number.isFinite(+k.cmp.value)) return v;
   const dv = +k.value - +k.cmp.value;
-  const d = k.cmp.kind === 'ratio' ? sf(dv * scale, k.decimals ?? 1) + (k.unit === '%' ? ' pt' : k.unit ? ' ' + k.unit : '') : Math.abs(k.cmp.value) > 1e-9 ? sf(dv / Math.abs(k.cmp.value) * 100, 1) + '%' : sf(dv);
+  const d = k.cmp.kind === 'ratio' ? sf(dv * scale, k.decimals ?? 1) + (k.unit === '%' ? ' pt' : k.unit ? ' ' + k.unit : '') : Math.abs(k.cmp.value) >= 0.5 ? sf(dv / Math.abs(k.cmp.value) * 100, 1) + '%' : sf(dv);
   return `${v} (${d}${k.cmp.label ? ' vs ' + k.cmp.label : ''})`;
 }
 
@@ -183,7 +203,7 @@ export function reportMarkdown(r) {
     if (s.table?.rows?.length) {
       const cols = s.table.cols;
       out.push('| ' + cols.map(c => c.label).join(' | ') + ' |', '| ' + cols.map(c => (c.align === 'r' ? '---:' : '---')).join(' | ') + ' |');
-      for (const row of s.table.rows) out.push('| ' + cols.map(c => String(fmtCell(row[c.key], c.fmt)).replace(/\|/g, '/')).join(' | ') + ' |');
+      for (const row of s.table.rows) out.push('| ' + cols.map(c => String(fmtCell(cellValue(row, c), c.fmt)).replace(/\|/g, '/').replace(/\n/g, ' ')).join(' | ') + ' |');
       out.push('');
     }
     for (const t of s.narrative || EMPTY) out.push(t);
@@ -199,11 +219,14 @@ export function reportCsv(r) {
   for (const s of r.sections) {
     const rows = [...(s.kpis || EMPTY).map(k => ({ a: k.label, b: k.value, c: k.cmp?.value ?? null, d: k.unit || '' }))];
     if (rows.length) parts.push(toCSV(rows, [{ label: `${s.title} · indicatore`, value: x => x.a }, { label: 'Valore', value: x => (typeof x.b === 'number' ? Math.round(x.b * 1e4) / 1e4 : x.b) }, { label: 'Confronto', value: x => (typeof x.c === 'number' ? Math.round(x.c * 1e4) / 1e4 : x.c) }, { label: 'Unità', value: x => x.d }]));
-    if (s.table?.rows?.length) parts.push(toCSV(s.table.rows, s.table.cols.map(c => ({ label: `${c.label}`, value: row => (typeof row[c.key] === 'number' ? Math.round(row[c.key] * 1e4) / 1e4 : row[c.key]) }))));
+    const num4 = v => (typeof v === 'number' ? Math.round(v * 1e4) / 1e4 : v);
+    if (s.table?.rows?.length) parts.push(toCSV(s.table.rows, s.table.cols.map((c, i) => ({ label: i === 0 ? `${s.title} · ${c.label}` : `${c.label}`, value: row => num4(cellValue(row, c)) }))));
   }
   const strip = t => t.replace(/^﻿/, '');
   const h = r.header;
-  return '﻿' + [`${h.company};${h.periodLabel};emesso il ${dateIt(h.issuedAt)}`, ...parts.map(strip)].join('\r\n\r\n');
+  // intestazione anch'essa attraverso toCSV (separatori e formule neutralizzati)
+  const head = toCSV([h], [{ label: 'Azienda', value: x => x.company }, { label: 'Periodo', value: x => x.periodLabel }, { label: 'Confronto', value: x => x.compareLabel || '' }, { label: 'Emesso il', value: x => dateIt(x.issuedAt) }]);
+  return '﻿' + [head, ...parts].map(strip).join('\r\n\r\n');
 }
 
 /** Commenti salvati nella chiusura del mese (anche aperta). */

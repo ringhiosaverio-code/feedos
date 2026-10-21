@@ -47,7 +47,7 @@ th .dz-tip { font-weight: 500; }
 .dz-legend { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 12px; color: var(--ink-2); margin-top: 6px; }
 .dz-legend span { display: inline-flex; align-items: center; gap: 6px; }
 .dz-legend i { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
-.dz-legend i.hatch { background-image: repeating-linear-gradient(45deg, currentColor 0 2px, transparent 2px 5px) !important; border: 1px solid currentColor; }
+.dz-legend i.hatch { background-color: transparent !important; background-image: repeating-linear-gradient(45deg, currentColor 0 2px, transparent 2px 5px) !important; border: 1px solid currentColor; }
 .dz-legend i.outline { background: transparent !important; border: 1.5px solid currentColor; }
 
 /* conto economico */
@@ -56,8 +56,8 @@ th .dz-tip { font-weight: 500; }
 .dz-pnl tr:has(.dz-tot.key) td { background: color-mix(in srgb, var(--accent-soft) 60%, var(--surface)); }
 .dz-pnl tr:has(.dz-ch) td { font-size: 12.5px; color: var(--ink-2); background: color-mix(in srgb, var(--surface-2) 45%, var(--surface)); }
 .dz-pnl tr:has(.dz-memo) td { font-style: italic; color: var(--ink-2); border-top: 1px dashed var(--line-2); }
-.dz-pnl .dz-lbl { display: inline-flex; align-items: center; gap: 6px; min-width: 0; }
-.dz-pnl .dz-ch { padding-left: 26px; display: inline-flex; align-items: center; gap: 6px; }
+.dz-pnl .dz-lbl { display: inline-flex; align-items: center; gap: 6px; min-width: 0; white-space: nowrap; }
+.dz-pnl .dz-ch { padding-left: 26px; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
 .dz-exp { display: inline-grid; place-items: center; width: 18px; height: 18px; border-radius: 5px; color: var(--muted); flex: none; }
 .dz-exp svg { width: 14px; height: 14px; transition: transform .15s var(--ease); }
 .dz-exp.on svg { transform: rotate(90deg); }
@@ -132,6 +132,9 @@ th .dz-tip { font-weight: 500; }
 .dz-rk span { font-size: 11px; color: var(--ink-2); }
 .dz-rk b { font-size: 17px; letter-spacing: -.01em; font-variant-numeric: tabular-nums; }
 .dz-rk small { font-size: 10.5px; color: var(--muted); }
+.dz-rk > div.st-ok { border-left: 3px solid var(--good); }
+.dz-rk > div.st-warn { border-left: 3px solid var(--warn); }
+.dz-rk > div.st-bad { border-left: 3px solid var(--crit); }
 .dz-rk .good { color: var(--good-ink); font-weight: 700; }
 .dz-rk .bad { color: var(--crit-ink); font-weight: 700; }
 .dz-rtw { min-width: 0; overflow-x: auto; }

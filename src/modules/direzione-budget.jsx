@@ -18,7 +18,7 @@ const LAND_KEY = { ebit: 'ebit', mc2: 'mc2', revenue: 'rev', tonnes: 't' };
 
 /** Variazione rispetto al budget: chip verde o rosso (per i costi fissi meno è meglio). */
 function Var({ act, bud, good = 'up', pctMode = true }) {
-  if (act == null || bud == null || !Number.isFinite(act) || !Number.isFinite(bud) || Math.abs(bud) < 1e-9) return null;
+  if (act == null || bud == null || !Number.isFinite(act) || !Number.isFinite(bud) || Math.abs(bud) < 0.5) return null;
   const dv = act - bud;
   const txt = pctMode ? sf(dv / Math.abs(bud) * 100, 1) + '%' : sf(dv / 1000, 1) + ' k€';
   const cls = Math.abs(dv / Math.abs(bud)) < 0.005 ? '' : (good === 'up') === dv > 0 ? 'good' : 'bad';

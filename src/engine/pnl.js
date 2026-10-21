@@ -270,7 +270,7 @@ export function compareLines(cur, cmp) {
     const delta = cv == null ? null : l.value - cv;
     return {
       ...l, cmp: cv, cmpPerT: c?.perT ?? null, cmpPctRev: c?.pctRev ?? null, delta,
-      deltaPct: delta == null || Math.abs(cv) < 1e-9 ? null : delta / Math.abs(cv),
+      deltaPct: delta == null || Math.abs(cv) < 0.5 ? null : delta / Math.abs(cv), // sotto 0,5 € la percentuale non ha senso
       deltaPerT: l.perT != null && c?.perT != null ? l.perT - c.perT : null,
     };
   });

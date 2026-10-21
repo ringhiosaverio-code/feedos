@@ -232,7 +232,7 @@ function Ponte() {
         <Kpi label={`${LEVELS[level]} B`} {...money(res.end)} foot={`${PB.short} · ${nf(res.TB)} t`} />
         <Kpi label="Differenza" value={(res.end - res.start >= 0 ? '+' : '−') + money(Math.abs(res.end - res.start)).value} unit={money(res.end - res.start).unit}
           status={Math.abs(res.end - res.start) < Math.max(mat.abs ?? 5000, (mat.pct ?? 2) / 100 * Math.abs(res.start)) ? 'ok' : res.end > res.start ? 'ok' : 'bad'}
-          foot={Math.abs(res.start) > 1e-9 ? sf((res.end - res.start) / Math.abs(res.start) * 100, 1) + '% su A' : '—'} />
+          foot={Math.abs(res.start) >= 0.5 ? sf((res.end - res.start) / Math.abs(res.start) * 100, 1) + '% su A' : '—'} />
         <Kpi label={<Def text="Margine medio per tonnellata: M / t. La differenza tra B e A si spiega con i passi del ponte.">Margine per t</Def>} value={perT(res.mBarB)} unit="€/t" foot={`A ${perT(res.mBarA)} €/t`} />
       </div>
       <div className="split">

@@ -8,7 +8,7 @@ import { nf, sf, monthLabel, endOfMonth, dateIt, monthsIn, addMonths } from '../
 import { download, stamp } from '../core/io.js';
 import { makePeriod, comparePeriod } from '../core/period.js';
 import { firstFactDate } from '../engine/pnl.js';
-import { buildReport, reportMarkdown, reportCsv, reportComments, commentOps, defaultReportMonth, fmtCell, REPORT_TEMPLATES, TEMPLATE_LABELS } from '../engine/report.js';
+import { buildReport, reportMarkdown, reportCsv, reportComments, commentOps, defaultReportMonth, fmtCell, cellValue, REPORT_TEMPLATES, TEMPLATE_LABELS } from '../engine/report.js';
 import { PrintPage, printNow } from '../ui/print.jsx';
 import { Panel, Btn, Seg, Select, Chip, Empty } from '../ui/ui.jsx';
 import { useDir, HWaterfall, eurTxt } from './direzione-conto.jsx';
@@ -17,19 +17,21 @@ const CMP = [{ id: 'prec', label: 'Mese prima' }, { id: 'ap', label: 'Anno prima
 
 /** Valore di un indicatore del report (le percentuali arrivano come frazioni). */
 function kpiValue(k) {
-  if (k.value == null || !Number.isFinite(+k.value)) return '—';
+  // sezioni di altri pacchetti: il valore può arrivare già formattato
+  if (typeof k.value === 'string' && k.value.trim() && !Number.isFinite(+k.value)) return k.value + (k.unit && !k.value.includes(k.unit) ? ' ' + k.unit : '');
+  if (k.value == null || k.value === '' || !Number.isFinite(+k.value)) return '—';
   if (k.unit === '€') return eurTxt(+k.value);
   if (k.unit === '%') return nf(+k.value * 100, k.decimals ?? 1) + '%';
   return nf(+k.value, k.decimals ?? 0) + (k.unit ? ' ' + k.unit : '');
 }
 function kpiDelta(k) {
   const c = k.cmp;
-  if (!c || c.value == null || k.value == null || !Number.isFinite(+c.value)) return null;
+  if (!c || c.value == null || k.value == null || k.value === '' || !Number.isFinite(+c.value) || !Number.isFinite(+k.value)) return null;
   if (c.cov != null && c.cov < 0.9) return { text: 'non confrontabile', cls: '' };
   const dv = +k.value - +c.value, up = (c.good || 'up') === 'up';
   let text;
   if (c.kind === 'ratio') text = k.unit === '%' ? sf(dv * 100, 1) + ' pt' : sf(dv, k.decimals ?? 1) + (k.unit ? ' ' + k.unit : '');
-  else text = Math.abs(c.value) > 1e-9 ? sf(dv / Math.abs(c.value) * 100, 1) + '%' : '—';
+  else text = Math.abs(c.value) >= 0.5 ? sf(dv / Math.abs(c.value) * 100, 1) + '%' : '—';
   return { text: `${text}${c.label ? ' vs ' + c.label : ''}`, cls: Math.abs(dv) < 1e-9 ? '' : (dv > 0) === up ? 'good' : 'bad' };
 }
 
@@ -37,13 +39,13 @@ function SectionBody({ s }) {
   return (
     <>
       {s.kpis?.length > 0 && <div className="dz-rk">{s.kpis.map((k, i) => { const dl = kpiDelta(k); return (
-        <div key={i}><span>{k.label}</span><b>{kpiValue(k)}</b>{dl && <small className={dl.cls}>{dl.text}</small>}{k.note && <small>{k.note}</small>}</div>); })}</div>}
+        <div key={i} className={k.status ? `st-${k.status}` : undefined}><span>{k.label}</span><b>{kpiValue(k)}</b>{dl && <small className={dl.cls}>{dl.text}</small>}{(k.note || k.foot) && <small>{k.note || k.foot}</small>}</div>); })}</div>}
       {s.id === 'ponte' && s.steps && <HWaterfall steps={[{ key: 'a', label: 'Partenza', value: s.start, kind: 'total' }, ...s.steps.filter(x => Math.abs(x.value) >= 0.5).map(x => ({ ...x, kind: 'step', def: null })), { key: 'b', label: 'Arrivo', value: s.end, kind: 'total' }]} ariaLabel="Ponte del margine" />}
       {s.table?.rows?.length > 0 && s.id !== 'ponte' && (
         <div className="dz-rtw">
           <table className="dz-rt">
             <thead><tr>{s.table.cols.map(c => <th key={c.key} className={c.align === 'r' ? 'r' : ''}>{c.label}</th>)}</tr></thead>
-            <tbody>{s.table.rows.map((r, i) => <tr key={i} className={r.total || r.kind === 'total' ? 'tot' : ''}>{s.table.cols.map(c => <td key={c.key} className={c.align === 'r' ? 'r' : ''}>{fmtCell(r[c.key], c.fmt)}</td>)}</tr>)}</tbody>
+            <tbody>{s.table.rows.map((r, i) => <tr key={i} className={r.total || r.kind === 'total' ? 'tot' : ''}>{s.table.cols.map(c => <td key={c.key} className={c.align === 'r' ? 'r' : ''}>{fmtCell(cellValue(r, c), c.fmt)}</td>)}</tr>)}</tbody>
           </table>
         </div>
       )}
@@ -108,6 +110,7 @@ export function ReportCda({ d }) {
           <Seg label="Confronto" value={cmpMode} onChange={setCmp} options={CMP} />
           {r.header.closed ? <Chip kind="accent" icon={LuSnowflake}>mese chiuso</Chip> : <Chip kind="warn">mese non chiuso: numeri provvisori</Chip>}
         </div>
+        {r.header.failed?.length > 0 && <div className="note warn" style={{ marginTop: 10 }}>Sezioni non disponibili per un errore nei dati: {r.header.failed.map(f => f.title).join(', ')}. Il resto del report è completo.</div>}
       </Panel>
       <div className="dz-report">
         {r.sections.map((s, i) => (

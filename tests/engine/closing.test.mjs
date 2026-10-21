@@ -8,7 +8,7 @@ import { applyOpsTo } from '../../src/core/ops.js';
 import { isClosedMonth } from '../../src/core/schema.js';
 import { closeMonthOps, reopenMonthOps, reopenLabel, checklist, frozenFor, snapshotMonth, frozenVsLive, closingRecord, nextToClose } from '../../src/engine/closing.js';
 import { pnlFor, PNL_LINES } from '../../src/engine/pnl.js';
-import { buildReport, reportMarkdown, reportCsv, commentOps, reportComments, REPORT_TEMPLATES } from '../../src/engine/report.js';
+import { buildReport, reportMarkdown, reportCsv, commentOps, reportComments, normSection, cellValue, kpiText, REPORT_TEMPLATES } from '../../src/engine/report.js';
 import { makePeriod, comparePeriod } from '../../src/core/period.js';
 
 const today = '2026-10-16';
@@ -136,4 +136,20 @@ test('report CdA: sezioni nell’ordine del modello, intestazione, ponte che qua
   assert.ok(csv.startsWith('﻿')); assert.match(csv, /Ricavi netti/);
   // senza confronto: niente ponte
   assert.ok(!buildReport(d, ctx, P, null, 'cda').sections.some(s => s.id === 'ponte'));
+});
+
+test('report CdA: le sezioni di altri pacchetti si leggono anche con valori già formattati e colonne a funzione', () => {
+  const ext = { title: 'Crediti', kpis: [{ label: 'DSO', value: '62 gg' }, { label: 'Scaduto', value: 0.184, unit: '%', decimals: 1, status: 'warn' }, null],
+    table: { cols: [{ label: 'Cliente', value: r => r.n }, { key: 'eur', label: 'Scaduto', align: 'r', fmt: 'eur' }], rows: [{ n: 'Rossi; Bianchi', eur: 1200.5 }, { n: '=SOMMA(A1)', eur: 0 }] }, note: 'Fonte: partitario' };
+  const s = normSection(ext, 'finanza');
+  assert.equal(s.id, 'finanza'); assert.equal(s.kpis.length, 2); assert.deepEqual(s.narrative, ['Fonte: partitario']);
+  assert.equal(s.table.cols[0].key, 'c0'); assert.equal(cellValue(s.table.rows[0], s.table.cols[0]), 'Rossi; Bianchi');
+  assert.equal(kpiText(s.kpis[0]), '62 gg'); assert.equal(kpiText(s.kpis[1]), '18,4%');
+  const r = { header: { company: 'Mangimificio; prova', periodLabel: 'settembre 2026', compareLabel: null, issuedAt: today, closed: true, dqScore: null }, sections: [{ ...s, comment: '' }] };
+  const md = reportMarkdown(r);
+  assert.match(md, /\| Rossi; Bianchi \| 1\.?201 € \|/); assert.match(md, /- \*\*DSO\*\*: 62 gg/);
+  const csv = reportCsv(r);
+  assert.match(csv, /"Mangimificio; prova"/, 'intestazione con il separatore tra virgolette');
+  assert.match(csv, /'=SOMMA\(A1\)/, 'formula neutralizzata');
+  assert.match(csv, /Crediti · Cliente/);
 });

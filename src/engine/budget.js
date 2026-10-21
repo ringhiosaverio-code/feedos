@@ -306,7 +306,7 @@ function landingCalc(d, ctx, year, version, today) {
       // giorni del resto dell'anno: tonnellate e scarti P10/P90 per mese (settimane combinate come errori indipendenti)
       const acc = {}, tot = { v: 0, lo2: 0, hi2: 0 };
       for (const pt of pts) {
-        const ws = addDays(wk0, 7 * (pt.k - 1));
+        const ws = addDays(wk0, 7 * ((Number.isFinite(+pt.k) ? +pt.k : pts.indexOf(pt) + 1) - 1)); // k = settimana 1…h (contratto forecastAuto)
         const v = Math.max(0, n0(pt.value)), dLo = Math.max(0, v - Math.max(0, n0(pt.lo ?? pt.value))), dHi = Math.max(0, Math.max(0, n0(pt.hi ?? pt.value)) - v);
         const inM = {};
         for (let i = 0; i < 7; i++) { const day = addDays(ws, i); if (day >= restFrom && day <= y1) inM[day.slice(0, 7)] = (inM[day.slice(0, 7)] || 0) + 1 / 7; }

@@ -41,9 +41,9 @@ export function Def({ text, children, label }) {
 export function Delta({ cur, cmp, kind = 'abs', good = 'up', decimals = 0, unit = '' }) {
   if (cur == null || cmp == null || !Number.isFinite(+cur) || !Number.isFinite(+cmp)) return <span className="dz-pct">—</span>;
   const dv = cur - cmp;
-  const txt = kind === 'pct' ? (Math.abs(cmp) > 1e-9 ? sf(dv / Math.abs(cmp) * 100, 1) + '%' : '—') : sf(dv, decimals) + (unit ? ' ' + unit : '');
+  const txt = kind === 'pct' ? (Math.abs(cmp) >= 0.5 ? sf(dv / Math.abs(cmp) * 100, 1) + '%' : '—') : sf(dv, decimals) + (unit ? ' ' + unit : '');
   const sign = Math.abs(dv) < 0.5 * 10 ** -decimals ? 0 : Math.sign(dv);
-  const cls = !sign ? '' : (good === 'up') === sign > 0 ? 'good' : 'bad';
+  const cls = !sign || !good ? '' : (good === 'up') === sign > 0 ? 'good' : 'bad'; // good null: neutro (voci per memoria)
   return <span className={`dz-d ${cls}`}>{txt}</span>;
 }
 
@@ -174,6 +174,8 @@ export function MonthBars({ cols, legend, height = 230, decimals = 0, unit = '',
 // ---------------- conto economico ----------------
 const DIMS = [{ id: 'productId', label: 'Prodotto' }, { id: 'customerId', label: 'Cliente' }, { id: 'agentId', label: 'Agente' }, { id: 'species', label: 'Specie' }];
 const KEY_TOTALS = new Set(['mdc2', 'ebit']);
+/** Variazione % solo se il confronto è almeno 0,5 € (altrimenti «—»). */
+const pctOf = (v, c) => (c == null || v == null || Math.abs(c) < 0.5 ? null : (v - c) / Math.abs(c));
 const MAX_CHILD = 8;
 
 /** Cascata dai ricavi netti all'EBIT (passi del conto). */
@@ -210,10 +212,10 @@ export function Conto({ d }) {
       const f = VAR_LINE[l.id];
       const ch = byKey.map(r => ({ k: r[dim] ?? '', v: f(r), t: r.tonnes, c: byKeyC ? (byKeyC[r[dim] ?? ''] ? f(byKeyC[r[dim] ?? '']) : 0) : null })).sort((a, b) => Math.abs(b.v) - Math.abs(a.v));
       const top = ch.slice(0, MAX_CHILD), rest = ch.slice(MAX_CHILD);
-      for (const c of top) rows.push({ id: `${l.id}:${c.k}`, kind: 'child', label: keyLabel(d, dim, c.k, ctx.ix), value: c.v, perT: c.t > 0 ? c.v / c.t : null, pctRev: cur.revenueNet ? c.v / cur.revenueNet : null, cmp: c.c, delta: c.c == null ? null : c.v - c.c, deltaPct: c.c ? (c.v - c.c) / Math.abs(c.c) : null });
+      for (const c of top) rows.push({ id: `${l.id}:${c.k}`, kind: 'child', label: keyLabel(d, dim, c.k, ctx.ix), value: c.v, perT: c.t > 0 ? c.v / c.t : null, pctRev: cur.revenueNet ? c.v / cur.revenueNet : null, cmp: c.c, delta: c.c == null ? null : c.v - c.c, deltaPct: pctOf(c.v, c.c) });
       if (rest.length) {
         const v = rest.reduce((s, x) => s + x.v, 0), tt = rest.reduce((s, x) => s + x.t, 0), cc = byKeyC ? rest.reduce((s, x) => s + (x.c || 0), 0) : null;
-        rows.push({ id: `${l.id}:altri`, kind: 'child', label: `Altri ${rest.length}`, value: v, perT: tt > 0 ? v / tt : null, pctRev: cur.revenueNet ? v / cur.revenueNet : null, cmp: cc, delta: cc == null ? null : v - cc, deltaPct: cc ? (v - cc) / Math.abs(cc) : null });
+        rows.push({ id: `${l.id}:altri`, kind: 'child', label: `Altri ${rest.length}`, value: v, perT: tt > 0 ? v / tt : null, pctRev: cur.revenueNet ? v / cur.revenueNet : null, cmp: cc, delta: cc == null ? null : v - cc, deltaPct: pctOf(v, cc) });
       }
     } else if (fixedGroup) {
       const fx = cur.fixed?.byCenter || {}, fc = cmp?.fixed?.byCenter || null;
@@ -223,13 +225,13 @@ export function Conto({ d }) {
         const v = -(fx[c.id] || 0);
         if (!v && !(fc && fc[c.id])) continue;
         const cv = fc ? -(fc[c.id] || 0) : null;
-        rows.push({ id: `${l.id}:${c.id}`, kind: 'child', label: c.name, value: v, perT: t > 0 ? v / t : null, pctRev: cur.revenueNet ? v / cur.revenueNet : null, cmp: cv, delta: cv == null ? null : v - cv, deltaPct: cv ? (v - cv) / Math.abs(cv) : null });
+        rows.push({ id: `${l.id}:${c.id}`, kind: 'child', label: c.name, value: v, perT: t > 0 ? v / t : null, pctRev: cur.revenueNet ? v / cur.revenueNet : null, cmp: cv, delta: cv == null ? null : v - cv, deltaPct: pctOf(v, cv) });
       }
     }
   }
   const se = stockEffect(cur.sums);
   rows.push({ id: 'effettoScorte', kind: 'memo', label: 'Effetto scorte (per memoria)', value: se, perT: t > 0 ? se / t : null, pctRev: cur.revenueNet ? se / cur.revenueNet : null, cmp: cmp?.sums ? stockEffect(cmp.sums) : null, def: 'Costo variabile ai prezzi di oggi − costo variabile effettivo dei lotti venduti. Positivo: le scorte comprate prima dei rincari hanno sostenuto il margine.' });
-  for (const r of rows) if (r.kind === 'memo') { r.delta = r.cmp == null ? null : r.value - r.cmp; r.deltaPct = r.cmp ? r.delta / Math.abs(r.cmp) : null; }
+  for (const r of rows) if (r.kind === 'memo') { r.delta = r.cmp == null ? null : r.value - r.cmp; r.deltaPct = pctOf(r.value, r.cmp); }
   const toggle = id => setOpen(s => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; });
   const cols = [
     { key: 'label', label: 'Voce', nosort: true, csv: r => (r.kind === 'child' ? '   ' : '') + r.label, render: r => {
@@ -243,7 +245,7 @@ export function Conto({ d }) {
     { key: 'pctRev', label: '% ricavi', align: 'r', nosort: true, csv: r => r.pctRev, render: r => <span className="dz-pct">{r.pctRev == null ? '—' : pct(r.pctRev, 1)}</span> },
     ...(cmp ? [
       { key: 'cmp', label: C?.budget ? 'Budget' : `Confronto`, csvLabel: 'Confronto', align: 'r', nosort: true, csv: r => r.cmp, render: r => eur0(r.cmp) },
-      { key: 'delta', label: 'Δ €', align: 'r', nosort: true, csv: r => r.delta, render: r => <Delta cur={r.value} cmp={r.cmp} /> }, // valori con segno: più alto è meglio
+      { key: 'delta', label: 'Δ €', align: 'r', nosort: true, csv: r => r.delta, render: r => <Delta cur={r.value} cmp={r.cmp} good={r.kind === 'memo' ? null : 'up'} /> }, // valori con segno: più alto è meglio
       { key: 'deltaPct', label: 'Δ%', align: 'r', nosort: true, csv: r => r.deltaPct, render: r => <span className="dz-pct">{r.deltaPct == null ? '—' : sf(r.deltaPct * 100, 1) + '%'}</span> },
     ] : []),
   ];
