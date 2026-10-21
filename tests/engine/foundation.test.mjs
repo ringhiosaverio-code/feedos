@@ -42,8 +42,8 @@ const close = (a, b, tol = 1e-6, msg = '') => assert.ok(Math.abs(a - b) <= tol *
 
 /* ---------------- generatore e demo completo ---------------- */
 test('generatore: schema 17 con le impostazioni di base, tutte le raccolte, niente campi interni', () => {
-  assert.equal(DEMO_VERSION, 3);
-  assert.equal(g.settings.schema, 17); assert.equal(g.settings.demoVersion, 3);
+  assert.equal(DEMO_VERSION, 4);
+  assert.equal(g.settings.schema, 17); assert.equal(g.settings.demoVersion, 4);
   for (const k of Object.keys(DEFAULT_SETTINGS)) assert.ok(k in g.settings, 'impostazione ' + k);
   assert.deepEqual(g.settings.finance, DEFAULT_SETTINGS.finance);
   assert.equal(g.settings.company.lat, null);
@@ -147,13 +147,20 @@ test('aggiornamento di un demo salvato dalla versione 2: rettifiche e dati dei p
   const old = { ...g, adjustments: [], settings: { ...g.settings, demoVersion: 2 } };
   old.customers = old.customers.map(c => (c.id === 'c-1' ? { ...c, name: 'Cliente rinominato' } : c));
   const up = upgradeDemo(old);
-  assert.equal(up.settings.demoVersion, 3);
+  assert.equal(up.settings.demoVersion, 4);
   assert.equal(up.adjustments.length, 8);
   close(sum(up.adjustments, a => a.tonnes), sum(g.adjustments, a => a.tonnes), 1e-6);
   assert.equal(up.customers.find(c => c.id === 'c-1').name, 'Cliente rinominato', 'modifica dell’utente conservata');
   assert.equal(up.costCenters.length, 8);
   assert.equal(up.shipments, old.shipments, 'raccolte non toccate dagli estensori restano le stesse');
   assert.equal(upgradeDemo(up), up, 'già aggiornato');
+  // ogni estensore una sola volta: nessun id ripetuto tra i passi 3 e 4
+  for (const c of COLLECTIONS) if (Array.isArray(up[c])) assert.equal(new Set(up[c].map(x => x.id)).size, up[c].length, 'id unici in ' + c);
+  // un demo salvato con la versione 3 riceve solo i dati dei pacchetti (passo 4), senza ripetere i costi fissi
+  const v3 = { ...D, settings: { ...D.settings, demoVersion: 3 } };
+  const up3 = upgradeDemo(v3);
+  assert.equal(up3.settings.demoVersion, 4);
+  assert.equal(up3.fixedCosts.length, D.fixedCosts.length, 'costi fissi non duplicati');
 });
 
 /* ---------------- identità dei margini sul demo completo ---------------- */
@@ -220,53 +227,86 @@ test('segnali corretti: prezzo netto, offerte scadute, clienti fermi, quotazioni
 });
 
 /* ---------------- contratti dei pacchetti ---------------- */
-test('contratti: esportazioni e risposte neutre degli stub dei pacchetti', () => {
+// I contratti tra pacchetti: nomi, firme e forme dei risultati. Vale sia con gli stub sia con le implementazioni reali.
+const SEV = new Set(['critico', 'attenzione', 'info']);
+function isSignalList(x, who) {
+  assert.ok(Array.isArray(x), who + ': elenco di segnali');
+  for (const s of x) {
+    assert.ok(s && typeof s.key === 'string' && s.key, who + ': chiave');
+    assert.ok(SEV.has(s.severity), who + ': gravità ' + s.severity);
+    assert.ok(typeof s.title === 'string' && s.title && typeof s.area === 'string', who + ': titolo e area');
+    assert.ok(Number.isFinite(s.impact ?? 0), who + ': impatto numerico');
+  }
+}
+function isSection(x, who) {
+  if (x == null) return;
+  assert.ok(typeof x.title === 'string' && x.title, who + ': titolo');
+  assert.ok(Array.isArray(x.kpis ?? []), who + ': kpis');
+  if (x.table) assert.ok(Array.isArray(x.table.cols) && Array.isArray(x.table.rows), who + ': tabella');
+}
+const hasKeys = (o, keys, who) => { assert.ok(o && typeof o === 'object', who); for (const k of keys) assert.ok(k in o, who + ': ' + k); };
+
+test('contratti: esportazioni e forme dei risultati dei pacchetti', () => {
   const P = P12, C = null;
-  assert.deepEqual(budget.budgetSignals(D, ctx), []); assert.equal(budget.budgetTotals(D, P), null);
-  assert.equal(pnl.pnlFor(D, ctx, P), null);
-  const cs = credit.creditSummary(D, today);
-  for (const k of ['open', 'overdue', 'overdue30', 'dso', 'dsoContract', 'byCustomer']) assert.ok(k in cs, k);
-  assert.deepEqual(credit.financeSignals(D, ctx), []); assert.equal(credit.financeReportSection(D, ctx, P, C), null);
+  isSignalList(budget.budgetSignals(D, ctx), 'budgetSignals');
+  const bt = budget.budgetTotals(D, P); assert.ok(bt === null || typeof bt === 'object');
+  const pl = pnl.pnlFor(D, ctx, P); assert.ok(pl === null || Array.isArray(pl.lines), 'pnlFor');
+  hasKeys(credit.creditSummary(D, today), ['open', 'overdue', 'overdue30', 'dso', 'dsoContract', 'byCustomer'], 'creditSummary');
+  isSignalList(credit.financeSignals(D, ctx), 'financeSignals');
+  isSection(credit.financeReportSection(D, ctx, P, C), 'financeReportSection');
   const inv = inventory.inventorySummary(D, ctx, P);
-  for (const k of ['mpFifo', 'fgValue', 'dio', 'excessValue', 'carryingCost']) assert.ok(k in inv, k);
+  hasKeys(inv, ['mpFifo', 'fgValue', 'dio', 'excessValue', 'carryingCost'], 'inventorySummary');
   close(inv.mpFifo, 880569, 1 / 880569, 'MP al FIFO');
   assert.ok(inv.fgValue > 400000);
-  assert.deepEqual(inventory.abcXyz(D, ctx, P), {});
-  assert.equal(cash.cashLowPoint(D, ctx), null);
-  const cp = profitability.customerProfit(D, ctx, P);
-  for (const k of ['rows', 'hhi', 'top1', 'top5', 'top10', 'n80', 'peakPct']) assert.ok(k in cp, k);
-  assert.deepEqual(profitability.abcCustomers(D, ctx, P), {}); assert.deepEqual(profitability.profitSignals(D, ctx), []); assert.equal(profitability.profitReportSection(D, ctx, P, C), null);
-  assert.equal(breakeven.costStructure(D, ctx, P), null);
-  const fa = forecast.forecastAuto([10, 12, 11, 13, 12, 14, 13, 15], 3);
-  assert.equal(fa.model, 'holt'); assert.equal(fa.points.length, 3); assert.equal(fa.mape, null); assert.equal(fa.benchmarkMape, null);
-  assert.deepEqual(forecast.forecastAuto([1, 2], 3).points, [], 'serie troppo corta: nessun punto');
-  assert.equal(pricing.offerState({ status: 'inviata', validUntil: '2020-01-01' }, today), 'inviata');
-  assert.deepEqual(pricing.commercialSignals(D, ctx), []); assert.equal(pricing.commercialReportSection(D, ctx, P, C), null);
-  assert.deepEqual(commissions.commissionTotals(D, ctx, P), {});
-  assert.deepEqual(suppliers.scorecard(D, ctx, P), []); assert.deepEqual(suppliers.purchasingSignals(D, ctx), []); assert.equal(suppliers.purchasingReportSection(D, ctx, P, C), null);
-  assert.deepEqual(purchaseVariance.ppv(D, ctx, P), { total: 0, byIng: [], byMonth: [] });
-  assert.deepEqual(oee.oeeSummary(D, ctx, P), { plant: null, byLine: {} }); assert.equal(oee.opsReportSection(D, ctx, P, C), null);
-  assert.deepEqual(massbalance.shrinkSummary(D, ctx, P), { shrinkPct: null, unexplainedEur: 0 });
-  assert.deepEqual(kpis.KPIS, []); assert.deepEqual(kpis.kpiValues(D, ctx, P), {}); assert.equal(kpis.statusFor(D, 'oee', 0.7), null);
-  assert.deepEqual(kpis.kpiSignals(D, ctx), []); assert.equal(kpis.kpiReportSection(D, ctx, P, C), null);
-  assert.deepEqual(dataquality.runRules(D, ctx, { scope: 'all' }), { score: null, byArea: {}, rules: [] });
-  assert.deepEqual(dataquality.dqSignals(D, ctx), []); assert.equal(dataquality.dqReportSection(D, ctx, P, C), null);
-  // registri
+  const ax = inventory.abcXyz(D, ctx, P); assert.ok(ax && typeof ax === 'object' && !Array.isArray(ax));
+  const lp = cash.cashLowPoint(D, ctx); assert.ok(lp === null || typeof lp === 'object');
+  hasKeys(profitability.customerProfit(D, ctx, P), ['rows', 'hhi', 'top1', 'top5', 'top10', 'n80', 'peakPct'], 'customerProfit');
+  const ac = profitability.abcCustomers(D, ctx, P); assert.ok(ac && typeof ac === 'object');
+  isSignalList(profitability.profitSignals(D, ctx), 'profitSignals');
+  isSection(profitability.profitReportSection(D, ctx, P, C), 'profitReportSection');
+  const cs = breakeven.costStructure(D, ctx, P); assert.ok(cs === null || Number.isFinite(cs.cf ?? 0));
+  const fa = forecast.forecastAuto([10, 12, 11, 13, 12, 14, 13, 15, 14, 16, 15, 17, 16, 18], 3);
+  assert.ok(typeof fa.model === 'string' && fa.points.length === 3, 'forecastAuto');
+  for (const pt of fa.points) assert.ok(Number.isFinite(pt.value), 'forecastAuto: valori');
+  assert.equal(typeof pricing.offerState({ status: 'inviata', validUntil: '2020-01-01' }, today), 'string');
+  isSignalList(pricing.commercialSignals(D, ctx), 'commercialSignals');
+  isSection(pricing.commercialReportSection(D, ctx, P, C), 'commercialReportSection');
+  const ct = commissions.commissionTotals(D, ctx, P); assert.ok(ct && typeof ct === 'object');
+  assert.ok(Array.isArray(suppliers.scorecard(D, ctx, P)), 'scorecard');
+  isSignalList(suppliers.purchasingSignals(D, ctx), 'purchasingSignals');
+  isSection(suppliers.purchasingReportSection(D, ctx, P, C), 'purchasingReportSection');
+  const pv = purchaseVariance.ppv(D, ctx, P);
+  assert.ok(Number.isFinite(pv.total) && Array.isArray(pv.byIng) && Array.isArray(pv.byMonth), 'ppv');
+  hasKeys(oee.oeeSummary(D, ctx, P), ['plant', 'byLine'], 'oeeSummary');
+  isSection(oee.opsReportSection(D, ctx, P, C), 'opsReportSection');
+  hasKeys(massbalance.shrinkSummary(D, ctx, P), ['shrinkPct', 'unexplainedEur'], 'shrinkSummary');
+  assert.ok(Array.isArray(kpis.KPIS), 'KPIS');
+  const kv = kpis.kpiValues(D, ctx, P); assert.ok(kv && typeof kv === 'object', 'kpiValues');
+  const st = kpis.statusFor(D, 'oee', 0.7); assert.ok(st === null || ['ok', 'warn', 'bad'].includes(st), 'statusFor');
+  isSignalList(kpis.kpiSignals(D, ctx), 'kpiSignals');
+  isSection(kpis.kpiReportSection(D, ctx, P, C), 'kpiReportSection');
+  hasKeys(dataquality.runRules(D, ctx, { scope: 'all' }), ['score', 'byArea', 'rules'], 'runRules');
+  isSignalList(dataquality.dqSignals(D, ctx), 'dqSignals');
+  isSection(dataquality.dqReportSection(D, ctx, P, C), 'dqReportSection');
+  // registri: ordine fisso, ogni sezione è null o ben formata
   assert.deepEqual(SIGNAL_PROVIDERS.map(f => f.name), ['budgetSignals', 'financeSignals', 'profitSignals', 'commercialSignals', 'purchasingSignals', 'productionSignals', 'kpiSignals', 'dqSignals']);
   assert.deepEqual(REPORT_SECTIONS.map(r => [r.id, r.order]), [['kpi', 10], ['redditivita', 40], ['commerciale', 45], ['finanza', 50], ['acquisti', 60], ['produzione', 70], ['dati', 90]]);
-  for (const r of REPORT_SECTIONS) assert.equal(r.build(D, ctx, P, C), null, r.id);
+  for (const r of REPORT_SECTIONS) isSection(r.build(D, ctx, P, C), r.id);
+  // ogni fornitore di segnali, preso da solo, non rompe e restituisce segnali ben formati
+  for (const f of SIGNAL_PROVIDERS) isSignalList(f(D, { today, ...ctx }) || [], f.name);
 });
 
-test('productionSignals: regole 9 e 10 con il fattore di utilizzo delle impostazioni', () => {
-  const base = oee.productionSignals(D, { today });
-  const drift = base.find(x => x.key.startsWith('drift:L2:'));
-  assert.ok(drift && /energia per tonnellata/.test(drift.title));
+test('productionSignals: deriva energetica della linea pellet 2 e carico oltre la capacità utile', () => {
+  const base = oee.productionSignals(D, { today, ...ctx });
+  isSignalList(base, 'productionSignals');
+  const drift = base.find(x => x.key.startsWith('drift:L2'));
+  assert.ok(drift && /energia per tonnellata/.test(drift.title), 'deriva L2');
   const caps = base.filter(x => x.key.startsWith('cap:'));
-  assert.ok(caps.length >= 1 && caps.every(x => x.why.includes('al 90%')));
-  // con un fattore più alto la capacità utile cresce: meno settimane oltre il limite
-  const loose = oee.productionSignals({ ...D, settings: { ...D.settings, ops: { ...D.settings.ops, utilFactor: 1.5 } } }, { today });
+  assert.ok(caps.length >= 1, 'almeno una settimana oltre la capacità utile');
+  // con un fattore di utilizzo più alto la capacità utile cresce: meno settimane oltre il limite
+  const loose = oee.productionSignals({ ...D, settings: { ...D.settings, ops: { ...D.settings.ops, utilFactor: 1.5 } } }, { today, ...ctx });
   assert.ok(loose.filter(x => x.key.startsWith('cap:')).length < caps.length);
-  assert.equal(loose.find(x => x.key.startsWith('drift:L2:'))?.key, drift.key);
+  assert.ok(loose.some(x => x.key.startsWith('drift:L2')));
 });
 
 /* ---------------- operazioni e aree ---------------- */

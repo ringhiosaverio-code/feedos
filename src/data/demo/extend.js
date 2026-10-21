@@ -88,9 +88,10 @@ export function applyPatch(d, patch) {
  * Applica gli estensori in ordine all'archivio d (alla data today, seme di base seed).
  * Un estensore che si interrompe non ferma il demo: si segnala e si passa al successivo.
  */
-export function applyDemoExtenders(d, today = d?.settings?.demoAnchor, seed = 16) {
+export function applyDemoExtenders(d, today = d?.settings?.demoAnchor, seed = 16, { only = null, skip = [] } = {}) {
   let out = d;
   for (const [name, fn, offset] of EXTENDERS) {
+    if ((only && !only.includes(name)) || skip.includes(name)) continue; // aggiornamenti per passi: ogni estensore una sola volta
     let patch;
     try { patch = fn(out, { today, R: rng(seed + offset) }); } catch (e) { console.warn(`FeedOS: estensore del demo «${name}» non applicato`, e); continue; }
     const bad = patchViolations(out, patch);

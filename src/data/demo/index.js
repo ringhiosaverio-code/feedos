@@ -56,13 +56,17 @@ export const DEMO_UPGRADES = [
     },
   },
   {
-    to: 3, label: 'rettifiche di inventario e dati dei pacchetti (costi, finanza, operations)',
+    to: 3, label: 'rettifiche di inventario, centri di costo e costi fissi',
     up(d) {
       const today = d.settings.demoAnchor || todayLocal();
       const adj = closingAdjustments(d, today);
       const base = adj.length ? { ...d, adjustments: [...(d.adjustments || []), ...adj] } : d;
-      return applyDemoExtenders(base, today);
+      return applyDemoExtenders(base, today, 16, { only: ['costs'] });
     },
+  },
+  {
+    to: 4, label: 'direzione, finanza, redditività, commerciale, acquisti, produzione e obiettivi',
+    up(d) { return applyDemoExtenders(d, d.settings.demoAnchor || todayLocal(), 16, { skip: ['costs'] }); },
   },
 ];
 
