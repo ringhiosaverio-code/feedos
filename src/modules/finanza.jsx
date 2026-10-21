@@ -368,8 +368,8 @@ export function CustomerCredit({ d, id }) {
         <Kv items={[['Fido accordato', lim ? eur(lim) : 'non fissato'], ['Termini', `${t.days} giorni ${t.endOfMonth ? 'data fattura fine mese' : 'data fattura'} · ${METHOD[t.method] || t.method}`]]} />
       ) : (
         <div className="form">
-          <Field label="Fido accordato €"><NumInput value={c.creditLimit ?? null} decimals={0} min={0} step={5000} onChange={v => upd({ creditLimit: v }, `Fido di ${c.name}: ${v == null ? 'non fissato' : eur(v)}`)} ariaLabel="Fido accordato" /></Field>
-          <Field label={`Giorni di pagamento ${t.endOfMonth ? '(d.f.f.m.)' : '(d.f.)'}`}><NumInput value={t.days} decimals={0} min={0} max={365} onChange={v => v != null && upd({ terms: { ...t, days: v } }, `Termini di ${c.name}: ${v} giorni`)} ariaLabel="Giorni di pagamento" /></Field>
+          <Field label="Fido accordato €"><NumInput value={c.creditLimit ?? null} decimals={0} min={0} step={5000} onChange={v => (v ?? null) !== (c.creditLimit ?? null) && upd({ creditLimit: v }, `Fido di ${c.name}: ${v == null ? 'non fissato' : eur(v)}`)} ariaLabel="Fido accordato" /></Field>
+          <Field label={`Giorni di pagamento ${t.endOfMonth ? '(d.f.f.m.)' : '(d.f.)'}`}><NumInput value={t.days} decimals={0} min={0} max={365} onChange={v => v != null && v !== t.days && upd({ terms: { ...t, days: v } }, `Termini di ${c.name}: ${v} giorni`)} ariaLabel="Giorni di pagamento" /></Field>
           <Field label="Mezzo"><Select value={t.method} onChange={v => upd({ terms: { ...t, method: v } }, `Mezzo di pagamento di ${c.name}: ${METHOD[v]}`)} options={METHODS} ariaLabel="Mezzo di pagamento" /></Field>
         </div>
       )}
@@ -651,11 +651,13 @@ function StockSheet({ d, ctx, date, mpM, fgM, onClose }) {
 /* ---------------- parametri ---------------- */
 function Parametri({ d }) {
   const f = finOf(d), pd = pdOf(d);
-  const setF = (patch, label) => store.settings(st => ({ ...st, finance: { ...(st.finance || {}), ...patch } }), label) && toast(label, 'ok', { label: 'Annulla', fn: () => store.undo() });
-  const setOps = (patch, label) => store.settings(st => ({ ...st, ops: { ...(st.ops || {}), ...patch } }), label) && toast(label, 'ok', { label: 'Annulla', fn: () => store.undo() });
+  // un campo lasciato senza modifiche non scrive nulla (niente passi vuoti da annullare)
+  const same = (cur, patch) => Object.entries(patch).every(([k, v]) => JSON.stringify(cur?.[k] ?? null) === JSON.stringify(v ?? null));
+  const setF = (patch, label) => !same(f, patch) && store.settings(st => ({ ...st, finance: { ...(st.finance || {}), ...patch } }), label) && toast(label, 'ok', { label: 'Annulla', fn: () => store.undo() });
+  const setOps = (patch, label) => !same(d.settings?.ops, patch) && store.settings(st => ({ ...st, ops: { ...(st.ops || {}), ...patch } }), label) && toast(label, 'ok', { label: 'Annulla', fn: () => store.undo() });
   const num = (key, label, opts = {}) => (
     <Field label={label} hint={opts.hint}><NumInput value={f[key] ?? opts.def ?? null} decimals={opts.dec ?? 1} min={opts.min ?? 0} max={opts.max} placeholder={opts.def != null ? String(opts.def).replace('.', ',') : ''}
-      onChange={v => setF({ [key]: v }, `${label}: ${v == null ? 'valore di base' : nf(v, opts.dec ?? 1)}`)} ariaLabel={label} /></Field>
+      onChange={v => (v ?? null) !== (f[key] ?? opts.def ?? null) && setF({ [key]: v }, `${label}: ${v == null ? 'valore di base' : nf(v, opts.dec ?? 1)}`)} ariaLabel={label} /></Field>
   );
   return (
     <>
@@ -669,14 +671,14 @@ function Parametri({ d }) {
             {num('rate', 'Costo del denaro % annuo', { def: 5, max: 30, hint: 'capitale circolante e oneri delle dilazioni' })}
           </div>
           <Field label="Liquidazione IVA nella cassa"><Seg label="Liquidazione IVA" value={f.vatSettlement === 'trimestrale' ? 'trimestrale' : f.vatSettlement ? 'mensile' : 'no'}
-            onChange={v => setF({ vatSettlement: v === 'no' ? false : v }, v === 'no' ? 'Liquidazione IVA esclusa dalla cassa' : `Liquidazione IVA ${v} nella cassa`)}
+            onChange={v => v !== (f.vatSettlement === 'trimestrale' ? 'trimestrale' : f.vatSettlement ? 'mensile' : 'no') && setF({ vatSettlement: v === 'no' ? false : v }, v === 'no' ? 'Liquidazione IVA esclusa dalla cassa' : `Liquidazione IVA ${v} nella cassa`)}
             options={[{ id: 'no', label: 'Esclusa' }, { id: 'mensile', label: 'Mensile' }, { id: 'trimestrale', label: 'Trimestrale' }]} /></Field>
         </Panel>
         <Panel title="Rischio di credito" sub="Perdita attesa = esposizione × PD della classe × LGD">
           <div className="form">
             {['A', 'B', 'C', 'D'].map(k => (
               <Field key={k} label={`PD classe ${k} %`}><NumInput value={f.pd?.[k] ?? PD_DEFAULT[k]} decimals={1} min={0} max={100}
-                onChange={v => setF({ pd: { ...(f.pd || {}), [k]: v ?? PD_DEFAULT[k] } }, `Probabilità di insolvenza della classe ${k}: ${nf(v ?? PD_DEFAULT[k], 1)}%`)} ariaLabel={`PD classe ${k}`} /></Field>
+                onChange={v => (v ?? PD_DEFAULT[k]) !== pd[k] && setF({ pd: { ...(f.pd || {}), [k]: v ?? PD_DEFAULT[k] } }, `Probabilità di insolvenza della classe ${k}: ${nf(v ?? PD_DEFAULT[k], 1)}%`)} ariaLabel={`PD classe ${k}`} /></Field>
             ))}
             {num('lgd', 'LGD %', { def: LGD_DEFAULT, max: 100, dec: 0, hint: 'perdita in caso di insolvenza' })}
             {num('overdueSignalAbs', 'Soglia segnale scaduto €', { def: 5000, dec: 0, hint: 'scaduto oltre 30 giorni' })}
@@ -686,7 +688,7 @@ function Parametri({ d }) {
         <Panel title="Fornitori e personale" sub="Per i debiti stimati e la cassa a 13 settimane">
           <div className="form">
             {num('defaultSupplierDays', 'Giorni di pagamento fornitori', { def: 60, dec: 0, max: 365, hint: 'se il fornitore non ha termini propri' })}
-            <Field label="Data fattura fine mese"><Seg label="Fine mese fornitori" value={f.defaultSupplierEom === false ? 'no' : 'si'} onChange={v => setF({ defaultSupplierEom: v === 'si' }, v === 'si' ? 'Fornitori: data fattura fine mese' : 'Fornitori: data fattura')} options={[{ id: 'si', label: 'Sì' }, { id: 'no', label: 'No' }]} /></Field>
+            <Field label="Data fattura fine mese"><Seg label="Fine mese fornitori" value={f.defaultSupplierEom === false ? 'no' : 'si'} onChange={v => v !== (f.defaultSupplierEom === false ? 'no' : 'si') && setF({ defaultSupplierEom: v === 'si' }, v === 'si' ? 'Fornitori: data fattura fine mese' : 'Fornitori: data fattura')} options={[{ id: 'si', label: 'Sì' }, { id: 'no', label: 'No' }]} /></Field>
             {num('payrollF24Pct', 'Quota F24 sul costo del personale %', { def: 30, dec: 0, max: 60, hint: 'ritenute e contributi, versati il 16' })}
             {num('defaultCustomerDays', 'Giorni di pagamento clienti di base', { def: 60, dec: 0, max: 365, hint: 'per i clienti senza termini' })}
           </div>
@@ -694,7 +696,7 @@ function Parametri({ d }) {
         <Panel title="Rimanenze">
           <div className="form">
             <Field label="Tasso di mantenimento % annuo" hint="oneri finanziari, magazzino, assicurazione, cali"><NumInput value={d.settings?.ops?.carryRatePct ?? 8} decimals={1} min={0} max={60}
-              onChange={v => setOps({ carryRatePct: v ?? 8 }, `Tasso di mantenimento delle scorte: ${nf(v ?? 8, 1)}%`)} ariaLabel="Tasso di mantenimento" /></Field>
+              onChange={v => (v ?? 8) !== carryRate(d) && setOps({ carryRatePct: v ?? 8 }, `Tasso di mantenimento delle scorte: ${nf(v ?? 8, 1)}%`)} ariaLabel="Tasso di mantenimento" /></Field>
           </div>
           <p className="small muted">Usato per il costo delle rimanenze e del capitale in eccesso (Finanza › Rimanenze).</p>
         </Panel>

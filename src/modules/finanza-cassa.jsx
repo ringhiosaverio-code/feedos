@@ -271,9 +271,9 @@ function CashInputs({ d, fin, today }) {
     <Panel title="Saldo, linee e finanziamenti" sub="Si salvano nell’archivio; ogni modifica si annulla con Ctrl+Z" id="fin-cash-inputs">
       <div className="form">
         <Field label="Saldo dei conti €" hint="somma dei conti correnti"><NumInput value={cash.balance ?? null} decimals={0} step={10000} ariaLabel="Saldo di cassa"
-          onChange={v => setFin(f => ({ ...f, cash: { date: f.cash?.date || today, balance: v ?? 0 } }), `Saldo di cassa: ${eur(v ?? 0)}`)} /></Field>
+          onChange={v => (v ?? 0) !== (cash.balance ?? 0) && setFin(f => ({ ...f, cash: { date: f.cash?.date || today, balance: v ?? 0 } }), `Saldo di cassa: ${eur(v ?? 0)}`)} /></Field>
         <Field label="Alla data" hint="la previsione parte da qui"><input type="date" className="input" value={cash.date || ''} aria-label="Data del saldo"
-          onChange={e => /^\d{4}-\d{2}-\d{2}$/.test(e.target.value) && setFin(f => ({ ...f, cash: { balance: f.cash?.balance ?? 0, date: e.target.value } }), `Data del saldo di cassa: ${dateIt(e.target.value)}`)} /></Field>
+          onChange={e => /^\d{4}-\d{2}-\d{2}$/.test(e.target.value) && e.target.value !== cash.date && setFin(f => ({ ...f, cash: { balance: f.cash?.balance ?? 0, date: e.target.value } }), `Data del saldo di cassa: ${dateIt(e.target.value)}`)} /></Field>
       </div>
       <div className="eyebrow fin-sub">Linee di credito · {eur(sum(lines, l => +l.limit || 0))}</div>
       {lines.length ? (
@@ -282,7 +282,7 @@ function CashInputs({ d, fin, today }) {
             <div key={l.id || i} className="fin-row">
               <TextCommit value={l.bank} ariaLabel="Banca" placeholder="Banca" onCommit={v => updLine(i, { bank: v }, `Linea di credito: banca ${v}`)} />
               <Select className="slim" value={l.type || 'altro'} onChange={v => updLine(i, { type: v }, `Linea di credito ${l.bank || ''}: ${v}`)} options={LINE_TYPES} ariaLabel="Tipo di linea" />
-              <NumInput slim value={l.limit ?? null} decimals={0} min={0} step={50000} ariaLabel="Fido accordato" onChange={v => updLine(i, { limit: v ?? 0 }, `Linea di credito ${l.bank || ''}: ${eur(v ?? 0)}`)} />
+              <NumInput slim value={l.limit ?? null} decimals={0} min={0} step={50000} ariaLabel="Fido accordato" onChange={v => (v ?? 0) !== (l.limit ?? 0) && updLine(i, { limit: v ?? 0 }, `Linea di credito ${l.bank || ''}: ${eur(v ?? 0)}`)} />
               <Btn small kind="ghost" icon={LuTrash2} title={`Elimina la linea ${l.bank || ''}`} onClick={() => { setFin(f => ({ ...f, creditLines: (f.creditLines || []).filter((_, k) => k !== i) }), `Linea di credito eliminata: ${l.bank || ''}`); undoToast('Linea di credito eliminata'); }} />
             </div>
           ))}
@@ -295,8 +295,8 @@ function CashInputs({ d, fin, today }) {
           {loans.map((l, i) => (
             <div key={l.id || i} className="fin-row loan">
               <TextCommit value={l.name} ariaLabel="Finanziamento" placeholder="Nome" onCommit={v => updLoan(i, { name: v }, `Finanziamento: ${v}`)} />
-              <NumInput slim value={l.instalment ?? null} decimals={0} min={0} step={500} ariaLabel="Rata mensile €" onChange={v => updLoan(i, { instalment: v ?? 0 }, `Rata di ${l.name || 'finanziamento'}: ${eur(v ?? 0)}`)} />
-              <label className="fin-day"><span className="small muted">giorno</span><NumInput slim value={l.day ?? 1} decimals={0} min={1} max={31} ariaLabel="Giorno del mese" onChange={v => updLoan(i, { day: v ?? 1 }, `Giorno della rata di ${l.name || 'finanziamento'}: ${v ?? 1}`)} /></label>
+              <NumInput slim value={l.instalment ?? null} decimals={0} min={0} step={500} ariaLabel="Rata mensile €" onChange={v => (v ?? 0) !== (l.instalment ?? 0) && updLoan(i, { instalment: v ?? 0 }, `Rata di ${l.name || 'finanziamento'}: ${eur(v ?? 0)}`)} />
+              <label className="fin-day"><span className="small muted">giorno</span><NumInput slim value={l.day ?? 1} decimals={0} min={1} max={31} ariaLabel="Giorno del mese" onChange={v => (v ?? 1) !== (l.day ?? 1) && updLoan(i, { day: v ?? 1 }, `Giorno della rata di ${l.name || 'finanziamento'}: ${v ?? 1}`)} /></label>
               <Btn small kind="ghost" icon={LuTrash2} title={`Elimina ${l.name || 'il finanziamento'}`} onClick={() => { setFin(f => ({ ...f, loans: (f.loans || []).filter((_, k) => k !== i) }), `Finanziamento eliminato: ${l.name || ''}`); undoToast('Finanziamento eliminato'); }} />
             </div>
           ))}
