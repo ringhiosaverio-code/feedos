@@ -47,6 +47,7 @@ export function Budget({ d }) {
   const locked = isLocked(d, year, version);
   const superseded = locked && version !== active;
   const has = hasBudget(d, year, version);
+  const noData = !(d.shipments || []).length && !(d.salesHistory || []).length;
   const years = [...new Set([curYear - 1, curYear, curYear + 1, ...(d.budget || []).map(r => +String(r.month).slice(0, 4))])].filter(y => y === curYear || hasBudget(d, y)).sort();
   const yP = { from: `${year}-01-01`, to: `${year}-12-31` };
   const bt = useMemo(() => (has ? budgetTotals(d, yP, version) : null), [d, year, version, has]);
@@ -74,7 +75,7 @@ export function Budget({ d }) {
         ? <Chip kind={superseded ? 'outline' : 'good'} icon={LuLock} title={`Approvato il ${dateIt(st.approvedAt)} da ${st.approvedBy}${st.supersededAt ? ` · superato il ${dateIt(st.supersededAt)}` : ''}`}>{superseded ? 'approvato · superato' : `approvato · ${st.approvedBy}`}</Chip>
         : <Chip kind="maize" title={version !== active ? `I confronti usano ancora la versione ${active}` : undefined}>bozza{version !== active ? ` · riferimento ${active}` : ''}</Chip>)}
       <span className="sp" />
-      {!hasBudget(d, curYear + 1) && <Btn small kind={year === curYear + 1 ? 'primary' : ''} icon={LuPlus} onClick={() => openWiz(curYear + 1, 'nuovo')}>Crea budget {curYear + 1}</Btn>}
+      {!hasBudget(d, curYear + 1) && <Btn small kind={year === curYear + 1 ? 'primary' : ''} icon={LuPlus} onClick={() => openWiz(curYear + 1, 'nuovo')} disabled={noData} title={noData ? 'Servono prima le consegne o lo storico mensile' : undefined}>Crea budget {curYear + 1}</Btn>}
       {has && !locked && <Btn small icon={LuRotateCcw} onClick={() => openWiz(year, 'rigenera')} title="Ricalcola questa versione con nuove ipotesi">Rigenera</Btn>}
       {has && <Btn small icon={LuGitBranch} onClick={() => openWiz(year, 'revisione')} title="Nuova versione del budget dell’anno, con ipotesi aggiornate">Revisione</Btn>}
       {has && !locked && <Btn small kind="primary" icon={LuStamp} onClick={() => approve()}>Approva</Btn>}
@@ -87,8 +88,8 @@ export function Budget({ d }) {
       <Panel title={`Budget ${year}`}>
         <Empty title={`Nessun budget per il ${year}`}>
           <p>Il budget parte dai volumi dello stesso mese degli ultimi 12 mesi per prodotto, dal listino di oggi con lo sconto realizzato negli ultimi 90 giorni, dai costi di oggi di materie prime ed energia e dai costi fissi per centro dell’anno prima. Ogni ipotesi si regola prima di salvare.</p>
-          <div className="row" style={{ justifyContent: 'center', marginTop: 10 }}><Btn kind="primary" icon={LuPlus} onClick={() => openWiz(year, 'nuovo')} disabled={!(d.shipments || []).length && !(d.salesHistory || []).length}>Crea budget {year}</Btn></div>
-          {!(d.shipments || []).length && !(d.salesHistory || []).length && <p className="small" style={{ marginTop: 8 }}>Servono prima le consegne (o lo storico mensile) da cui partire: Dati › Importa.</p>}
+          <div className="row" style={{ justifyContent: 'center', marginTop: 10 }}><Btn kind="primary" icon={LuPlus} onClick={() => openWiz(year, 'nuovo')} disabled={noData}>Crea budget {year}</Btn></div>
+          {noData && <p className="small" style={{ marginTop: 8 }}>Servono prima le consegne (o lo storico mensile) da cui partire: Dati › Importa.</p>}
         </Empty>
       </Panel>
       {wizard}
@@ -133,7 +134,7 @@ export function Budget({ d }) {
       <div className="kpis">
         <Kpi label={`EBIT a budget ${year}`} {...money(bt.ebit)} foot={`MdC II ${nf(bt.tonnes ? bt.mc2 / bt.tonnes : null, 1)} €/t · ${nf(bt.tonnes)} t · fissi ${eurTxt(bt.fixed)}`} />
         <Kpi label="EBIT da inizio anno" {...money(ytd.act.ebit)} cmp={{ cur: ytd.act.ebit, value: ytd.bud.ebit, kind: 'flow', good: 'up', label: 'budget' }} foot={year === curYear ? `a oggi · budget pro quota ${eurTxt(ytd.bud.ebit)}` : `budget ${eurTxt(ytd.bud.ebit)}`} />
-        {L && <Kpi label={<Def text="EBIT da inizio anno + MdC II previsto per il resto dell’anno (previsione settimanale per prodotto × margine unitario a prezzi netti degli ultimi 90 giorni e costi di oggi) − costi fissi del resto dell’anno. Banda P10–P90 approssimata: somma dei limiti dei prodotti.">Stima di chiusura</Def>}
+        {L && <Kpi label={<Def text="EBIT da inizio anno + MdC II previsto per il resto dell’anno (previsione settimanale per prodotto × margine unitario a prezzi netti degli ultimi 90 giorni e costi di oggi) − costi fissi del resto dell’anno. Banda P10–P90 approssimata: per ogni prodotto le settimane previste si combinano come errori indipendenti, poi si sommano i limiti dei prodotti.">Stima di chiusura</Def>}
           {...money(L.landing)} status={L.budgetEbit == null ? null : L.landing >= L.budgetEbit ? 'ok' : L.landing >= L.budgetEbit * 0.9 ? 'warn' : 'bad'}
           foot={`P10–P90 ${kEur(L.p10, 0)} – ${kEur(L.p90, 0)} · approssimata`} cmp={L.budgetEbit != null ? { cur: L.landing, value: L.budgetEbit, kind: 'flow', good: 'up', label: 'budget' } : undefined} />}
         {L && L.gap != null && <Kpi label={<Def text="Differenza tra stima di chiusura e budget, divisa per i mesi che restano: quanto EBIT in più (o in meno) serve ogni mese per arrivare al budget.">Gap per mese</Def>} {...money(-L.gapPerMonth)} status={gapBad ? 'bad' : 'ok'}

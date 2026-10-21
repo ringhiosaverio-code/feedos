@@ -7,7 +7,7 @@ import { store, toast, useData } from '../core/store.js';
 import { getPrefs } from '../core/prefs.js';
 import { go } from '../core/router.js';
 import { signals } from '../core/derived.js';
-import { nf, sf, pct, monthLabel, dateIt, addMonths, endOfMonth, monthsIn, uid, norm } from '../core/util.js';
+import { nf, sf, pct, monthLabel, dateIt, addMonths, endOfMonth, monthsIn, daysInMonth, uid, norm } from '../core/util.js';
 import { parseCSV, readFile, num } from '../core/io.js';
 import { comparePeriod, makePeriod } from '../core/period.js';
 import { isClosedMonth } from '../core/schema.js';
@@ -107,7 +107,7 @@ function Sintesi() {
           cmp={kc(dir, ebitdaPct, ebitdaPctC, { kind: 'ratio', unit: '%', scale: 100 })} foot={eurTxt(by.ebitda)} />
         <Kpi label="EBIT" {...money(by.ebit)} cmp={kc(dir, by.ebit, cb?.ebit)} foot={cur.partialFixedMonths?.length ? <Chip kind="warn" title={`Consuntivo dei costi fissi incompleto per ${cur.partialFixedMonths.map(m => monthLabel(m, false)).join(', ')}: i centri senza importo valgono zero`}>fissi parziali</Chip>
             : cur.estimatedMonths?.length ? <Chip kind="maize" title={`Costi fissi stimati per ${cur.estimatedMonths.map(m => monthLabel(m, false)).join(', ')}`}>fissi stimati</Chip> : cur.frozen ? 'numeri congelati' : `${pct(cur.revenueNet ? by.ebit / cur.revenueNet : null, 1)} dei ricavi`} />
-        <Kpi label={<Def text="EBIT da inizio anno + MdC II previsto per il resto dell’anno − costi fissi del resto dell’anno. Banda P10–P90 approssimata.">{`Stima di chiusura ${y}`}</Def>}
+        <Kpi label={<Def text="EBIT da inizio anno + MdC II previsto per il resto dell’anno − costi fissi del resto dell’anno. Banda P10–P90 approssimata (limiti dei prodotti sommati).">{`Stima di chiusura ${y}`}</Def>}
           {...(L ? money(L.landing) : { value: '—' })} onClick={() => go('direzione', 'budget')}
           status={!L || L.budgetEbit == null ? null : L.landing >= L.budgetEbit ? 'ok' : L.landing >= L.budgetEbit * 0.9 ? 'warn' : 'bad'}
           cmp={L && L.budgetEbit != null ? { cur: L.landing, value: L.budgetEbit, kind: 'flow', good: 'up', label: 'budget' } : undefined}
@@ -552,6 +552,10 @@ function Chiusura({ sel }) {
     }, { ok: 'Riapri', danger: true });
   };
   const s = series[m];
+  // confronto con il mese prima (numeri congelati se chiuso); mese in corso o parziale: i flussi non sono confrontabili
+  const ps = m ? series[addMonths(m, -1)] : null;
+  const covM = !s || !ps ? null : s.partial || ps.partial ? 0 : m === tm ? s.days / daysInMonth(m) : 1;
+  const kcm = (cur, prev, flow = true) => (cur == null || prev == null ? undefined : { cur, value: prev, kind: flow ? 'flow' : 'ratio', good: 'up', unit: flow ? '' : '€/t', decimals: flow ? 1 : 2, label: 'mese prima', cov: flow ? covM : (s?.partial || ps?.partial ? 0 : 1) });
   const st = isClosed ? STATUS.chiuso : rec?.status === 'riaperto' ? STATUS.riaperto : m === tm ? ['outline', 'in corso'] : ['outline', 'da chiudere'];
   return (
     <div className="split r">
@@ -578,9 +582,9 @@ function Chiusura({ sel }) {
             {!isClosed && <Btn small kind="primary" icon={LuLock} onClick={() => doClose()} disabled={!canClose} title={canClose ? undefined : 'Il mese deve essere finito e il mese precedente chiuso'}>Chiudi il mese</Btn>}</div>}>
           <div className="stack" style={{ gap: 12 }}>
             {s && <div className="kpis">
-              <Kpi label="Ricavi netti" {...money(rec?.status === 'chiuso' ? rec.pnl?.revenue : s.revenue)} foot={`${nf(rec?.status === 'chiuso' ? rec.pnl?.tonnes : s.tonnes)} t`} />
-              <Kpi label="MdC II" value={perT(rec?.status === 'chiuso' ? rec.kpis?.mdc2T : s.mdc2T)} unit="€/t" foot={eurTxt(rec?.status === 'chiuso' ? rec.pnl?.mc2 : s.mdc2)} />
-              <Kpi label="EBIT" {...money(rec?.status === 'chiuso' ? rec.kpis?.ebit : s.ebit)} foot={s.estimatedFixed && !isClosed ? <Chip kind="maize">fissi stimati</Chip> : isClosed ? 'congelato' : 'dal vivo'} />
+              <Kpi label="Ricavi netti" {...money(rec?.status === 'chiuso' ? rec.pnl?.revenue : s.revenue)} cmp={kcm(s.revenue, ps?.revenue)} foot={`${nf(rec?.status === 'chiuso' ? rec.pnl?.tonnes : s.tonnes)} t`} />
+              <Kpi label="MdC II" value={perT(rec?.status === 'chiuso' ? rec.kpis?.mdc2T : s.mdc2T)} unit="€/t" cmp={kcm(s.mdc2T, ps?.mdc2T, false)} foot={eurTxt(rec?.status === 'chiuso' ? rec.pnl?.mc2 : s.mdc2)} />
+              <Kpi label="EBIT" {...money(rec?.status === 'chiuso' ? rec.kpis?.ebit : s.ebit)} cmp={kcm(s.ebit, ps?.ebit)} foot={s.estimatedFixed && !isClosed ? <Chip kind="maize">fissi stimati</Chip> : isClosed ? 'congelato' : 'dal vivo'} />
             </div>}
             {(rec?.note || rec?.forced || rec?.reopenNote || rec?.history?.length) && <Kv items={[
               rec.note && ['Nota', rec.note],
