@@ -5,11 +5,11 @@ import assert from 'node:assert/strict';
 import { demoData } from '../../src/data/demo/index.js';
 import { generateDemo } from '../../src/data/demo/generator.js';
 import { demoFinanza } from '../../src/data/demo/finanza.js';
-import { patchViolations } from '../../src/data/demo/extend.js';
+import { patchViolations, applyPatch, EXTENDERS } from '../../src/data/demo/extend.js';
 import { makeCtx } from '../../src/engine/actuals.js';
 import {
   aging, dsoCountBack, dsoContract, creditSummary, openItems, invoicesOf, invoicesFromShipments, registerPaymentOps, allocatePaymentOps,
-  riskScore, dueDateFor, dunningOps, financeSignals, financeReportSection, exposure, writeDownSuggestion, AGING_BUCKETS,
+  riskScore, dueDateFor, dunningOps, financeSignals, financeReportSection, exposure, writeDownSuggestion, AGING_BUCKETS, ledger,
 } from '../../src/engine/credit.js';
 import { applyOpsTo, revertOp } from '../../src/core/ops.js';
 import { resolvePeriod } from '../../src/core/period.js';
@@ -152,6 +152,11 @@ test('demo: obiettivi del seme 16 (crediti, scaduto, DSO, fidi, classe D con ins
   close(cs.dsoContract, dsoContract(D, { from: addDays(today, -364), to: today }), 1e-9, 'contrattuale sui 12 mesi');
   const rows = Object.values(cs.byCustomer);
   assert.ok(rows.filter(b => b.util != null && b.util >= 1).length >= 2, 'almeno 2 clienti oltre il fido');
+  // oltre il fido col solo credito (senza le offerte da consegnare): esattamente i 2 clienti cresciuti di più, fido a 0,85 × credito
+  const credOver = rows.filter(b => b.creditLimit && b.open + b.uninvoiced >= b.creditLimit);
+  assert.equal(credOver.length, 2, 'due clienti oltre il fido col solo credito');
+  for (const b of credOver) assert.equal(b.creditLimit, Math.floor(0.85 * (b.open + b.uninvoiced) / 5000) * 5000);
+  assert.ok(D.customers.every(c => c.creditLimit == null || (c.creditLimit >= 5000 && c.creditLimit % 5000 === 0)), 'fidi a multipli di 5.000 €');
   assert.ok(rows.some(b => b.riskClass === 'D' && b.insoluta), 'almeno un cliente di classe D con insoluto');
   assert.equal(D.invoices.filter(i => i.status === 'insoluta').length, 3);
   assert.ok(D.invoices.every(i => i.source === 'demo' && /^FT-\d{2}-\d{3}$/.test(i.number)));
@@ -162,16 +167,40 @@ test('demo: obiettivi del seme 16 (crediti, scaduto, DSO, fidi, classe D con ins
   for (const b of rows) close(b.exposure, b.open + b.uninvoiced + b.offers, 1e-6, 'componenti dell’esposizione');
 });
 
-test('estensore del demo: deterministico e solo aggiunte', () => {
-  const base = demoData(today); // contiene già le fatture: si riparte dal generatore con i soli estensori precedenti
-  void base;
-  const g = generateDemo({ today });
+test('partitario a una data passata: le consegne del mese sono «da fatturare» finché la fattura di fine mese non esiste', () => {
+  const at = '2026-09-15';
+  const L = ledger(D, at);
+  assert.ok(!L.open.some(i => i.date > at), 'nessuna fattura successiva alla data');
+  assert.equal(invoicesOf(D, at).filter(i => i.estimated).length, 0, 'i mesi chiusi sono coperti da fatture vere');
+  const [id] = Object.entries(L.byCust).find(([, b]) => b.uninvN > 2);
+  const ships = D.shipments.filter(s => s.customerId === id && s.date >= '2026-09-01' && s.date <= at);
+  close(L.byCust[id].uninvGross, sum(ships, s => s.tonnes * s.price) * 1.1, 1e-6, 'da fatturare al 15/09');
+  // a fine mese la fattura esiste: niente più da fatturare per quel mese
+  assert.ok(!ledger(D, '2026-09-30').uninvoiced.list.some(g => g.month === '2026-09'));
+});
+
+test('estensore del demo: deterministico, solo aggiunte, insoluti anche con un’ancora di inizio anno', () => {
+  // archivio cumulativo come in extend.js: generatore + estensori che precedono la finanza
+  let g = generateDemo({ today });
+  for (const [name, fn, off] of EXTENDERS) { if (name === 'finanza') break; g = applyPatch(g, fn(g, { today, R: rng(16 + off) })); }
   const p1 = demoFinanza(g, { today, R: rng(16 + 301) }), p2 = demoFinanza(g, { today, R: rng(16 + 301) });
   assert.equal(JSON.stringify(p1), JSON.stringify(p2));
   assert.deepEqual(patchViolations(g, p1), []);
   assert.equal(p1.settings.finance.cash.balance, 620000);
   assert.deepEqual(p1.settings.finance.creditLines.map(l => l.limit), [800000, 700000]);
   assert.deepEqual(demoFinanza({ customers: [], shipments: [] }, { today }), {});
+  assert.equal(JSON.stringify(p1.add.invoices), JSON.stringify(D.invoices), 'lo stesso estensore di demoData');
+  // profili: 3 insoluti (giugno), metodo per tipo di cliente, termini come i giorni di pagamento
+  assert.equal(p1.add.invoices.filter(i => i.status === 'insoluta').length, 3);
+  assert.ok(p1.add.invoices.filter(i => i.status === 'insoluta').every(i => i.dueDate.slice(0, 7) === '2026-06'));
+  const typ = Object.fromEntries(g.customers.map(c => [c.id, c.type]));
+  assert.ok(p1.add.invoices.every(i => i.method === (typ[i.customerId] === 'rivendita' ? 'bonifico' : 'riba')));
+  assert.ok(p1.update.customers.every(u => u.terms.days === g.customers.find(c => c.id === u.id).paymentDays && u.terms.endOfMonth === true));
+  assert.ok(!p1.add.invoices.some(i => i.month === today.slice(0, 7)), 'il mese in corso resta da fatturare');
+  // ancora a marzo: l'insoluto è quello di giugno dell'anno prima
+  const t2 = '2027-03-03', g2 = generateDemo({ today: t2 });
+  const ins2 = demoFinanza(g2, { today: t2, R: rng(16 + 301) }).add.invoices.filter(i => i.status === 'insoluta');
+  assert.equal(ins2.length, 3); assert.ok(ins2.every(i => i.dueDate >= '2026-06-01' && i.dueDate < '2026-09-01'), ins2.map(i => i.dueDate).join());
 });
 
 test('sollecito: attività dell’Amministrazione con lo scaduto; nulla senza scaduto', () => {

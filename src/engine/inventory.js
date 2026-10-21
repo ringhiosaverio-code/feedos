@@ -271,37 +271,44 @@ export function slowMovers(d, ctx, opts = {}) {
   });
 }
 
-/** Costo del venduto industriale dei 12 mesi: Σ fatti materie prime + calo + energia + trasformazione variabile + imballo. */
-export function cogs12(d, ctx, at) {
+/** Basi annue dei 365 giorni alla data: costo del venduto industriale (materie prime + calo + energia + trasformazione variabile
+ *  + imballo dei fatti di vendita) e materie prime consumate (materie prime + calo). → {cogs, raw} */
+export function costBase12(d, ctx, at) {
   const today = at || ctx?.today || todayOf(d);
   const facts = ctx?.facts || shipmentFacts(d, { ix: ctx?.ix || makeIndex(d) });
   return cached('cogs|' + today, [facts], () => {
     const from = addDays(today, -364);
-    let c = 0;
-    for (const f of facts) if (f.date >= from && f.date <= today) c += f.raw + f.shrink + f.energy + f.varConv + f.pack;
-    return c;
+    let cogs = 0, raw = 0;
+    for (const f of facts) if (f.date >= from && f.date <= today) { cogs += f.raw + f.shrink + f.energy + f.varConv + f.pack; raw += f.raw + f.shrink; }
+    return { cogs, raw };
   });
 }
+/** Costo del venduto industriale dei 12 mesi: Σ fatti materie prime + calo + energia + trasformazione variabile + imballo. */
+export function cogs12(d, ctx, at) { return costBase12(d, ctx, at).cogs; }
 
 /**
  * Sintesi delle rimanenze (contratto): MP al FIFO e prodotto finito al costo pieno effettivo (actuals), giorni di magazzino
  * DIO = (MP + PF) / (costo del venduto 12 mesi / 365), capitale in eccesso (lenti ed eccedenze) e costo annuo di mantenimento
  * di tutte le rimanenze (carryingCost) e del solo eccesso (excessCarryingCost), al tasso settings.ops.carryRatePct.
+ * In più: dioMp = MP al FIFO / (materie prime consumate nei 12 mesi / 365), i giorni di consumo coperti dalle sole materie prime;
+ * dioMpShare e dioFgShare = le due quote che sommano il DIO.
  */
 export function inventorySummary(d, ctx, P) {
   const shipped = {};
   for (const s of d.shipments || EMPTY) shipped[s.lotId] = (shipped[s.lotId] || 0) + (+s.tonnes || 0);
   const ix = ctx?.ix || makeIndex(d);
   const v = inventoryValuation(d, { ix, costsToday: ctx?.costs || costsOf(d, ix), shipped });
-  const c12 = cogs12(d, ctx);
+  const { cogs: c12, raw: raw12 } = costBase12(d, ctx);
   const stock = v.mp.fifo + v.fg.valueFull;
   const dio = c12 > 0 ? stock / (c12 / 365) : null;
+  const dioMp = raw12 > 0 ? v.mp.fifo / (raw12 / 365) : null;
   const slow = slowMovers(d, ctx);
   const excessValue = sum(slow, r => r.excessValue);
   const rate = carryRate(d) / 100;
   return {
     mpFifo: v.mp.fifo, fgValue: v.fg.valueFull, dio, excessValue, carryingCost: stock * rate,
     fgValueVar: v.fg.valueVar, fgT: v.fg.t, mpReplacement: v.mp.replacement, mpQuarantine: v.mp.quarantine,
-    excessCarryingCost: excessValue * rate, turnover: dio ? 365 / dio : null, cogs12: c12, slowCount: slow.length,
+    excessCarryingCost: excessValue * rate, turnover: dio ? 365 / dio : null, cogs12: c12, raw12, slowCount: slow.length,
+    dioMp, dioMpShare: c12 > 0 ? v.mp.fifo / (c12 / 365) : null, dioFgShare: c12 > 0 ? v.fg.valueFull / (c12 / 365) : null,
   };
 }

@@ -74,16 +74,23 @@ export function supplierTerms(d, x) {
 }
 
 /* ---------- fatture ---------- */
+// consegne coperte da fatture registrate: id della consegna (ddts) o cliente|mese → data della prima fattura che le copre
 const covers = d => cached('covers', [d.invoices], () => {
-  const ddt = new Set(), cm = new Set(), byId0 = new Map();
+  const ddt = new Map(), cm = new Map();
+  const put = (m, k, dt) => { if (!m.has(k) || dt < m.get(k)) m.set(k, dt); };
   for (const inv of d.invoices || EMPTY) {
-    byId0.set(inv.id, inv);
-    if (Array.isArray(inv.ddts) && inv.ddts.length) for (const s of inv.ddts) ddt.add(s);
-    else if (inv.customerId && (inv.month || inv.date)) cm.add(inv.customerId + '|' + String(inv.month || inv.date).slice(0, 7));
+    const dt = inv.date || '0000-00-00'; // senza data: copre sempre
+    if (Array.isArray(inv.ddts) && inv.ddts.length) for (const s of inv.ddts) put(ddt, s, dt);
+    else if (inv.customerId && (inv.month || inv.date)) put(cm, inv.customerId + '|' + String(inv.month || inv.date).slice(0, 7), dt);
   }
-  return { ddt, cm, byId: byId0 };
+  return { ddt, cm };
 });
-const isCovered = (C, s) => C.ddt.has(s.id) || C.cm.has(s.customerId + '|' + String(s.date).slice(0, 7));
+/** Consegna già fatturata alla data asOf: c'è una fattura che la copre datata entro asOf (a una data passata la fattura di fine mese non esiste ancora). */
+const isCovered = (C, s, asOf) => {
+  const a = C.ddt.get(s.id), b = C.cm.get(s.customerId + '|' + String(s.date).slice(0, 7));
+  const dt = a == null ? b : b == null ? a : a < b ? a : b;
+  return dt != null && dt <= asOf;
+};
 
 /**
  * Fatture stimate dalle consegne: una fattura differita per cliente × mese, datata a fine mese (solo i mesi già chiusi alla data),
@@ -99,7 +106,7 @@ export function invoicesFromShipments(d, { months, today = todayOf(d), covered =
     const m = s.date.slice(0, 7);
     if (only && !only.has(m)) continue;
     if (endOfMonth(m) > today) continue; // mese in corso: da fatturare
-    if (covered && isCovered(covered, s)) continue;
+    if (covered && isCovered(covered, s, today)) continue;
     const k = s.customerId + '|' + m;
     let g = groups.get(k); if (!g) groups.set(k, g = { customerId: s.customerId, month: m, ddts: [], taxable: 0 });
     g.ddts.push(s.id); g.taxable += n0(s.tonnes) * n0(s.price);
@@ -194,7 +201,7 @@ export function ledger(d, today = todayOf(d)) {
     const um = new Map();
     for (const s of d.shipments || EMPTY) {
       if (!s?.date || s.date > today || endOfMonth(s.date) <= today) continue;
-      if (cov && isCovered(cov, s)) continue;
+      if (cov && isCovered(cov, s, today)) continue;
       const v = n0(s.tonnes) * n0(s.price);
       const c = C(s.customerId);
       c.uninvTaxable += v; c.uninvGross += v * (1 + vat / 100); c.uninvN++;

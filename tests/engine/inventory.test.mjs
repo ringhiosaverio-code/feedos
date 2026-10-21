@@ -98,6 +98,11 @@ test('andamento mensile e sintesi: ultimo mese = valori di oggi; DIO e costo di 
   close(s.dio, (s.mpFifo + s.fgValue) / (cogs12(D, ctx) / 365), 1e-9, 'DIO');
   close(s.carryingCost, (s.mpFifo + s.fgValue) * 0.08, 1e-6, 'mantenimento al tasso di settings.ops');
   close(s.excessValue, sum(slowMovers(D, ctx), r => r.excessValue), 1e-6, 'eccesso');
+  // giorni di consumo coperti dalle sole MP (≈ 27 giorni del collaudo): MP al FIFO ÷ (materie prime + calo dei 12 mesi ÷ 365)
+  const raw = sum(ctx.facts.filter(f => f.date >= P.from && f.date <= today), f => f.raw + f.shrink);
+  close(s.dioMp, s.mpFifo / (raw / 365), 1e-9, 'DIO materie prime');
+  assert.ok(s.dioMp > 25 && s.dioMp < 31, 'DIO MP ≈ 27–28 giorni');
+  close(s.dioMpShare + s.dioFgShare, s.dio, 1e-9, 'quote MP + PF = DIO');
   console.log(`DIO ${s.dio.toFixed(1)} giorni · rotazione ${s.turnover.toFixed(1)} · eccesso ${Math.round(s.excessValue)} € · mantenimento ${Math.round(s.carryingCost)} €/anno`);
   // archivio vuoto
   const e = inventorySummary({ settings: {}, ingLots: [], lots: [], shipments: [], ingredients: [], products: [] }, null, P);
