@@ -46,10 +46,10 @@ export function Cassa({ d }) {
         <Kpi label="Saldo iniziale" value={mila(F.opening)} unit="mila €" foot={F.balanceSet ? `al ${dateIt(F.start)}` : 'da impostare'} title="Saldo dei conti correnti alla data indicata (impostazioni)" />
         <Kpi label={<>Punto più basso <Est /></>} value={mila(lp.closing)} unit="mila €" status={lp.belowLines ? 'bad' : lp.belowZero ? 'warn' : 'ok'}
           foot={`settimana del ${dm(lp.from)}`} title="Saldo minimo di fine settimana nelle 13 settimane: sotto zero si usano le linee di credito" />
-        <Kpi label="Margine sulle linee" value={mila(lp.headroom)} unit="mila €" status={lp.belowLines ? 'bad' : lp.headroom < F.lines * 0.25 ? 'warn' : 'ok'} foot={`linee per ${mila(F.lines)} mila`} title="Saldo minimo + linee di credito accordate: quanto resta prima di superare i fidi" />
+        <Kpi label={<>Margine sulle linee <Est /></>} value={mila(lp.headroom)} unit="mila €" status={lp.belowLines ? 'bad' : lp.headroom < F.lines * 0.25 ? 'warn' : 'ok'} foot={`linee per ${mila(F.lines)} mila`} title="Saldo minimo + linee di credito accordate: quanto resta prima di superare i fidi" />
         <Kpi label={<>Entrate 13 settimane <Est /></>} value={mila(F.totals.in)} unit="mila €" foot={`dal piano ${mila(sum(W, w => w.in.previsti))} mila`} />
         <Kpi label={<>Uscite 13 settimane <Est /></>} value={mila(F.totals.out)} unit="mila €" foot={`materie prime ${mila(sum(W, w => w.out.fornitori + w.out.ordini + w.out.pianificati))} mila`} />
-        <Kpi label="Saldo finale" value={mila(F.totals.closing)} unit="mila €" foot={`al ${dm(F.end)} · Δ ${signed(F.totals.closing - F.opening)} mila`} />
+        <Kpi label={<>Saldo finale <Est /></>} value={mila(F.totals.closing)} unit="mila €" foot={`al ${dm(F.end)} · Δ ${signed(F.totals.closing - F.opening)} mila`} />
       </div>
       {!hasFlows ? (
         <Panel><Empty icon={LuLandmark} title="Nessun movimento previsto">Senza consegne, fatture, ordini o costi fissi non ci sono incassi e pagamenti da prevedere: la cassa resta al saldo iniziale.</Empty></Panel>

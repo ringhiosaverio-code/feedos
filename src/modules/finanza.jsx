@@ -119,9 +119,9 @@ function Crediti({ d, sel }) {
         <Kpi label={<>Crediti aperti {est && <Est />}</>} value={mila(cs.open)} unit="mila €" raw={cs.open}
           cmp={csC ? { cur: cs.open, value: csC.open, kind: 'flow', good: 'down', label: 'al ' + dateIt(cTo, 'dm'), cov } : undefined}
           foot={`${cs.nOpen} partite`} title="Residuo delle fatture emesse e non incassate alla data (IVA compresa)" />
-        <Kpi label="Scaduto" value={mila(cs.overdue)} unit="mila €" status={od30pct > 0.15 ? 'bad' : od30pct > 0.08 ? 'warn' : 'ok'}
+        <Kpi label={<>Scaduto {est && <Est />}</>} value={mila(cs.overdue)} unit="mila €" status={od30pct > 0.15 ? 'bad' : od30pct > 0.08 ? 'warn' : 'ok'}
           foot={`oltre 30 gg ${mila(cs.overdue30)} mila · ${pct(od30pct, 1)}`} title="Partite oltre la scadenza; il pallino guarda la quota scaduta da oltre 30 giorni (8% attenzione, 15% critico)" onClick={() => setFlt('scaduti')} />
-        <Kpi label="DSO a ritroso" value={gg(cs.dso)} unit="giorni" status={cs.dso != null && cs.dsoContract != null ? (cs.dso - cs.dsoContract > 20 ? 'bad' : cs.dso - cs.dsoContract > 10 ? 'warn' : 'ok') : null}
+        <Kpi label={<>DSO a ritroso {est && <Est />}</>} value={gg(cs.dso)} unit="giorni" status={cs.dso != null && cs.dsoContract != null ? (cs.dso - cs.dsoContract > 20 ? 'bad' : cs.dso - cs.dsoContract > 10 ? 'warn' : 'ok') : null}
           cmp={csC?.dso != null ? { cur: cs.dso, value: csC.dso, kind: 'ratio', good: 'down', unit: 'gg', decimals: 0, label: 'al ' + dateIt(cTo, 'dm'), cov } : undefined}
           foot={`contrattuale ${gg(cs.dsoContract)} gg`} title="Giorni di vendite lorde più recenti che servono a coprire i crediti aperti, mese per mese a ritroso da oggi. Il contrattuale è la media dei giorni di pagamento concordati, pesata sui ricavi dei 12 mesi." />
         <Kpi label="Fatture da emettere" value={mila(cs.uninvoiced.gross)} unit="mila €" foot={`${cs.uninvoiced.customers} clienti · si emettono il ${dateIt(endOfMonth(today), 'dm')}`} title="Consegne del mese in corso non ancora fatturate (IVA compresa)" />
@@ -428,9 +428,9 @@ function Circolante({ d }) {
         <Kpi label="Crediti commerciali" value={mila(w.ar)} unit="mila €" raw={w.ar} cmp={cmp(w.ar, wc?.ar)} foot={`fatturati ${mila(w.arInvoiced)} · da fatturare ${mila(w.arUninvoiced)}`} title="Partite aperte più consegne non ancora fatturate, IVA compresa" />
         <Kpi label="Rimanenze MP + PF" value={mila(w.mp + w.fg)} unit="mila €" raw={w.mp + w.fg} cmp={cmp(w.mp + w.fg, wc ? wc.mp + wc.fg : null)} foot={`MP ${mila(w.mp)} · PF ${mila(w.fg)}`} title="Materie prime al FIFO (anche in quarantena) e prodotto finito al costo pieno industriale" />
         <Kpi label={<>Debiti fornitori <Est title="Lotti ricevuti negli ultimi 180 giorni non ancora scaduti, lordi d’IVA, con i termini del fornitore (o 60 gg f.m. di base)." /></>} value={mila(w.ap)} unit="mila €" raw={w.ap} cmp={cmp(w.ap, wc?.ap, 'up')} foot={`DPO ${gg(w.dpo)} giorni`} />
-        <Kpi label="Capitale circolante" value={mila(w.nwc)} unit="mila €" raw={w.nwc} cmp={cmp(w.nwc, wc?.nwc)} foot="crediti + rimanenze − debiti" title="Capitale investito nel ciclo commerciale: va finanziato con mezzi propri o linee di credito" />
-        <Kpi label="Costo annuo" value={mila(w.costPerYear, 1)} unit="mila €" foot={`al ${nf(w.rate, 1)}% di costo del denaro`} title="Capitale circolante × costo del denaro (Parametri)" />
-        <Kpi label="Ciclo di cassa" value={gg(w.ccc)} unit="giorni" raw={w.ccc} cmp={cmp(w.ccc, wc?.ccc, 'down', 'ratio', 'gg')} foot={`DSO ${gg(w.dso)} + DIO ${gg(w.dio)} − DPO ${gg(w.dpo)}`} title="Giorni tra il pagamento delle materie prime e l’incasso dai clienti" />
+        <Kpi label={<>Capitale circolante <Est title="Comprende i debiti verso fornitori stimati dai lotti ricevuti e dai termini di pagamento." /></>} value={mila(w.nwc)} unit="mila €" raw={w.nwc} cmp={cmp(w.nwc, wc?.nwc)} foot="crediti + rimanenze − debiti" title="Capitale investito nel ciclo commerciale: va finanziato con mezzi propri o linee di credito" />
+        <Kpi label={<>Costo annuo <Est title="Capitale circolante (con i debiti stimati) × costo del denaro." /></>} value={mila(w.costPerYear, 1)} unit="mila €" foot={`al ${nf(w.rate, 1)}% di costo del denaro`} title="Capitale circolante × costo del denaro (Parametri)" />
+        <Kpi label={<>Ciclo di cassa <Est title="Il DPO viene dai debiti verso fornitori stimati." /></>} value={gg(w.ccc)} unit="giorni" raw={w.ccc} cmp={cmp(w.ccc, wc?.ccc, 'down', 'ratio', 'gg')} foot={`DSO ${gg(w.dso)} + DIO ${gg(w.dio)} − DPO ${gg(w.dpo)}`} title="Giorni tra il pagamento delle materie prime e l’incasso dai clienti" />
       </div>
       <div className="grid g2 start fin-wc">
         <Panel title="Dove sta il capitale" sub={`Impieghi ${eur(w.ar + w.mp + w.fg)} · finanziati dai fornitori per ${eur(w.ap)} (${pct(w.ap / Math.max(1, w.ar + w.mp + w.fg), 0)})`}>

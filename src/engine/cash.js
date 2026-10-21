@@ -56,7 +56,8 @@ export function customerTerms(c, settings) {
   return { days, endOfMonth: t.endOfMonth !== false, method: t.method || (c?.type === 'rivendita' ? 'bonifico' : 'riba') };
 }
 /**
- * Termini del fornitore di un lotto MP o di un ordine: da d.suppliers (per supplierId o per nome), altrimenti
+ * Termini del fornitore di un lotto MP o di un ordine: da d.suppliers (per supplierId, per nome o per materia prima in ingIds;
+ * campi paymentDays ed endOfMonth, o terms {days, endOfMonth}), altrimenti
  * settings.finance.defaultSupplierDays (di base 60) con fine mese settings.finance.defaultSupplierEom (di base sì).
  */
 export function supplierTerms(d, x) {
@@ -66,6 +67,8 @@ export function supplierTerms(d, x) {
   if (!list.length || !x) return def;
   let s = x.supplierId ? list.find(y => y.id === x.supplierId) : null;
   if (!s && x.supplier) { const k = norm(x.supplier).trim(); s = list.find(y => norm(y.name).trim() === k); }
+  // ordini pianificati e lotti senza fornitore riconosciuto: il primo fornitore qualificato per quella materia prima
+  if (!s && x.ingId) s = list.find(y => Array.isArray(y.ingIds) && y.ingIds.includes(x.ingId) && y.approval !== 'sospeso');
   if (!s) return def;
   const t = s.terms || s.paymentTerms || {};
   const days = has(t.days) ? +t.days : has(s.paymentDays) ? +s.paymentDays : def.days;

@@ -66,6 +66,12 @@ test('debiti: la scadenza segue i termini del fornitore (o quelli di base)', () 
   // per id del fornitore e per i giorni di base cambiati nelle impostazioni
   assert.equal(supplierTerms({ ...S, suppliers: [{ id: 'sup-y', name: 'altro', paymentDays: 90 }] }, { supplierId: 'sup-y' }).days, 90);
   assert.equal(supplierTerms({ settings: { finance: { defaultSupplierDays: 45, defaultSupplierEom: false } } }, lot).days, 45);
+  // forma dell'anagrafica Acquisti (paymentDays, endOfMonth, ingIds): per materia prima quando il nome non corrisponde
+  const W5 = { ...D, suppliers: [{ id: 'sup-z', name: 'Molino di fantasia', ingIds: [lot.ingId], paymentDays: 90, endOfMonth: true, approval: 'qualificato' }] };
+  const t5 = supplierTerms(W5, { ...lot, supplier: 'nome diverso' });
+  assert.deepEqual([t5.days, t5.endOfMonth, t5.source], [90, true, 'fornitore']);
+  assert.equal(supplierTerms({ ...W5, suppliers: [{ ...W5.suppliers[0], approval: 'sospeso' }] }, { ...lot, supplier: 'nome diverso' }).source, 'impostazioni');
+  assert.equal(supplierTerms({ ...D, suppliers: null }, lot).source, 'impostazioni', 'anagrafica assente: nessun errore');
   // i lotti respinti non si pagano; gli ordini aperti sì, alla consegna + termini
   assert.ok(!payables(D, today).some(x => D.ingLots.find(l => l.id === x.id)?.status === 'bloccato'));
   const po = D.purchases.find(p => p.status === 'confermato');
