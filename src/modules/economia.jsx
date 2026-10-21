@@ -1,17 +1,22 @@
-/* FeedOS 16 · Economia: costo pieno e margine per prodotto (prezzi realizzati), simulatore «E se…» che propaga
- * uno scenario su formule, costi, margini e CO₂ separando l'efficienza già disponibile, previsioni della domanda
- * verificate sul passato e confrontate con il piano. */
+/* FeedOS 17 · Economia: margini per prodotto al costo effettivo dei lotti o ai costi di oggi (avvisi sul prezzo netto
+ * incassato), redditività netta per cliente/prodotto/agente, pareggio e leva operativa, simulatore «E se…» che propaga
+ * uno scenario su formule, costi, margini e CO₂, previsioni della domanda verificate sul passato e confrontate con il piano. */
 import React, { useEffect, useMemo, useState } from 'react';
 import { LuSave, LuTrash2, LuRotateCcw, LuSparkles, LuLeaf, LuX } from 'react-icons/lu';
 import { useData, store, toast, useUi, uiStore, openDrawer } from '../core/store.js';
 import { go } from '../core/router.js';
 import { idx, appToday, costs, volumes, contaminantFor, weekly, signals } from '../core/derived.js';
 import { nf, sf, sum, dateIt, addDays, mondayOf, mean } from '../core/util.js';
-import { runScenario } from '../engine/scenario.js';
-import { forecast, backtest } from '../engine/forecast.js';
+import { runScenario, scenarioBase } from '../engine/scenario.js';
+import { forecastAuto, MODEL_LABEL } from '../engine/forecast.js';
 import { PageHead, Panel, Btn, Table, Chip, Kpi, Field, Select, Empty, Seg, Kv } from '../ui/ui.jsx';
 import { Waterfall, Bars, LineChart, Legend, StackBar } from '../ui/charts.jsx';
-import { SignalList, SectionPlaceholder } from './shared.jsx';
+import { SignalList } from './shared.jsx';
+import { Redditivita } from './redditivita.jsx';
+import { Pareggio } from './pareggio.jsx';
+import { productProfit } from '../engine/profitability.js';
+import { ctxOf } from '../core/derived.js';
+import { usePeriod } from '../ui/period.jsx';
 import { NAV } from '../app/nav.js';
 
 const CAT = [['cereale', 'Cereali'], ['proteico', 'Proteici'], ['coprodotto', 'Co-prodotti'], ['grasso', 'Grassi'], ['minerale', 'Minerali'], ['aminoacido', 'Aminoacidi'], ['premix', 'Premiscele']];
@@ -21,11 +26,11 @@ export function Economia({ route }) {
   const tab = route.tab || 'margini';
   return (
     <>
-      <PageHead title="Economia" lead="Quanto rende ogni tonnellata: costo pieno ai prezzi di oggi, margine sui prezzi realmente incassati, simulatore «E se…» sulle materie prime e sull’energia, previsioni della domanda verificate sul passato."
+      <PageHead title="Economia" lead="Quanto rende ogni tonnellata: margine al costo effettivo dei lotti o ai costi di oggi sui prezzi realmente incassati, redditività netta di clienti, prodotti e agenti, punto di pareggio, simulatore «E se…» e previsioni della domanda verificate sul passato."
         tabs={NAV.economia.tabs} tab={tab} onTab={t => go('economia', t)} />
       {tab === 'margini' && <Margini d={d} sel={route.id} />}
-      {tab === 'redditivita' && <SectionPlaceholder title="Redditività">Margine netto per cliente, prodotto e agente dopo il costo di servizio, concentrazione dei ricavi e rischio di abbandono.</SectionPlaceholder>}
-      {tab === 'pareggio' && <SectionPlaceholder title="Pareggio">Punto di pareggio in tonnellate e in euro, margine di sicurezza, leva operativa e assorbimento dei costi fissi per linea.</SectionPlaceholder>}
+      {tab === 'redditivita' && <Redditivita d={d} sel={route.id} />}
+      {tab === 'pareggio' && <Pareggio d={d} />}
       {tab === 'scenari' && <Scenari d={d} />}
       {tab === 'previsioni' && <Previsioni d={d} sel={route.id} />}
     </>
@@ -39,15 +44,80 @@ export function useProductEconomics(d) {
     const from = addDays(today, -90);
     const rev = {}, t = {};
     for (const s of d.shipments) if (s.date > from) { rev[s.productId] = (rev[s.productId] || 0) + s.tonnes * s.price; t[s.productId] = (t[s.productId] || 0) + s.tonnes; }
-    return d.products.map(p => {
-      const c = C[p.id]; const real = t[p.id] ? rev[p.id] / t[p.id] : c.price;
+    // avvisi sul prezzo NETTO incassato negli ultimi 90 giorni (listino quando non ci sono consegne); prodotti non attivi esclusi
+    return d.products.filter(p => p.active !== false && C[p.id] && C[p.id].total != null).map(p => {
+      const c = C[p.id]; const real = t[p.id] ? rev[p.id] / t[p.id] : (p.listPrice || c.price);
       const m = real - c.total;
-      return { ...p, c, real, margin: m, marginPct: real ? m / real : null, vol: V[p.id] || 0, annual: m * (V[p.id] || 0), discount: p.listPrice ? 1 - real / p.listPrice : null, below: p.listPrice < c.minPrice - 1e-9 };
+      return { ...p, c, real, margin: m, marginPct: real ? m / real : null, vol: V[p.id] || 0, annual: m * (V[p.id] || 0), discount: p.listPrice ? 1 - real / p.listPrice : null, below: real < c.minPrice - 1e-9, listBelow: p.listPrice < c.minPrice - 1e-9 };
     });
   }, [C, V, d.products, d.shipments, today]);
 }
 
 function Margini({ d, sel }) {
+  const [mode, setMode] = useState('effettivo');
+  return (
+    <>
+      <div className="row between">
+        <Seg options={[{ id: 'effettivo', label: 'Effettivo (costo dei lotti)' }, { id: 'oggi', label: 'A costi di oggi' }]} value={mode} onChange={setMode} label="Base di costo" />
+        <span className="small muted">{mode === 'effettivo' ? 'Consegne del periodo al costo effettivo dei lotti di materie prime, energia misurata e provvigioni' : 'Prezzi netti degli ultimi 90 giorni contro il costo pieno ai prezzi di oggi'}</span>
+      </div>
+      {mode === 'effettivo' ? <MarginiEffettivi d={d} sel={sel} /> : <MarginiOggi d={d} sel={sel} />}
+    </>
+  );
+}
+
+/** Margini per prodotto nel periodo, al costo effettivo (fonte unica del conto economico). */
+function MarginiEffettivi({ d, sel }) {
+  const per = usePeriod(d); const ctx = ctxOf(d);
+  const pp = useMemo(() => productProfit(d, ctx, per.P), [d, ctx, per.P]);
+  const econ = useProductEconomics(d);
+  const rows = pp.rows.filter(r => r.tonnes > 0).map(r => ({ ...r, below: econ.find(e => e.id === r.id)?.below, minPrice: econ.find(e => e.id === r.id)?.c.minPrice, priceT: r.revenue / r.tonnes, varT: (r.raw + r.shrink + r.energy + r.varConv + r.pack) / r.tonnes, mc2T: r.mc2 / r.tonnes, fullT: r.marginFull / r.tonnes }));
+  const T = pp.totals || {};
+  const cur = rows.find(r => r.id === sel) || [...rows].sort((a, b) => b.mc2 - a.mc2)[0];
+  const sigs = signals(d).filter(s => s.area === 'economia');
+  if (!rows.length) return <Panel title="Margini"><Empty title="Nessuna consegna nel periodo" /></Panel>;
+  const per1 = v => (cur ? v / cur.tonnes : 0);
+  const steps = cur ? [
+    { label: 'Prezzo netto', value: per1(cur.revenue), kind: 'total' },
+    { label: 'Materie prime', value: -per1(cur.raw) }, { label: 'Calo', value: -per1(cur.shrink) }, { label: 'Energia', value: -per1(cur.energy) },
+    { label: 'Trasformazione variabile', value: -per1(cur.varConv) }, { label: 'Imballi', value: -per1(cur.pack) }, { label: 'Trasporto', value: -per1(cur.logistics) }, { label: 'Provvigioni', value: -per1(cur.commission) },
+    { label: 'MdC II', value: per1(cur.mc2), kind: 'total', color: cur.mc2 >= 0 ? 'var(--s3)' : 'var(--crit)' },
+    { label: 'Trasformazione fissa', value: -per1(cur.fixConv) },
+    { label: 'Margine pieno', value: per1(cur.marginFull), kind: 'total', color: cur.marginFull >= 0 ? 'var(--s3)' : 'var(--crit)' },
+  ].filter(x => x.kind === 'total' || Math.abs(x.value) > 0.005) : [];
+  return (
+    <>
+      <div className="kpis">
+        <Kpi label="Margine di contribuzione II" value={nf(T.mc2 / 1000)} unit="mila €" foot={`${nf(T.tonnes ? T.mc2 / T.tonnes : null, 1)} €/t · ${per.P.short}`} onClick={() => go('direzione', 'conto')} />
+        <Kpi label="Margine pieno" value={nf(T.marginFull / 1000)} unit="mila €" foot={`${nf(T.tonnes ? T.marginFull / T.tonnes : null, 1)} €/t dopo la trasformazione fissa`} />
+        <Kpi label="Materie prime sui ricavi" value={nf(T.revenue ? T.raw / T.revenue * 100 : null, 1)} unit="%" foot="al prezzo effettivo dei lotti consegnati" />
+        <Kpi label="Prodotti sotto il prezzo minimo" value={econ.filter(r => r.below).length} status={econ.some(r => r.below) ? 'warn' : 'ok'} foot="prezzo netto incassato (90 giorni) contro il minimo ai costi di oggi" onClick={() => go('commerciale', 'listino')} />
+      </div>
+      {sigs.length > 0 && <Panel title="Da decidere" flush><SignalList items={sigs} limit={3} /></Panel>}
+      <div className="split">
+        <Panel title={`Dal prezzo al margine · ${cur?.name}`} sub={`Per tonnellata nel periodo, al costo effettivo · ${nf(cur?.tonnes)} t consegnate`} id="eco-waterfall">
+          <Waterfall steps={steps} height={300} ariaLabel={`Cascata del margine effettivo di ${cur?.name}`} />
+        </Panel>
+        <Panel title="Dove si guadagna" sub="Margine di contribuzione II del periodo per prodotto">
+          <Bars data={[...rows].sort((a, b) => b.mc2 - a.mc2).map(r => ({ key: r.id, label: r.name, value: r.mc2 / 1000, color: r.mc2 < 0 ? 'var(--crit)' : r.id === cur?.id ? 'var(--maize)' : 'var(--s1)' }))} unit="mila €" decimals={0} onClick={x => go('economia', 'margini', x.key)} ariaLabel="Margine di contribuzione per prodotto" />
+        </Panel>
+      </div>
+      <Panel title="Prodotti" sub="Clic per la cascata · esportabile" flush>
+        <Table rows={rows} exportName="margini-effettivi" selected={cur?.id} onRow={r => go('economia', 'margini', r.id)} initialSort={{ key: 'mc2', dir: 'desc' }} cols={[
+          { key: 'name', label: 'Prodotto', render: r => <><b>{r.name}</b><span className="sub">{r.code} · {r.packaging}</span></>, csv: r => r.name },
+          { key: 'tonnes', label: 't', align: 'r', render: r => nf(r.tonnes), csv: r => r.tonnes },
+          { key: 'priceT', label: 'Prezzo netto', align: 'r', render: r => <>{nf(r.priceT, 1)}{r.below && <span className="sub" style={{ color: 'var(--warn-ink)' }}>sotto il minimo {nf(r.minPrice, 0)}</span>}</>, csv: r => r.priceT },
+          { key: 'varT', label: 'Costo variabile €/t', align: 'r', render: r => nf(r.varT, 1), csv: r => r.varT },
+          { key: 'mc2T', label: 'MdC II €/t', align: 'r', render: r => <span className={r.mc2T < 0 ? 'chip crit' : r.below ? 'chip warn' : ''}>{nf(r.mc2T, 1)}</span>, csv: r => r.mc2T },
+          { key: 'fullT', label: 'Margine pieno €/t', align: 'r', render: r => nf(r.fullT, 1), csv: r => r.fullT },
+          { key: 'mc2', label: 'MdC II', align: 'r', render: r => nf(r.mc2 / 1000, 1) + ' mila €', csv: r => r.mc2 },
+        ]} />
+      </Panel>
+    </>
+  );
+}
+
+function MarginiOggi({ d, sel }) {
   const rows = useProductEconomics(d);
   const sigs = signals(d).filter(s => s.area === 'economia');
   const cur = rows.find(r => r.id === sel) || [...rows].sort((a, b) => b.vol - a.vol)[0];
@@ -56,10 +126,10 @@ function Margini({ d, sel }) {
   return (
     <>
       <div className="kpis">
-        <Kpi label="Margine annuo stimato" value={nf(sum(rows, r => r.annual) / 1000)} unit="mila €" foot="prezzi degli ultimi 90 giorni × volumi annui, costi di oggi" />
+        <Kpi label="Margine annuo stimato" value={nf(sum(rows, r => r.annual) / 1000)} unit="mila €" foot="stimato: prezzi netti di 90 giorni × volumi annui, costi pieni di oggi" />
         <Kpi label="Margine medio" value={nf(sum(rows, r => r.annual) / Math.max(1, T), 1)} unit="€/t" foot={`su ${nf(T)} t/anno`} />
         <Kpi label="Materie prime sul prezzo" value={nf(sum(rows, r => r.c.raw * r.vol) / Math.max(1, sum(rows, r => r.real * r.vol)) * 100, 1)} unit="%" foot="la leva principale del costo" />
-        <Kpi label="Listini sotto il margine minimo" value={rows.filter(r => r.below).length} foot={`sconto medio sul listino ${nf(sum(rows, r => (r.discount || 0) * r.vol) / Math.max(1, T) * 100, 1)}%`} onClick={() => go('commerciale', 'listino')} />
+        <Kpi label="Prodotti sotto il prezzo minimo" value={rows.filter(r => r.below).length} foot={`sul prezzo netto incassato · sconto medio ${nf(sum(rows, r => (r.discount || 0) * r.vol) / Math.max(1, T) * 100, 1)}%`} onClick={() => go('commerciale', 'listino')} />
       </div>
       {sigs.length > 0 && <Panel title="Da decidere" flush><SignalList items={sigs} limit={3} /></Panel>}
       <div className="split">
@@ -77,7 +147,7 @@ function Margini({ d, sel }) {
           { key: 'real', label: 'Prezzo incassato', align: 'r', render: r => <>{nf(r.real, 1)}<span className="sub">listino {nf(r.listPrice)}</span></> },
           { key: 'raw', label: 'Materie prime', align: 'r', sort: r => r.c.raw, render: r => nf(r.c.raw, 1) },
           { key: 'total', label: 'Costo pieno', align: 'r', sort: r => r.c.total, render: r => nf(r.c.total, 1) },
-          { key: 'margin', label: 'Margine €/t', align: 'r', render: r => <span className={r.margin < 0 ? 'chip crit' : r.below ? 'chip warn' : ''} title={r.below ? 'Listino sotto il margine minimo' : undefined}>{nf(r.margin, 1)}</span> },
+          { key: 'margin', label: 'Margine €/t', align: 'r', render: r => <span className={r.margin < 0 ? 'chip crit' : r.below ? 'chip warn' : ''} title={r.below ? 'Prezzo netto incassato sotto il prezzo minimo' : undefined}>{nf(r.margin, 1)}</span> },
           { key: 'marginPct', label: '%', align: 'r', render: r => nf(r.marginPct * 100, 1) },
           { key: 'annual', label: 'Margine annuo', align: 'r', render: r => nf(r.annual / 1000, 1) + ' mila €' },
         ]} />
@@ -101,13 +171,16 @@ function Scenari({ d }) {
   const seed = useUi(s => s.scenarioSeed);
   const [sc, setSc] = useState(EMPTY);
   const [name, setName] = useState('');
-  useEffect(() => { if (seed) { setSc({ ...EMPTY, ...seed }); setName(''); uiStore.set({ scenarioSeed: null }); } }, [seed]);
-  const V = volumes(d); const I = idx(d);
-  const ctx = useMemo(() => ({ ...d, energy: d.settings?.energy || {}, volumes: V, contaminant: f => contaminantFor(d, f) }), [d.ingredients, d.formulas, d.products, d.specs, d.lines, d.settings, V]);
+  const [ing, setIng] = useState('soia44');
+  // uno scenario pronto, salvato o arrivato dalla barra comandi: la materia prima mostrata è la prima con una variazione
+  const apply = x => { setSc({ ...EMPTY, ...x, id: undefined, name: undefined }); const k = Object.entries(x.byIngredient || {}).find(([, v]) => v)?.[0]; if (k) setIng(k); };
+  useEffect(() => { if (seed) { apply(seed); setName(''); uiStore.set({ scenarioSeed: null }); } }, [seed]);
+  const I = idx(d); const actx = ctxOf(d);
+  // base del simulatore: prezzi netti incassati (90 giorni), MdC e costi fissi degli ultimi 12 mesi, come Margini e Pareggio
+  const ctx = useMemo(() => ({ ...scenarioBase(d, actx), contaminant: f => contaminantFor(d, f) }), [d, actx]);
   const base0 = useMemo(() => runScenario(ctx, { reoptimize: true }), [ctx]);
   const R = useMemo(() => runScenario(ctx, sc), [ctx, sc]);
   const Rfix = useMemo(() => sc.reoptimize ? runScenario(ctx, { ...sc, reoptimize: false }) : R, [ctx, sc, R]);
-  const volF = 1 + (sc.volumePct || 0) / 100;
   // effetto dello scenario a ricetta fissa e con ri-ottimizzazione, al netto dell'efficienza già disponibile oggi
   const fixedDelta = sum(Rfix.rows, r => r.deltaFixed * r.volumeSc);
   const reDelta = sc.reoptimize ? sum(R.rows, r => { const b = base0.rows.find(x => x.productId === r.productId); return ((r.reopt || r.fixed).total - (b?.reopt || b?.base).total) * r.volumeSc; }) : null;
@@ -117,10 +190,11 @@ function Scenari({ d }) {
   const refCO2 = r => { const b = base0.rows.find(x => x.productId === r.productId); return sc.reoptimize ? b?.co2Sc ?? r.co2Base : r.co2Base; };
   const marginBase = sum(R.rows, r => ref(r).margin * r.volume), marginSc = sum(R.rows, r => r.scen.margin * r.volumeSc);
   const co2Ref = sum(R.rows, r => refCO2(r) * r.volume) / 1000, co2Sc = R.co2ScT;
+  // EBIT e pareggio contro lo stesso riferimento del margine: con la ri-ottimizzazione, le formule già ottimizzate ai prezzi di oggi
+  const refEbit = sc.reoptimize ? base0.ebitSc : R.ebitBase, refBep = sc.reoptimize ? base0.bepTSc : R.bepTBase;
+  const dEbit = R.ebitSc != null && refEbit != null ? R.ebitSc - refEbit : null, dBep = R.bepTSc != null && refBep != null ? R.bepTSc - refBep : null;
   const set = patch => setSc(s => ({ ...s, ...patch }));
   const setCat = (k, v) => setSc(s => ({ ...s, byCategory: { ...s.byCategory, [k]: v } }));
-  const [ing, setIng] = useState('soia44');
-  useEffect(() => { const k = Object.entries(sc.byIngredient || {}).find(([, v]) => v)?.[0]; if (k && k !== ing) setIng(k); }, [sc.byIngredient]);
   const save = () => {
     const n = name.trim() || describe(sc, I) || 'Scenario';
     store.add('scenarios', { name: n, ...sc }, `Scenario salvato: ${n}`); toast('Scenario salvato'); setName('');
@@ -130,25 +204,28 @@ function Scenari({ d }) {
     <>
       <div className="row gap-s" id="eco-presets">
         <span className="small muted">Scenari pronti:</span>
-        {PRESETS.map(p => <button key={p.name} className="chip outline pick" onClick={() => setSc({ ...EMPTY, ...p, name: undefined })}>{p.name}</button>)}
+        {PRESETS.map(p => <button key={p.name} className="chip outline pick" onClick={() => apply(p)}>{p.name}</button>)}
         {d.scenarios.length > 0 && <span className="small muted" style={{ marginLeft: 8 }}>Salvati:</span>}
-        {d.scenarios.map(s => <span key={s.id} className="chip accent">{<button className="linkish" onClick={() => setSc({ ...EMPTY, ...s, id: undefined, name: undefined })}>{s.name}</button>}<button className="linkish" title="Elimina" aria-label={`Elimina ${s.name}`} onClick={() => { store.remove('scenarios', s.id, `Scenario eliminato: ${s.name}`); toast('Scenario eliminato', 'ok', { label: 'Annulla', fn: () => store.undo() }); }}><LuX /></button></span>)}
+        {d.scenarios.map(s => <span key={s.id} className="chip accent">{<button className="linkish" onClick={() => apply(s)}>{s.name}</button>}<button className="linkish" title="Elimina" aria-label={`Elimina ${s.name}`} onClick={() => { store.remove('scenarios', s.id, `Scenario eliminato: ${s.name}`); toast('Scenario eliminato', 'ok', { label: 'Annulla', fn: () => store.undo() }); }}><LuX /></button></span>)}
       </div>
       <div className="split r">
         <Panel title="Ipotesi" sub="Variazioni rispetto a oggi" id="eco-controls" actions={<Btn small kind="ghost" icon={LuRotateCcw} onClick={() => setSc(EMPTY)} disabled={!changed}>Azzera</Btn>}>
           <div className="stack" style={{ gap: 14 }}>
             <div className="eyebrow">Prezzi delle materie prime</div>
-            {CAT.slice(0, 5).map(([k, l]) => <Slider key={k} label={l} value={sc.byCategory[k] || 0} onChange={v => setCat(k, v)} min={-30} max={30} unit="%" />)}
+            {CAT.map(([k, l]) => <Slider key={k} label={l} value={sc.byCategory[k] || 0} onChange={v => setCat(k, v)} min={-30} max={30} unit="%" />)}
             <div className="grid" style={{ gridTemplateColumns: 'minmax(0,1fr) auto', gap: 8, alignItems: 'end' }}>
               <Field label="Una materia prima"><Select value={ing} onChange={setIng} options={d.ingredients.map(i => ({ id: i.id, label: i.name }))} /></Field>
               <span className="num" style={{ paddingBottom: 8, fontWeight: 700 }}>{sf(sc.byIngredient[ing] || 0)}%</span>
             </div>
             <input type="range" className="range" min={-40} max={40} step={1} value={sc.byIngredient[ing] || 0} onChange={e => setSc(s => ({ ...s, byIngredient: { ...s.byIngredient, [ing]: +e.target.value } }))} aria-label="Variazione della materia prima scelta" />
+            {Object.entries(sc.byIngredient || {}).some(([, v]) => v) && <div className="row gap-s">{Object.entries(sc.byIngredient).filter(([, v]) => v).map(([k, v]) => (
+              <span key={k} className="chip accent"><button className="linkish" onClick={() => setIng(k)}>{I.ing[k]?.name || k} {sf(v)}%</button><button className="linkish" title="Togli questa variazione" aria-label={`Togli la variazione di ${I.ing[k]?.name || k}`} onClick={() => setSc(s => { const b = { ...s.byIngredient }; delete b[k]; return { ...s, byIngredient: b }; })}><LuX /></button></span>))}</div>}
             <div className="eyebrow">Energia, volumi e prezzi</div>
             <Slider label="Elettricità" value={sc.kwhPricePct} onChange={v => set({ kwhPricePct: v })} min={-40} max={60} unit="%" />
             <Slider label="GPL" value={sc.gplPricePct} onChange={v => set({ gplPricePct: v })} min={-40} max={60} unit="%" />
             <Slider label="Volumi venduti" value={sc.volumePct} onChange={v => set({ volumePct: v })} min={-30} max={30} unit="%" />
             <Slider label="Listino" value={sc.listPricePct} onChange={v => set({ listPricePct: v })} min={-10} max={10} unit="%" />
+            {sc.listPricePct !== 0 && <Slider label="Elasticità dei volumi al prezzo" value={sc.elasticity ?? ctx.elasticity ?? 0} onChange={v => set({ elasticity: v })} min={-3} max={0} step={0.1} unit="" />}
             <div className="eyebrow">Scelte</div>
             <label className="check"><input type="checkbox" checked={sc.reoptimize} onChange={e => set({ reoptimize: e.target.checked })} /> Ri-ottimizzare le formule con i nuovi prezzi</label>
             <label className="check"><input type="checkbox" checked={!!sc.swapSoy} onChange={e => set({ swapSoy: e.target.checked })} /> Solo soia certificata senza deforestazione</label>
@@ -160,7 +237,9 @@ function Scenari({ d }) {
           <div className="kpis two" id="eco-results">
             <Kpi label="Costi annui a formule invariate" value={sf(fixedDelta / 1000)} unit="mila €" foot={`${sf(fixedDelta / Math.max(1, sum(R.rows, r => r.volumeSc)), 2)} €/t in media`} />
             <Kpi label="Con le formule ri-ottimizzate" value={reDelta == null ? '—' : sf(reDelta / 1000)} unit={reDelta == null ? '' : 'mila €'} foot={reDelta == null ? 'ri-ottimizzazione esclusa' : `la ri-ottimizzazione assorbe ${nf(Math.max(0, fixedDelta - reDelta) / 1000)} mila €`} />
-            <Kpi label="Margine annuo" value={sf((marginSc - marginBase) / 1000)} unit="mila €" foot={`${nf(marginSc / 1000)} mila € contro ${nf(marginBase / 1000)} di riferimento`} />
+            <Kpi label="Margine annuo" value={sf((marginSc - marginBase) / 1000)} unit="mila €" foot={`${nf(marginSc / 1000)} mila € contro ${nf(marginBase / 1000)} di riferimento (prezzi netti incassati)`} />
+            <Kpi label="EBIT annuo" value={dEbit == null ? '—' : sf(dEbit / 1000)} unit={dEbit == null ? '' : 'mila €'} foot={dEbit == null ? 'servono i costi fissi (Direzione › Costi fissi)' : `${nf(R.ebitSc / 1000)} mila € contro ${nf(refEbit / 1000)} di riferimento${refEbit ? ` (${sf(dEbit / Math.abs(refEbit) * 100)}%)` : ''}`} />
+            <Kpi label="Punto di pareggio" value={R.bepTSc == null ? '—' : nf(R.bepTSc)} unit={R.bepTSc == null ? '' : 't/anno'} foot={dBep == null ? 'servono i costi fissi' : `${sf(dBep)} t rispetto al riferimento${R.breakEvenVolumePct != null ? ` · volumi a margine invariato ${sf(R.breakEvenVolumePct * 100, 1)}%` : ''}`} />
             <Kpi label="CO₂e delle materie prime" value={sf(co2Sc - co2Ref)} unit="t/anno" foot={`${nf(co2Sc)} t nello scenario`} />
           </div>
           <div className="note maize"><b>Efficienza già disponibile oggi:</b> ri-ottimizzando le formule ai prezzi attuali, senza nessuna variazione, si risparmierebbero circa {nf(available / 1000)} mila € l’anno. {sc.reoptimize ? 'Per non attribuire allo scenario un risparmio che esiste già, il confronto parte dalle formule già ri-ottimizzate.' : 'Questo importo non è compreso nei risultati a formule invariate.'}</div>
@@ -214,12 +293,16 @@ function Previsioni({ d, sel }) {
     const cw = mondayOf(today);
     return d.products.map(p => {
       const y = byP[p.id].slice(0, -1); // l'ultima settimana è in corso: esclusa dall'adattamento
-      const fc = forecast(y, 8, 1);
-      const bt = backtest(y, 4, 1, 26);
-      const naive = []; for (let t = 26; t + 4 <= y.length; t++) { const m4 = mean(y.slice(t - 4, t)); naive.push(Math.abs(m4 - y[t + 3]) / Math.max(1, y[t + 3])); }
+      // scelta automatica del modello (ingenuo, media mobile, livellamento semplice o con tendenza smorzata, stagionale con 2 anni)
+      // sull'errore a un passo con origine mobile; le ultime 4 settimane restano fuori dalla scelta e misurano l'errore «a scatola chiusa»
+      const fa = y.filter(v => v > 0).length >= 8 ? forecastAuto(y, 8, { m: 52, holdout: 4, minTrain: 12 }) : null;
+      const fc = fa && fa.points.length ? fa : null;
       const planW = Array.from({ length: 8 }, (_, k) => sum(d.plan.filter(x => x.productId === p.id && x.week === addDays(cw, 7 * k)), x => x.tonnes));
       const fc8 = fc ? sum(fc.points, x => x.value) : null;
-      return { p, y, fc, bt, naive: naive.length ? mean(naive) : null, planW, fc8, plan8: sum(planW), gap: fc8 ? sum(planW) / fc8 - 1 : null };
+      const sh = d.shipments.filter(x => x.productId === p.id && x.date > addDays(today, -90));
+      const price = sum(sh, x => x.tonnes) ? sum(sh, x => x.tonnes * x.price) / sum(sh, x => x.tonnes) : p.listPrice;
+      const gapT = fc8 != null ? sum(planW) - fc8 : null;
+      return { p, y, fc, planW, fc8, plan8: sum(planW), gap: fc8 ? sum(planW) / fc8 - 1 : null, gapT, gapEur: gapT != null ? gapT * (price || 0) : null };
     });
   }, [W, d.plan, d.products, today]);
   const cur = data.find(x => x.p.id === sel) || data.find(x => x.fc) || null;
@@ -235,8 +318,9 @@ function Previsioni({ d, sel }) {
           { key: 'last', label: 'Ultime 4 sett.', align: 'r', sort: x => sum(x.y.slice(-4)), render: x => nf(sum(x.y.slice(-4))) + ' t' },
           { key: 'fc8', label: 'Previsione 8 sett.', align: 'r', render: x => nf(x.fc8) + ' t' },
           { key: 'plan8', label: 'Piano 8 sett.', align: 'r', render: x => nf(x.plan8) + ' t' },
-          { key: 'gap', label: 'Piano vs previsione', align: 'r', render: x => x.gap == null ? '—' : <span className={Math.abs(x.gap) > 0.1 ? 'chip warn' : ''}>{sf(x.gap * 100)}%</span> },
-          { key: 'mape', label: 'Errore storico', align: 'r', sort: x => x.bt.mape, render: x => <>{nf(x.bt.mape * 100, 1)}%<span className="sub">media mobile {nf(x.naive * 100, 1)}%</span></> },
+          { key: 'gap', label: 'Piano vs previsione', align: 'r', render: x => x.gap == null ? '—' : <><span className={Math.abs(x.gap) > 0.1 ? 'chip warn' : ''}>{sf(x.gap * 100)}%</span><span className="sub">{sf(x.gapT)} t · {sf((x.gapEur || 0) / 1000, 0)} k€</span></> },
+          { key: 'model', label: 'Modello', sort: x => x.fc?.model || '', render: x => (x.fc ? MODEL_LABEL[x.fc.model] || x.fc.model : '—') },
+          { key: 'mape', label: 'Errore storico', align: 'r', sort: x => x.fc?.mape, render: x => (x.fc?.mape != null ? <>{nf(x.fc.mape * 100, 1)}%<span className="sub">media mobile {x.fc.benchmarkMape != null ? nf(x.fc.benchmarkMape * 100, 1) + '%' : '—'}</span></> : '—') },
         ]} />
       </Panel>
       <div className="split">
@@ -248,9 +332,9 @@ function Previsioni({ d, sel }) {
         </Panel>
         <Panel title="Lettura" sub="Metodo classico e verificabile, non una scatola nera">
           <div className="stack" style={{ gap: 12 }}>
-            <Kv items={[['Previsione 8 settimane', `${nf(cur.fc8)} t`], ['Piano 8 settimane', `${nf(cur.plan8)} t (${sf(cur.gap * 100)}%)`], ['Errore storico a 4 settimane', `${nf(cur.bt.mape * 100, 1)}% (media mobile a 4 settimane: ${nf(cur.naive * 100, 1)}%)`], ['Consegne reali dentro la banda', `${nf(cur.bt.coverage * 100)}%`]]} />
+            <Kv items={[['Modello scelto', MODEL_LABEL[cur.fc.model] || cur.fc.model], ['Previsione 8 settimane', `${nf(cur.fc8)} t`], ['Piano 8 settimane', `${nf(cur.plan8)} t (${sf(cur.gap * 100)}%, ${sf((cur.gapEur || 0) / 1000, 0)} k€ ai prezzi netti)`], ['Errore a un passo (selezione)', cur.fc.mape != null ? `${nf(cur.fc.mape * 100, 1)}% contro ${cur.fc.benchmarkMape != null ? nf(cur.fc.benchmarkMape * 100, 1) + '%' : '—'} della media mobile a 4 settimane` : '—'], ['Errore sulle ultime 4 settimane', cur.fc.holdoutMape != null ? `${nf(cur.fc.holdoutMape * 100, 1)}% (escluse dalla scelta)` : '—']]} />
             <div className={`note ${Math.abs(cur.gap) > 0.1 ? 'maize' : 'good'}`}>{Math.abs(cur.gap) > 0.1 ? `Il piano è ${cur.gap > 0 ? 'sopra' : 'sotto'} la previsione del ${nf(Math.abs(cur.gap) * 100)}%: ${cur.gap > 0 ? 'rischio di scorte di prodotto finito e di acquisti anticipati' : 'rischio di mancate consegne'}. Verificare con il commerciale.` : 'Piano e previsione sono coerenti (differenza entro il 10%).'}</div>
-            <p className="small muted">Livellamento esponenziale con tendenza (Holt), parametri scelti sui dati; la banda viene dagli errori a un passo osservati. Con più di due anni di storia si attiva anche la stagionalità.</p>
+            <p className="small muted">FeedOS confronta metodo ingenuo, media mobile, livellamento esponenziale semplice e con tendenza smorzata, e sceglie quello con l’errore minore sulle settimane passate; la banda P10–P90 viene dagli errori osservati e non scende sotto zero. La stagionalità si attiva con almeno due anni di storico settimanale.</p>
           </div>
         </Panel>
       </div>
