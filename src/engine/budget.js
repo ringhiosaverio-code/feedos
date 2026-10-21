@@ -375,24 +375,40 @@ function seasonSource(d, ctx, month, first) {
  * opts: {year, version = 'B', growthPct: {specie: %}, listDeltaPct = 0, listFromMonth = 3, mpDeltaPct = 0, fixedInflPct = 2, centerPct: {centro: %}}
  * → {rows, fixed}
  */
+/** Basi del budget che non dipendono dalle ipotesi (volumi stagionali, prezzi a 90 giorni, provvigione media): memorizzate per fatti e storico. */
+const seedCache = new WeakMap();
+function seedBase(d, ctx, today) {
+  const sh = d.salesHistory || EMPTY;
+  let byF = seedCache.get(ctx.facts);
+  if (!byF) { byF = new WeakMap(); seedCache.set(ctx.facts, byF); }
+  let byS = byF.get(sh);
+  if (!byS) { byS = new Map(); byF.set(sh, byS); }
+  const hit = byS.get(today);
+  if (hit) return hit;
+  const last = addMonths(today.slice(0, 7), -1);
+  const window = Array.from({ length: 12 }, (_, k) => addMonths(last, k - 11));
+  const first = firstFactDate(ctx.facts);
+  // provvigione media pesata sui ricavi degli ultimi 12 mesi
+  const a12 = aggregateFacts(ctx.facts, sh, { from: window[0] + '-01', to: endOfMonth(last) }).total;
+  const sources = {};
+  for (let i = 1; i <= 12; i++) { const src = window.find(w => +w.slice(5, 7) === i); sources[i] = src ? seasonSource(d, ctx, src, first) : { rows: [], scale: 1 }; }
+  const base = { q90: last90(ctx.facts, today), rev12: a12.revenue, comm12: a12.commission, sources };
+  byS.set(today, base);
+  return base;
+}
+
 export function seedBudgetRows(d, ctx, opts = {}) {
   const today = todayOf(d, ctx);
   ctx = ctx?.facts ? ctx : makeCtx(d, today);
   const { year = +today.slice(0, 4) + 1, version = 'B', growthPct = {}, listDeltaPct = 0, listFromMonth = 3, mpDeltaPct = 0, fixedInflPct = 2, centerPct = {} } = opts;
   const ix = ctx.ix || makeIndex(d), costs = ctx.costs || costsOf(d, ix);
-  const tm = today.slice(0, 7), last = addMonths(tm, -1);
-  const window = Array.from({ length: 12 }, (_, k) => addMonths(last, k - 11));
-  const first = firstFactDate(ctx.facts);
-  const q90 = last90(ctx.facts, today);
-  // provvigione media pesata sui ricavi degli ultimi 12 mesi
-  const a12 = aggregateFacts(ctx.facts, d.salesHistory || EMPTY, { from: window[0] + '-01', to: endOfMonth(last) }).total;
-  const commPct = a12.revenue > 0 ? a12.commission / a12.revenue * 100 : agentsPct(d);
+  const { q90, rev12, comm12, sources } = seedBase(d, ctx, today);
+  const commPct = rev12 > 0 ? comm12 / rev12 * 100 : agentsPct(d);
   const en = d.settings?.energy || {};
   const rows = [];
   for (let i = 1; i <= 12; i++) {
     const m = `${year}-${p2(i)}`;
-    const src = window.find(w => +w.slice(5, 7) === i);
-    const s = src ? seasonSource(d, ctx, src, first) : { rows: [], scale: 1 };
+    const s = sources[i];
     for (const r of s.rows) {
       const p = ix.prod[r.productId];
       if (!p || p.active === false) continue;
