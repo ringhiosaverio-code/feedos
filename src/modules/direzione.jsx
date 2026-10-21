@@ -20,7 +20,7 @@ import { checklist, closeMonthOps, reopenMonthOps, reopenLabel, closeLabel, clos
 import { PageHead, Panel, Kpi, Btn, Chip, Seg, Select, Table, Empty, Field, NumInput, Kv, confirm } from '../ui/ui.jsx';
 import { SignalList } from './shared.jsx';
 import { COST_CENTERS } from '../data/demo/costs.js';
-import { Conto, useDir, kc, money, eurTxt, kEur, perT, Def, HWaterfall, MonthBars, Delta } from './direzione-conto.jsx';
+import { Conto, useDir, kc, goal, money, eurTxt, kEur, perT, Def, HWaterfall, MonthBars, Delta } from './direzione-conto.jsx';
 import { Budget } from './direzione-budget.jsx';
 import { ReportCda } from './direzione-report.jsx';
 
@@ -102,9 +102,10 @@ function Sintesi() {
       <div className="kpis">
         <Kpi label="Ricavi netti" {...money(cur.revenueNet)} cmp={kc(dir, cur.revenueNet, cmp?.revenueNet)} foot={`${nf(t)} t`} />
         <Kpi label={<Def text="MdC II per tonnellata: ricavi netti − materie prime, calo, energia, trasformazione variabile, imballi, trasporti e provvigioni, al costo effettivo dei lotti.">Margine di contribuzione</Def>}
-          value={perT(t ? by.mdc2 / t : null)} unit="€/t" cmp={kc(dir, t ? by.mdc2 / t : null, cmp && cmp.tonnes ? cb.mdc2 / cmp.tonnes : null, { kind: 'ratio', unit: '€/t' })} foot={eurTxt(by.mdc2)} />
+          value={perT(t ? by.mdc2 / t : null)} unit="€/t" cmp={kc(dir, t ? by.mdc2 / t : null, cmp && cmp.tonnes ? cb.mdc2 / cmp.tonnes : null, { kind: 'ratio', unit: '€/t' })} foot={eurTxt(by.mdc2)}
+          {...goal(d, 'mdc-t', t ? by.mdc2 / t : null, v => nf(v, 0) + ' €/t')} />
         <Kpi label={<Def text="EBITDA sui ricavi netti: MdC II meno i costi fissi monetari (ammortamenti esclusi).">EBITDA</Def>} value={ebitdaPct == null ? '—' : nf(ebitdaPct * 100, 1)} unit="%"
-          cmp={kc(dir, ebitdaPct, ebitdaPctC, { kind: 'ratio', unit: '%', scale: 100 })} foot={eurTxt(by.ebitda)} />
+          cmp={kc(dir, ebitdaPct, ebitdaPctC, { kind: 'ratio', unit: '%', scale: 100 })} foot={eurTxt(by.ebitda)} {...goal(d, 'ebitda-pct', ebitdaPct, v => nf(v * 100, 1) + '%')} />
         <Kpi label="EBIT" {...money(by.ebit)} cmp={kc(dir, by.ebit, cb?.ebit)} foot={cur.partialFixedMonths?.length ? <Chip kind="warn" title={`Consuntivo dei costi fissi incompleto per ${cur.partialFixedMonths.map(m => monthLabel(m, false)).join(', ')}: i centri senza importo valgono zero`}>fissi parziali</Chip>
             : cur.estimatedMonths?.length ? <Chip kind="maize" title={`Costi fissi stimati per ${cur.estimatedMonths.map(m => monthLabel(m, false)).join(', ')}`}>fissi stimati</Chip> : cur.frozen ? 'numeri congelati' : `${pct(cur.revenueNet ? by.ebit / cur.revenueNet : null, 1)} dei ricavi`} />
         <Kpi label={<Def text="EBIT da inizio anno + MdC II previsto per il resto dell’anno − costi fissi del resto dell’anno. Banda P10–P90 approssimata (limiti dei prodotti sommati).">{`Stima di chiusura ${y}`}</Def>}

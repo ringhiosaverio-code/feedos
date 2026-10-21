@@ -8,6 +8,7 @@ import { ctxOf } from '../core/derived.js';
 import { usePeriod } from '../ui/period.jsx';
 import { pnlFor, aggregate, PNL_LINES, VAR_LINE, FIXED_LINE, compareLines, stockEffect, effectiveCoverage, keyLabel } from '../engine/pnl.js';
 import { budgetTotals, activeVersion } from '../engine/budget.js';
+import { statusFor } from '../engine/kpis.js';
 import { Panel, Kpi, Table, Seg, Chip, Empty, useWidth } from '../ui/ui.jsx';
 import { niceTicks } from '../ui/charts.jsx';
 
@@ -70,6 +71,18 @@ export function useDir(d) {
   const hasData = !!cur && (cur.tonnes > 0 || Math.abs(cur.revenueNet) > 0);
   return { ...per, ctx, year, cur, cmp, cov, covP, covC, cmpLabel, hasData };
 }
+/**
+ * Semaforo e obiettivo di un indicatore dal catalogo degli obiettivi (motore KPI, settings.targets): {status, target}.
+ * Senza obiettivo (o con il motore KPI non disponibile) restituisce {} e l'indicatore resta neutro.
+ */
+export function goal(d, id, value, fmt) {
+  if (value == null || !Number.isFinite(+value)) return {};
+  let status = null;
+  try { status = statusFor(d, id, +value) || null; } catch { status = null; }
+  const tv = d.settings?.targets?.[id]?.target;
+  return { status: status || undefined, target: tv != null && Number.isFinite(+tv) && fmt ? fmt(+tv) : undefined };
+}
+
 /** Proprietà cmp di Kpi per un valore del conto. */
 export function kc(dir, cur, cmp, { kind = 'flow', good = 'up', unit = '', decimals = 1, scale = 1 } = {}) {
   if (!dir.C || cmp == null) return undefined;
@@ -259,7 +272,8 @@ export function Conto({ d }) {
       <div className="kpis">
         <Kpi label="Ricavi netti" {...money(ct.ricaviNetti)} cmp={kc(dir, ct.ricaviNetti, cmp?.by.ricaviNetti)} foot={`${nf(t)} t`} />
         <Kpi label="MdC I" value={perT(t ? ct.mdc1 / t : null)} unit="€/t" cmp={kc(dir, t ? ct.mdc1 / t : null, cmp && cmp.tonnes ? cmp.by.mdc1 / cmp.tonnes : null, { kind: 'ratio', unit: '€/t' })} foot={eurTxt(ct.mdc1)} />
-        <Kpi label="MdC II" value={perT(t ? ct.mdc2 / t : null)} unit="€/t" cmp={kc(dir, t ? ct.mdc2 / t : null, cmp && cmp.tonnes ? cmp.by.mdc2 / cmp.tonnes : null, { kind: 'ratio', unit: '€/t' })} foot={eurTxt(ct.mdc2)} />
+        <Kpi label="MdC II" value={perT(t ? ct.mdc2 / t : null)} unit="€/t" cmp={kc(dir, t ? ct.mdc2 / t : null, cmp && cmp.tonnes ? cmp.by.mdc2 / cmp.tonnes : null, { kind: 'ratio', unit: '€/t' })} foot={eurTxt(ct.mdc2)}
+          {...goal(d, 'mdc-t', t ? ct.mdc2 / t : null, v => nf(v, 0) + ' €/t')} />
         <Kpi label="EBIT" {...money(ct.ebit)} cmp={kc(dir, ct.ebit, cmp?.by.ebit)} foot={cur.revenueNet ? `${pct(ct.ebit / cur.revenueNet, 1)} dei ricavi` : null} />
       </div>
       <Panel title="Conto economico a costi diretti" flush className="dz-pnl"
