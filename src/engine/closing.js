@@ -144,6 +144,9 @@ export function closeMonthOps(d, ctx, month, { by = 'Direzione', comments = {}, 
   const old = closingRecord(d, month);
   const snap = snapshotMonth(d, ctx, month, { by, at, comments: { ...(old?.comments || {}), ...(comments || {}) } });
   if (failed.length) snap.forced = { note: String(note || '').trim(), items: failed.map(i => i.id) };
+  // una richiusura conserva l'origine (storico del gestionale precedente) e la nota del mese (es. mese parziale)
+  if (old?.source === 'storico') snap.source = 'storico';
+  if (old?.note) snap.note = old.note;
   if (old?.history || old?.reopenedAt) snap.history = [...(old.history || []), ...(old.reopenedAt ? [{ reopenedAt: old.reopenedAt, reopenedBy: old.reopenedBy, note: old.reopenNote }] : [])];
   return [
     { kind: 'upsertMany', coll: 'closings', objs: [snap] },

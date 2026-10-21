@@ -64,6 +64,23 @@ test('chiudere un mese blocca i movimenti di quel mese (salvo force); riaprirlo 
   assert.equal(applyOpsTo(d3, [{ kind: 'update', coll: 'lots', id: 'lt-1', patch: { status: 'bloccato' } }]).refused, null);
 });
 
+test('riaprire un mese riapre anche i successivi; la richiusura conserva origine e nota del mese', () => {
+  const first = '2025-10';
+  const d1 = applyOpsTo(d, reopenMonthOps(d, first, { by: 'Test', note: 'Correzione del primo mese', at: '2026-10-16T10:00:00Z' })).data;
+  assert.equal(d1.settings.closedThrough, '2025-09');
+  assert.ok(d1.closings.filter(c => c.month >= first).every(c => c.status === 'riaperto'), 'mesi successivi riaperti');
+  assert.ok(d1.closings.filter(c => c.month < first).every(c => c.status === 'chiuso'), 'storico ancora chiuso');
+  const ops = closeMonthOps(d1, makeCtx(d1, today), first, { by: 'Test', at: '2026-10-16T11:00:00Z' });
+  assert.ok(Array.isArray(ops), 'il mese si richiude');
+  const c = closingRecord(applyOpsTo(d1, ops).data, first);
+  assert.match(c.note || '', /parziale/i); assert.equal(c.source, 'feedos');
+  // un mese dello storico richiuso resta «storico»
+  const h = '2025-09';
+  const d2 = applyOpsTo(d, reopenMonthOps(d, h, { note: 'verifica' })).data;
+  const c2 = closingRecord(applyOpsTo(d2, closeMonthOps(d2, makeCtx(d2, today), h, { by: 'Test', force: true, note: 'storico' })).data, h);
+  assert.equal(c2.source, 'storico'); assert.equal(c2.status, 'chiuso');
+});
+
 test('una voce bloccante della lista di controllo impedisce la chiusura (salvo force con nota)', () => {
   const d1 = applyOpsTo(d, reopenMonthOps(d, '2026-09', { note: 'prova' })).data;
   // manca il consuntivo di un centro

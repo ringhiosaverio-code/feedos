@@ -493,11 +493,12 @@ function CloseBody({ box, blocking }) {
     </div>
   );
 }
-function ReopenBody({ box }) {
+function ReopenBody({ box, after }) {
   const [v, setV] = useState(() => String(box.current || ''));
   return (
     <div className="stack" style={{ gap: 10 }}>
-      <p>Riaprendo il mese (e gli eventuali mesi chiusi dopo) i movimenti tornano modificabili e i numeri congelati non valgono più finché non lo si richiude. La nota resta nel registro delle modifiche.</p>
+      <p>Riaprendo il mese i movimenti tornano modificabili e i numeri congelati non valgono più finché non lo si richiude. La nota resta nel registro delle modifiche.</p>
+      {after.length > 0 && <div className="note warn">I mesi si chiudono in ordine: si riaprono anche {after.length === 1 ? monthLabel(after[0], false) : `i ${after.length} mesi chiusi dopo (fino a ${monthLabel(after[after.length - 1], false)})`}, da richiudere uno alla volta.</div>}
       <Field label="Nota (obbligatoria)"><textarea className="input" rows={3} value={v} autoFocus onChange={e => { setV(e.target.value); box.current = e.target.value; }} placeholder="Es. nota di credito tardiva al cliente…" /></Field>
     </div>
   );
@@ -542,7 +543,8 @@ function Chiusura({ sel }) {
   };
   const doReopen = (keep = false) => {
     if (!keep) box.current = '';
-    confirm(`Riaprire ${monthLabel(m, false)}?`, <ReopenBody box={box} />, () => {
+    const after = (d.closings || []).filter(c => c.status === 'chiuso' && (c.month || c.id) > m).map(c => c.month || c.id).sort();
+    confirm(`Riaprire ${monthLabel(m, false)}?`, <ReopenBody box={box} after={after} />, () => {
       const note = String(box.current || '').trim();
       if (!note) { toast('La nota è obbligatoria per riaprire un mese', 'err'); doReopen(true); return; }
       const ops = reopenMonthOps(d, m, { by: roleName(), note });
