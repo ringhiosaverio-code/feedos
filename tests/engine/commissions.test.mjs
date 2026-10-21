@@ -134,8 +134,8 @@ test('estratto del 3° trimestre: Enasarco 17% metà e metà, netto, scadenza, q
       close(s.standardInCE, sum(facts, f => f.commission));
       close(s.difference, sum(s.rows, r => r.revenue * (r.pct - a.commissionPct) / 100));
     } else {
-      assert.ok(s.totals.pending > 0 && s.totals.maturate < s.totals.amount); // all'incasso: matura con i pagamenti (stimati senza fatture)
-      assert.equal(s.estimated, true);
+      assert.ok(s.totals.pending > 0 && s.totals.maturate < s.totals.amount); // all'incasso: matura con i pagamenti
+      assert.equal(s.estimated, !(D.invoices || []).length); // stimato solo senza fatture registrate
     }
   }
   // massimale annuo: l'Enasarco si ferma alla soglia
@@ -159,7 +159,9 @@ test('totali e prestazioni degli agenti: somme coerenti con i fatti', () => {
     close(r.revenue, t.revenue); close(r.commission, t.amount);
     assert.ok(r.realization > 0.9 && r.realization <= 1);
     assert.ok(r.shareBelowMinT >= 0 && r.shareBelowMinT <= 1);
-    assert.equal(r.overdue, null); // senza crediti (pacchetto finanza) non si inventa lo scaduto
-    assert.ok(r.cmp && r.cmp.revenue === 0); // nessun dato nei 12 mesi precedenti
+    // scaduto dai crediti del pacchetto finanza: numero quando ci sono fatture, mai inventato senza
+    if ((D.invoices || []).length) assert.ok(Number.isFinite(r.overdue) && r.overdue >= 0);
+    else assert.equal(r.overdue, null);
+    assert.ok(r.cmp && r.cmp.revenue >= 0);
   }
 });
