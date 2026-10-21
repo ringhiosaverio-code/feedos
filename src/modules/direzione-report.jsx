@@ -8,7 +8,7 @@ import { nf, sf, monthLabel, endOfMonth, dateIt, monthsIn, addMonths } from '../
 import { download, stamp } from '../core/io.js';
 import { makePeriod, comparePeriod } from '../core/period.js';
 import { firstFactDate } from '../engine/pnl.js';
-import { buildReport, reportMarkdown, reportCsv, reportComments, commentOps, defaultReportMonth, fmtCell, cellValue, REPORT_TEMPLATES, TEMPLATE_LABELS } from '../engine/report.js';
+import { buildReport, reportMarkdown, reportCsv, reportComments, commentOps, defaultReportMonth, cellText, REPORT_TEMPLATES, TEMPLATE_LABELS } from '../engine/report.js';
 import { PrintPage, printNow } from '../ui/print.jsx';
 import { Panel, Btn, Seg, Select, Chip, Empty } from '../ui/ui.jsx';
 import { useDir, HWaterfall, eurTxt } from './direzione-conto.jsx';
@@ -45,7 +45,7 @@ function SectionBody({ s }) {
         <div className="dz-rtw">
           <table className="dz-rt">
             <thead><tr>{s.table.cols.map(c => <th key={c.key} className={c.align === 'r' ? 'r' : ''}>{c.label}</th>)}</tr></thead>
-            <tbody>{s.table.rows.map((r, i) => <tr key={i} className={r.total || r.kind === 'total' ? 'tot' : ''}>{s.table.cols.map(c => <td key={c.key} className={c.align === 'r' ? 'r' : ''}>{fmtCell(cellValue(r, c), c.fmt)}</td>)}</tr>)}</tbody>
+            <tbody>{s.table.rows.map((r, i) => <tr key={i} className={r.total || r.kind === 'total' ? 'tot' : ''}>{s.table.cols.map(c => <td key={c.key} className={c.align === 'r' ? 'r' : ''}>{cellText(r, c)}</td>)}</tr>)}</tbody>
           </table>
         </div>
       )}

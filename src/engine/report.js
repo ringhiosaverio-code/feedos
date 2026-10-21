@@ -88,7 +88,7 @@ function sintesi(d, ctx, P, C, cur, cmp, signals) {
 function conto(d, ctx, P, C, cur, cmp) {
   const rows = compareLines(cur, cmp).map(l => ({ voce: l.label, total: l.total, value: l.value, perT: l.perT, pctRev: l.pctRev, cmp: l.cmp, delta: l.delta, deltaPct: l.deltaPct }));
   const cols = [{ key: 'voce', label: 'Voce', fmt: 'text' }, { key: 'value', label: '€', align: 'r', fmt: 'eur' }, { key: 'perT', label: '€/t', align: 'r', fmt: 'num2' }, { key: 'pctRev', label: '% ricavi', align: 'r', fmt: 'pct' }];
-  if (cmp) cols.push({ key: 'cmp', label: C?.budget ? 'Budget' : 'Confronto', align: 'r', fmt: 'eur' }, { key: 'delta', label: 'Δ', align: 'r', fmt: 'eur' }, { key: 'deltaPct', label: 'Δ%', align: 'r', fmt: 'pct' });
+  if (cmp) cols.push({ key: 'cmp', label: C?.budget ? 'Budget' : 'Confronto', align: 'r', fmt: 'eur' }, { key: 'delta', label: 'Δ', align: 'r', fmt: 'eurs' }, { key: 'deltaPct', label: 'Δ%', align: 'r', fmt: 'pcts' });
   const narr = [`Volumi ${nf(cur.tonnes)} t · ricavi netti ${nf(cur.revenueNet / 1e6, 2)} M€ · MdC II ${nf(cur.tonnes ? cur.by.mdc2 / cur.tonnes : null, 1)} €/t · EBIT ${nf(cur.by.ebit / 1000, 1)} k€.`];
   if (cur.estimatedMonths?.length) narr.push(`Costi fissi stimati (budget o media) per ${cur.estimatedMonths.join(', ')}.`);
   if (cur.frozen) narr.push('Numeri congelati alla chiusura del mese.');
@@ -103,7 +103,7 @@ function ponte(d, ctx, P, C) {
   const rows = [{ voce: C.budget ? 'Budget' : `Partenza (${C.short || 'confronto'})`, value: br.start, kind: 'total' }, ...br.steps.filter(s => Math.abs(s.value) >= 0.5).map(s => ({ voce: s.label, value: s.value, kind: 'step' })), { voce: `Arrivo (${P.short || 'periodo'})`, value: br.end, kind: 'total' }];
   return { id: 'ponte', title: SECTION_TITLES.ponte, order: 25, kpis: [
     { label: 'Margine di partenza', value: br.start, unit: '€', decimals: 0 }, { label: 'Margine di arrivo', value: br.end, unit: '€', decimals: 0 }, { label: 'Differenza', value: br.end - br.start, unit: '€', decimals: 0 },
-  ], table: { cols: [{ key: 'voce', label: 'Effetto', fmt: 'text' }, { key: 'value', label: '€', align: 'r', fmt: 'eur' }], rows },
+  ], table: { cols: [{ key: 'voce', label: 'Effetto', fmt: 'text' }, { key: 'value', label: '€', align: 'r', fmt: 'eur', fmtOf: r => (r.kind === 'step' ? 'eurs' : 'eur') }], rows },
   narrative: cov < 0.9 ? ['Uno dei due periodi ha dati incompleti: non confrontabile.'] : narrative(br, d.settings?.finance?.materiality, { vs: vsText(C) }), steps: br.steps, start: br.start, end: br.end, check: br.check };
 }
 
@@ -171,6 +171,8 @@ export function normSection(s, id) {
 }
 /** Valore di una cella: funzione value(row) della colonna, altrimenti row[key]. */
 export const cellValue = (row, col) => (typeof col.value === 'function' ? col.value(row) : row?.[col.key]);
+/** Testo di una cella: formato della colonna, o della riga (fmtOf) quando cambia riga per riga (totali e passi del ponte). */
+export const cellText = (row, col) => fmtCell(cellValue(row, col), typeof col.fmtOf === 'function' ? col.fmtOf(row) : col.fmt);
 
 /** Testo di una cella secondo il formato della colonna. */
 export function fmtCell(v, fmt) {
@@ -180,6 +182,8 @@ export function fmtCell(v, fmt) {
     case 'eur': return nf(v) + ' €';
     case 't': return nf(v, Math.abs(v) < 10 ? 1 : 0) + ' t';
     case 'pct': return nf(v * 100, 1) + '%';
+    case 'eurs': return sf(v, 0) + ' €'; // scostamenti con segno
+    case 'pcts': return sf(v * 100, 1) + '%';
     case 'num2': return nf(v, 2);
     case 'num': return nf(v, Math.abs(v) < 10 ? 2 : 0);
     default: return nf(v, Math.abs(v) < 10 ? 2 : 0);
@@ -211,7 +215,7 @@ export function reportMarkdown(r) {
     if (s.table?.rows?.length) {
       const cols = s.table.cols;
       out.push('| ' + cols.map(c => c.label).join(' | ') + ' |', '| ' + cols.map(c => (c.align === 'r' ? '---:' : '---')).join(' | ') + ' |');
-      for (const row of s.table.rows) out.push('| ' + cols.map(c => String(fmtCell(cellValue(row, c), c.fmt)).replace(/\|/g, '/').replace(/\n/g, ' ')).join(' | ') + ' |');
+      for (const row of s.table.rows) out.push('| ' + cols.map(c => String(cellText(row, c)).replace(/\|/g, '/').replace(/\n/g, ' ')).join(' | ') + ' |');
       out.push('');
     }
     for (const t of s.narrative || EMPTY) out.push(t);
