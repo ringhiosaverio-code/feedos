@@ -104,6 +104,32 @@ test('fatture stimate: incasso su una stimata la registra con il numero FT e las
   assert.equal(creditSummary(d2, today).byCustomer[cust].open, 0);
 });
 
+test('mese chiuso: registrare una fattura stimata o un incasso datato nel mese chiuso richiede force; nient’altro cambia', () => {
+  // senza fatture registrate e con settembre chiuso: la fattura stimata di fine agosto cade in un mese chiuso
+  const g = { ...D, invoices: [], payments: [], settings: { ...D.settings, counters: {}, closedThrough: '2026-09' } };
+  const inv = openItems(g, today).find(i => i.date <= '2026-09-30' && i.residual > 5000);
+  assert.ok(inv, 'una fattura stimata di un mese chiuso ancora da incassare');
+  const ops = registerPaymentOps(g, inv.id, { date: today, amount: 1000 }, today);
+  const no = applyOpsTo(g, ops);
+  assert.ok(no.refused && no.refused.coll === 'invoices', 'senza force la registrazione nel mese chiuso è rifiutata');
+  assert.equal(no.data, g, 'tutto o niente: archivio invariato');
+  const ok = applyOpsTo(g, ops, { force: true });
+  assert.equal(ok.refused, null);
+  const m = ok.data.invoices[0];
+  assert.equal(m.status, 'parziale'); close(m.total, inv.total, 1e-9, 'stesso importo della stimata');
+  for (const k of ['shipments', 'lots', 'runs', 'fixedCosts', 'customers']) assert.equal(ok.data[k], g[k], k + ' invariati: nessun valore economico cambia');
+  close(creditSummary(ok.data, today).open, creditSummary(g, today).open - 1000, 1e-6, 'crediti aperti');
+  // fattura vera: l'incasso datato in un mese aperto aggiorna solo campi non protetti (nessun rifiuto);
+  // datato in un mese chiuso serve force, come fa la finestra «Registra incasso»
+  const real = { ...D, settings: { ...D.settings, closedThrough: '2026-09' } };
+  const it = openItems(real, today).find(i => !i.estimated && i.date <= '2026-08-31' && i.residual > 5000);
+  assert.ok(it);
+  assert.equal(applyOpsTo(real, registerPaymentOps(real, it.id, { date: today, amount: 500 }, today)).refused, null);
+  const back = registerPaymentOps(real, it.id, { date: '2026-09-28', amount: 500 }, today);
+  assert.ok(applyOpsTo(real, back).refused, 'incasso datato nel mese chiuso: rifiutato senza force');
+  assert.equal(applyOpsTo(real, back, { force: true }).refused, null);
+});
+
 test('punteggio di rischio: componenti sommate e classe attesa', () => {
   const r = riskScore({ exposure: 100000, overdue60: 40000, avgDelay: 30, delay3: 40, delay12: 30, util: 1.2, insoluta: true });
   assert.deepEqual(r.parts.map(p => Math.round(p.points * 100) / 100), [14, 12.5, 15, 15, 10]);

@@ -287,11 +287,13 @@ export function costBase12(d, ctx, at) {
 export function cogs12(d, ctx, at) { return costBase12(d, ctx, at).cogs; }
 
 /**
- * Sintesi delle rimanenze (contratto): MP al FIFO e prodotto finito al costo pieno effettivo (actuals), giorni di magazzino
- * DIO = (MP + PF) / (costo del venduto 12 mesi / 365), capitale in eccesso (lenti ed eccedenze) e costo annuo di mantenimento
- * di tutte le rimanenze (carryingCost) e del solo eccesso (excessCarryingCost), al tasso settings.ops.carryRatePct.
- * In più: dioMp = MP al FIFO / (materie prime consumate nei 12 mesi / 365), i giorni di consumo coperti dalle sole materie prime;
- * dioMpShare e dioFgShare = le due quote che sommano il DIO.
+ * Sintesi delle rimanenze (contratto): MP al FIFO e prodotto finito al costo pieno effettivo (actuals), giorni di magazzino,
+ * capitale in eccesso (lenti ed eccedenze) e costo annuo di mantenimento di tutte le rimanenze (carryingCost) e del solo
+ * eccesso (excessCarryingCost), al tasso settings.ops.carryRatePct.
+ * dio = giorni di magazzino delle materie prime: MP al FIFO ÷ (materie prime + calo consumati nei 12 mesi ÷ 365), il numero
+ * del pannello indicatori (obiettivo di settore 25 giorni) · rotazione = 365 ÷ dio.
+ * dioTotal = (MP + PF) ÷ (costo del venduto industriale dei 12 mesi ÷ 365), lo stesso DIO del capitale circolante;
+ * dioMpShare e dioFgShare = le due quote che sommano dioTotal.
  */
 export function inventorySummary(d, ctx, P) {
   const shipped = {};
@@ -300,8 +302,8 @@ export function inventorySummary(d, ctx, P) {
   const v = inventoryValuation(d, { ix, costsToday: ctx?.costs || costsOf(d, ix), shipped });
   const { cogs: c12, raw: raw12 } = costBase12(d, ctx);
   const stock = v.mp.fifo + v.fg.valueFull;
-  const dio = c12 > 0 ? stock / (c12 / 365) : null;
-  const dioMp = raw12 > 0 ? v.mp.fifo / (raw12 / 365) : null;
+  const dio = raw12 > 0 ? v.mp.fifo / (raw12 / 365) : null;
+  const dioTotal = c12 > 0 ? stock / (c12 / 365) : null;
   const slow = slowMovers(d, ctx);
   const excessValue = sum(slow, r => r.excessValue);
   const rate = carryRate(d) / 100;
@@ -309,6 +311,6 @@ export function inventorySummary(d, ctx, P) {
     mpFifo: v.mp.fifo, fgValue: v.fg.valueFull, dio, excessValue, carryingCost: stock * rate,
     fgValueVar: v.fg.valueVar, fgT: v.fg.t, mpReplacement: v.mp.replacement, mpQuarantine: v.mp.quarantine,
     excessCarryingCost: excessValue * rate, turnover: dio ? 365 / dio : null, cogs12: c12, raw12, slowCount: slow.length,
-    dioMp, dioMpShare: c12 > 0 ? v.mp.fifo / (c12 / 365) : null, dioFgShare: c12 > 0 ? v.fg.valueFull / (c12 / 365) : null,
+    dioTotal, dioMpShare: c12 > 0 ? v.mp.fifo / (c12 / 365) : null, dioFgShare: c12 > 0 ? v.fg.valueFull / (c12 / 365) : null,
   };
 }

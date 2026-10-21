@@ -87,7 +87,11 @@ function Crediti({ d, sel }) {
   const [flt, setFlt] = useState('tutti');
   const [pay, setPay] = useState(null);
   const [letter, setLetter] = useState(null);
-  useEffect(() => { if (sel === 'incasso') setPay({ custId: null }); }, [sel]);
+  // #finanza.crediti.incasso (barra comandi) apre «Registra incasso»; #finanza.crediti.<cliente> (dai segnali) apre la sua scheda
+  useEffect(() => {
+    if (sel === 'incasso') setPay({ custId: null });
+    else if (sel && (d.customers || []).some(c => c.id === sel)) openDrawer('customer', sel);
+  }, [sel]);
   const est = cs.source !== 'fatture';
   const flows = usePeriodFlows(d, P, today);
   if (!hasSales(d)) return <NoData />;
@@ -166,7 +170,7 @@ function Crediti({ d, sel }) {
           <Seg label="Filtro clienti" value={flt} onChange={setFlt} options={[{ id: 'tutti', label: 'Tutti' }, { id: 'scaduti', label: `Scaduti ${counts.scaduti}` }, { id: 'fido', label: `Fido ≥ 90% ${counts.fido}` }, { id: 'rischio', label: `Classe C–D ${counts.rischio}` }]} />
           <Btn small kind="primary" icon={LuCoins} onClick={() => setPay({ custId: null })}>Registra incasso</Btn>
         </>}>
-        <Table rows={view} rowKey={r => r.id} selected={sel} onRow={r => openDrawer('customer', r.id)} initialSort={{ key: 'exposure', dir: 'desc' }} exportName="crediti-clienti" pageSize={25}
+        <Table rows={view} rowKey={r => r.id} selected={sel} onRow={r => openDrawer('customer', r.id)} initialSort={{ key: 'exposure', dir: 'desc' }} exportName="crediti-clienti" pageSize={50}
           empty={agentView ? 'Nessun cliente con crediti nel portafoglio di questo agente' : 'Nessun cliente con questi criteri'}
           cols={[
             { key: 'name', label: 'Cliente', render: r => <><b>{r.name}</b><span className="sub">{r.agent || '—'} · {r.terms.days} gg {r.terms.endOfMonth ? 'f.m.' : ''} · {METHOD[r.terms.method] || r.terms.method}</span></> },
@@ -535,8 +539,8 @@ function Rimanenze({ d, sel }) {
           cmp={mpC ? { cur: mp.value, value: mpC.value, kind: 'flow', good: 'down', label: 'al ' + dateIt(cTo, 'dm'), cov } : undefined}
           foot={mpM === 'fifo' ? `${nf(mp.t)} t · sostituzione ${mila(iv.mp.replacement, 1)} mila` : `FIFO ${mila(iv.mp.fifo, 1)} mila · Δ ${mila(mp.value - iv.mp.fifo, 1)}`} title={MP_METHODS.find(m => m.id === mpM).title} />
         <Kpi label={`Prodotto finito · costo ${fgM}`} value={mila(fgVal, 1)} unit="mila €" foot={`${nf(iv.fg.t)} t in ${sum(iv.fg.byProduct, r => r.lots)} lotti`} title="Lotti prodotti e non ancora spediti (esclusi i bloccati), al costo effettivo del lotto" />
-        <Kpi label="Giorni di magazzino" value={gg(sumy.dio)} unit="giorni" foot={`rotazione ${nf(sumy.turnover, 1)} volte · MP ${gg(sumy.dioMp)} gg di consumo`}
-          title={`DIO = (MP al FIFO + PF al costo pieno) ÷ (costo del venduto industriale dei 12 mesi ÷ 365) = ${gg(mpDays)} gg di MP + ${gg(fgDays)} gg di PF.\nLe sole materie prime coprono ${gg(sumy.dioMp)} giorni di consumo: MP al FIFO ÷ (materie prime consumate nei 12 mesi ÷ 365).`} />
+        <Kpi label="Giorni di magazzino MP" value={gg(sumy.dio)} unit="giorni" foot={`rotazione ${nf(sumy.turnover, 1)} volte l’anno · MP + PF ${gg(sumy.dioTotal)} gg`}
+          title={`DIO delle materie prime = MP al FIFO ÷ (materie prime e calo consumati nei 12 mesi ÷ 365) = ${eur(iv.mp.fifo)} ÷ ${eur(sumy.raw12 / 365)} al giorno. Rotazione = 365 ÷ DIO.\nCon il prodotto finito: (MP + PF al costo pieno) ÷ (costo del venduto industriale dei 12 mesi ÷ 365) = ${gg(mpDays)} gg di MP + ${gg(fgDays)} gg di PF = ${gg(sumy.dioTotal)} giorni, il DIO del capitale circolante.`} />
         <Kpi label="Capitale in eccesso" value={mila(sumy.excessValue, 1)} unit="mila €" status={sumy.excessValue > 50000 ? 'warn' : 'ok'} foot={`mantenerlo costa ${eur(sumy.excessCarryingCost)}/anno`} title="Giacenza oltre fabbisogno a 8 settimane + scorta di sicurezza delle materie prime lente o in eccesso, ai prezzi dei lotti più recenti" />
         <Kpi label="Costo di mantenimento" value={mila(sumy.carryingCost, 1)} unit="mila €/anno" foot={`${nf(rate, 1)}% annuo su ${mila(iv.mp.fifo + iv.fg.valueFull)} mila`} title="Oneri finanziari, magazzino, assicurazione e cali sul valore delle rimanenze (tasso nei Parametri)" />
       </div>
@@ -582,7 +586,7 @@ function Rimanenze({ d, sel }) {
         </Panel>
       </div>
       <Panel title="Lenti ed eccedenze" sub={`Copertura oltre il necessario, nessun fabbisogno nelle 8 settimane del piano, lotti vecchi o in scadenza · mantenimento al ${nf(rate, 1)}% annuo`} flush id="fin-slow">
-        <Table rows={slow} rowKey={r => r.ingId} onRow={r => openDrawer('ingredient', r.ingId)} initialSort={{ key: 'excessValue', dir: 'desc' }} exportName="lenti-ed-eccedenze" empty="Nessuna materia prima lenta o in eccesso"
+        <Table rows={slow} rowKey={r => r.ingId} onRow={r => openDrawer('ingredient', r.ingId)} selected={sel} initialSort={{ key: 'excessValue', dir: 'desc' }} exportName="lenti-ed-eccedenze" empty="Nessuna materia prima lenta o in eccesso"
           cols={[
             { key: 'name', label: 'Materia prima', className: 'fin-namecol', render: r => <><b>{r.name}</b><span className="sub">{[r.flags.noNeed && 'senza fabbisogno', r.flags.cover && 'copertura alta', r.flags.old && 'lotto vecchio', r.flags.expiring && 'in scadenza'].filter(Boolean).join(' · ')}</span></> },
             { key: 'value', label: 'Giacenza', align: 'r', csv: r => Math.round(r.value), render: r => <>{eur(r.value)}<span className="sub">{nf(r.t, 1)} t</span></> },
