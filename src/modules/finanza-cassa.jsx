@@ -69,15 +69,51 @@ export function Cassa({ d }) {
       </>}
       <div className="split">
         <CashInputs d={d} fin={fin} today={today} />
-        <Panel title="Ipotesi del modello" sub="Come nasce ogni riga della previsione">
-          <dl className="fin-hyp">
-            {[...CASH_IN, ...CASH_OUT].map(c => <React.Fragment key={c.id}><dt>{c.label}</dt><dd>{c.hint}</dd></React.Fragment>)}
-          </dl>
-          {F.assumptions.map((a, i) => <p key={i} className="small muted">{a}</p>)}
-          {Object.keys(F.beyond).length > 0 && <p className="small muted">Oltre il {dm(F.end)}: incassi già maturati per {eur((F.beyond.incassi || 0) + (F.beyond.previsti || 0))} e pagamenti per {eur(sum(Object.entries(F.beyond).filter(([k]) => k !== 'incassi' && k !== 'previsti'), ([, v]) => v))}.</p>}
-        </Panel>
+        <CatTotals F={F} />
       </div>
+      <Definitions title="Come nasce ogni riga della previsione" items={[...CASH_IN, ...CASH_OUT].map(c => [c.label, c.hint])} />
     </>
+  );
+}
+
+/** Definizioni con le formule (riquadro richiudibile), usate da tutte le schede di Finanza. */
+export function Definitions({ items, title = 'Come si calcolano' }) {
+  return (
+    <details className="panel fin-defs">
+      <summary><LuInfo aria-hidden="true" /> {title}</summary>
+      <dl>{items.map(([k, v]) => <React.Fragment key={k}><dt>{k}</dt><dd>{v}</dd></React.Fragment>)}</dl>
+    </details>
+  );
+}
+
+/* ---------------- totali per categoria e ipotesi ---------------- */
+const CAT_COLOR = { incassi: 'var(--s1)', previsti: 'var(--s3)', fornitori: 'var(--s2)', ordini: 'var(--s2)', pianificati: 'var(--s2)', personale: 'var(--s7)', f24: 'var(--s7)' };
+function CatTotals({ F }) {
+  const rows = [
+    ...CASH_IN.map(c => ({ ...c, g: 'in', v: sum(F.weeks, w => w.in[c.id]) })),
+    ...CASH_OUT.map(c => ({ ...c, g: 'out', v: sum(F.weeks, w => w.out[c.id]) })),
+  ].filter(r => Math.abs(r.v) >= 500);
+  const max = Math.max(1, ...rows.map(r => Math.abs(r.v)));
+  const later = Object.entries(F.beyond);
+  const laterIn = sum(later.filter(([k]) => k === 'incassi' || k === 'previsti'), ([, v]) => v), laterOut = sum(later.filter(([k]) => k !== 'incassi' && k !== 'previsti'), ([, v]) => v);
+  return (
+    <Panel title="Totali delle 13 settimane" sub={`mila € dal ${dm(F.start)} al ${dm(F.end)} · passa sopra una voce per la regola`} id="fin-cash-cats">
+      {rows.length ? (
+        <table className="t fin-mini fin-cat">
+          <tbody>{rows.map(r => (
+            <tr key={r.g + r.id} title={r.hint}>
+              <td>{r.label}</td>
+              <td className="bar" aria-hidden="true"><i style={{ width: Math.abs(r.v) / max * 100 + '%', background: CAT_COLOR[r.id] || 'var(--s4)' }} /></td>
+              <td className="r">{r.g === 'out' ? '−' : '+'}{mila(r.v)}</td>
+            </tr>))}</tbody>
+          <tfoot><tr><td>Flusso netto</td><td /><td className="r">{signed(F.totals.in - F.totals.out)}</td></tr></tfoot>
+        </table>
+      ) : <p className="small muted">Nessun incasso o pagamento previsto.</p>}
+      <div className="fin-notes">
+        {F.assumptions.map((a, i) => <p key={i} className="small muted">{a}</p>)}
+        {later.length > 0 && <p className="small muted">Oltre il {dm(F.end)}: incassi già maturati per {eur(laterIn)} e pagamenti per {eur(laterOut)}, fuori dalla previsione.</p>}
+      </div>
+    </Panel>
   );
 }
 

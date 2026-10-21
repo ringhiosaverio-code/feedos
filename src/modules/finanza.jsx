@@ -3,7 +3,7 @@
  * le rimanenze sono una valorizzazione gestionale, non fiscale.
  * Contratto della fondazione: export Finanza({route}) e la sezione della scheda cliente CustomerCredit({d, id}). */
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { LuWallet, LuMail, LuPrinter, LuX, LuArrowRight, LuSearch, LuInbox, LuCoins, LuInfo, LuFileText, LuCalendar } from 'react-icons/lu';
+import { LuMail, LuPrinter, LuX, LuArrowRight, LuInbox, LuCoins, LuFileText, LuCalendar } from 'react-icons/lu';
 import { useData, store, toast, openDrawer, closeDrawer } from '../core/store.js';
 import { go } from '../core/router.js';
 import { usePrefs } from '../core/prefs.js';
@@ -19,7 +19,7 @@ import { LineChart, StackBar, Legend, SERIES } from '../ui/charts.jsx';
 import { usePeriod } from '../ui/period.jsx';
 import { PrintPage, printNow } from '../ui/print.jsx';
 import { NAV } from '../app/nav.js';
-import { Cassa } from './finanza-cassa.jsx';
+import { Cassa, Definitions } from './finanza-cassa.jsx';
 
 /* ---------- formattatori ---------- */
 const mila = (v, dd = 0) => (v == null || !Number.isFinite(+v) ? '—' : nf(v / 1000, dd));
@@ -222,16 +222,6 @@ function usePeriodFlows(d, P, today) {
   }, [d.invoices, d.payments, d.shipments, d.customers, d.settings?.finance, P.from, P.to, today]);
 }
 
-/** Definizioni con le formule (riquadro richiudibile). */
-function Definitions({ items, title = 'Come si calcolano' }) {
-  return (
-    <details className="panel fin-defs">
-      <summary><LuInfo aria-hidden="true" /> {title}</summary>
-      <dl>{items.map(([k, v]) => <React.Fragment key={k}><dt>{k}</dt><dd>{v}</dd></React.Fragment>)}</dl>
-    </details>
-  );
-}
-
 /* ---------------- registra incasso ---------------- */
 /** Finestra «Registra incasso»: un cliente, una fattura o la ripartizione sulle più vecchie, importo anche parziale. */
 export function PayModal({ d, custId: initial, onClose }) {
@@ -382,15 +372,17 @@ export function CustomerCredit({ d, id }) {
         <div className="tw fin-stmt">
           <table className="t">
             <caption className="sr">Estratto conto delle partite aperte</caption>
-            <thead><tr><th>Fattura</th><th>Scadenza</th><th className="r">Residuo</th><th className="r">Progressivo</th><th>Stato</th></tr></thead>
-            <tbody>{rows.map(i => (
-              <tr key={i.id}>
-                <td>{i.number ? <span className="code">{i.number}</span> : <span className="muted">stimata</span>}<span className="sub">{dateIt(i.date)} · {eur(i.total)}</span></td>
-                <td>{dateIt(i.dueDate)}<span className="sub">{i.daysOverdue > 0 ? `scaduta da ${i.daysOverdue} gg` : `tra ${daysBetween(today, i.dueDate)} gg`}</span></td>
-                <td className="r">{eur(i.residual, 2)}</td><td className="r">{eur(i.run, 2)}</td>
-                <td><Chip kind={i.daysOverdue > 0 && i.status === 'aperta' ? 'warn' : STATUS[i.status]?.[0] || ''}>{i.daysOverdue > 0 && i.status === 'aperta' ? 'scaduta' : STATUS[i.status]?.[1] || i.status}</Chip></td>
-              </tr>))}</tbody>
-            <tfoot><tr><td colSpan={2}>Totale aperto</td><td className="r">{eur(b.open, 2)}</td><td /><td /></tr></tfoot>
+            <thead><tr><th>Fattura</th><th>Scadenza</th><th className="r">Residuo</th><th className="r" title="Somma dei residui dalla scadenza più vecchia">Progressivo</th></tr></thead>
+            <tbody>{rows.map(i => {
+              const st = i.status !== 'aperta' ? i.status : i.daysOverdue > 0 ? 'scaduta' : null;
+              return (
+                <tr key={i.id}>
+                  <td>{i.number ? <span className="code">{i.number}</span> : <span className="muted">stimata</span>}<span className="sub">{dateIt(i.date, 'dm')} · {eur(i.total)}</span></td>
+                  <td>{dateIt(i.dueDate)}<span className="sub">{st && <span className={`fin-st ${st === 'scaduta' ? 'warn' : STATUS[st]?.[0] || ''}`}>{STATUS[st]?.[1] || st}</span>}{i.daysOverdue > 0 ? `${st === 'scaduta' ? '' : 'scaduta '}da ${i.daysOverdue} gg` : `tra ${daysBetween(today, i.dueDate)} gg`}</span></td>
+                  <td className="r">{eur(i.residual, 2)}</td><td className="r">{eur(i.run, 2)}</td>
+                </tr>);
+            })}</tbody>
+            <tfoot><tr><td colSpan={2}>Totale aperto</td><td className="r">{eur(b.open, 2)}</td><td /></tr></tfoot>
           </table>
         </div>
       ) : <span className="small muted">Nessuna fattura aperta.</span>}
@@ -499,6 +491,7 @@ function Circolante({ d }) {
 const MP_METHODS = [{ id: 'fifo', label: 'FIFO', title: 'Giacenza dei lotti × prezzo del lotto' }, { id: 'cmp', label: 'CMP', title: 'Costo medio ponderato degli arrivi degli ultimi 12 mesi' }, { id: 'sostituzione', label: 'Sostituzione', title: 'Giacenza × prezzo di oggi' }];
 const FG_METHODS = [{ id: 'pieno', label: 'Pieno', title: 'Costo industriale pieno: variabile + trasformazione fissa' }, { id: 'variabile', label: 'Variabile', title: 'Solo i costi variabili: materie prime, calo, energia, trasformazione variabile, imballo' }];
 const ABC_HINT = { A: 'fino all’80% del valore consumato', B: 'dall’80 al 95%', C: 'l’ultimo 5%' };
+const ABC_SHORT = { A: 'primo 80% del valore', B: 'dall’80 al 95%', C: 'ultimo 5%' };
 const XYZ_HINT = { X: 'consumo regolare (CV < 0,25)', Y: 'variabile (CV 0,25–0,75)', Z: 'irregolare (CV > 0,75)' };
 
 function Rimanenze({ d, sel }) {
@@ -569,7 +562,7 @@ function Rimanenze({ d, sel }) {
           <div className="tw fin-tw"><table className="t fin-mini fin-abc-sum">
             <thead><tr><th>Classe</th><th className="r">Voci</th><th className="r">Consumato</th><th className="r">Giacenza</th><th className="r" title="Giacenza ÷ consumo medio giornaliero del periodo">Copertura</th></tr></thead>
             <tbody>{['A', 'B', 'C'].map(a => { const rs = rows.filter(r => r.abc === a), v = sum(rs, r => r.value), s = sum(rs, r => r.stockV); return (
-              <tr key={a}><td><b>{a}</b><span className="sub">{ABC_HINT[a]}</span></td><td className="r">{rs.length}</td><td className="r">{eur(v)}<span className="sub">{pct(v / totV, 0)}</span></td><td className="r">{eur(s)}</td>
+              <tr key={a} title={ABC_HINT[a]}><td><b>{a}</b><span className="sub">{ABC_SHORT[a]}</span></td><td className="r">{rs.length}</td><td className="r">{eur(v)}<span className="sub">{pct(v / totV, 0)}</span></td><td className="r">{eur(s)}</td>
                 <td className="r">{v > 0 ? `${nf(s / (v / P.days))} gg` : '—'}</td></tr>); })}</tbody>
           </table></div>
           <p className="small muted">X {XYZ_HINT.X}, Y {XYZ_HINT.Y}, Z {XYZ_HINT.Z}. Le AX si gestiscono con riordini regolari e scorte basse; le Z con scorte di sicurezza più alte o acquisti su ordine; le C con lotti di riordino più grandi e meno frequenti.</p>

@@ -36,10 +36,9 @@ details.fin-defs > summary { list-style: none; cursor: pointer; display: flex; a
 details.fin-defs > summary::-webkit-details-marker { display: none; }
 details.fin-defs > summary svg { width: 16px; height: 16px; color: var(--accent); }
 details.fin-defs[open] > summary { border-bottom: 1px solid var(--line); }
-details.fin-defs dl, dl.fin-hyp { display: grid; grid-template-columns: minmax(150px, max-content) minmax(0, 1fr); gap: 8px 18px; margin: 0; padding: 14px 16px 16px; font-size: 12.5px; }
-dl.fin-hyp { padding: 0 0 8px; }
-details.fin-defs dt, dl.fin-hyp dt { font-weight: 700; color: var(--ink); }
-details.fin-defs dd, dl.fin-hyp dd { margin: 0; color: var(--ink-2); }
+details.fin-defs dl { display: grid; grid-template-columns: minmax(150px, max-content) minmax(0, 1fr); gap: 8px 18px; margin: 0; padding: 14px 16px 16px; font-size: 12.5px; }
+details.fin-defs dt { font-weight: 700; color: var(--ink); }
+details.fin-defs dd { margin: 0; color: var(--ink-2); }
 
 /* finestra «Registra incasso» (sopra anche la scheda laterale) */
 .scrim.fin-scrim { z-index: 66; }
@@ -75,6 +74,11 @@ details.fin-defs dd, dl.fin-hyp dd { margin: 0; color: var(--ink-2); }
 .fin-cc-n span { font-size: 12px; color: var(--muted); }
 .fin-stmt { max-height: 300px; border: 1px solid var(--line); border-radius: 9px; background: var(--surface); }
 .fin-stmt table.t td, .fin-stmt table.t th { padding: 6px 8px; }
+.fin-st { display: inline-block; margin-right: 5px; padding: 0 5px; border-radius: 4px; font-size: 10.5px; font-weight: 700; line-height: 16px; background: var(--surface-3); color: var(--ink-2); }
+.fin-st.warn { background: var(--warn-soft); color: var(--warn-ink); }
+.fin-st.crit { background: var(--crit-soft); color: var(--crit-ink); }
+.fin-st.serious { background: var(--serious-soft); color: var(--serious-ink); }
+.fin-st.good { background: var(--good-soft); color: var(--good-ink); }
 
 /* capitale circolante */
 .fin-bridge { display: flex; align-items: flex-end; gap: 10px; flex-wrap: wrap; margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--line); }
@@ -151,6 +155,14 @@ table.t.fin-cash td.crit { color: var(--crit-ink); background: var(--crit-soft);
 .fin-day .input { width: 64px; }
 #fin-cash-inputs .bd { display: grid; gap: 8px; align-content: start; }
 #fin-cash-inputs .bd > .btn { justify-self: start; }
+table.t.fin-cat td { padding: 7px 8px; }
+table.t.fin-cat td.bar { width: 38%; }
+table.t.fin-cat td.bar i { display: block; height: 8px; min-width: 2px; border-radius: 4px; }
+table.t.fin-cat td.r { white-space: nowrap; font-variant-numeric: tabular-nums; font-weight: 600; }
+table.t.fin-cat tfoot td { font-weight: 700; border-top: 2px solid var(--line-2); }
+table.t.fin-cat tr[title] { cursor: help; }
+.fin-notes { display: grid; gap: 4px; margin-top: 12px; }
+.fin-notes p { margin: 0; }
 
 @media (max-width: 720px) {
   table.t.fin-lev td, table.t.fin-lev th { white-space: normal; padding: 6px 5px; }
@@ -165,15 +177,23 @@ table.t.fin-cash td.crit { color: var(--crit-ink); background: var(--crit-soft);
   .fin-ccc .lane { grid-template-columns: minmax(0, 1fr); gap: 4px; }
   .fin-row, .fin-row.loan { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto; }
   .fin-row > :first-child { grid-column: 1 / -1; }
-  details.fin-defs dl, dl.fin-hyp { grid-template-columns: minmax(0, 1fr); gap: 2px 0; }
-  details.fin-defs dd, dl.fin-hyp dd { margin-bottom: 8px; }
+  details.fin-defs dl { grid-template-columns: minmax(0, 1fr); gap: 2px 0; }
+  table.t.fin-cat td.bar { width: 28%; }
+  details.fin-defs dd { margin-bottom: 8px; }
   .fin-tools > .row { gap: 6px; }
   .fin-bridge b { font-size: 16px; }
   .fin-sheet { padding: 0 8px 24px; }
   .fin-sheet-bar { margin: 0 -8px; }
   .fin-grid { max-width: none; }
   table.t.fin-cash th.lbl, table.t.fin-cash td.lbl { min-width: 150px; max-width: 170px; }
+  .fin-stmt table.t { font-size: 12px; }
+  .fin-stmt table.t td, .fin-stmt table.t th { padding: 6px 5px; }
 }
+
+/* anteprime A4 ridotte sugli schermi stretti (la stampa resta a grandezza reale) */
+@media screen and (max-width: 860px) { .fin-sheet .print-page { zoom: .84; } }
+@media screen and (max-width: 700px) { .fin-sheet .print-page { zoom: .6; } }
+@media screen and (max-width: 520px) { .fin-sheet .print-page { zoom: .45; } }
 
 @media print {
   .fin-sheet { position: static !important; overflow: visible !important; background: none !important; padding: 0 !important; display: block !important; }
