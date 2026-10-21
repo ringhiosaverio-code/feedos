@@ -6,7 +6,7 @@
 import { addDays, addMonths, monthsIn, monthFraction, endOfMonth, daysBetween, daysInMonth, mondayOf, round, todayLocal, nf } from '../core/util.js';
 import { aggregateFacts, fixedFor, listAt, makeCtx, makeIndex, costsOf } from './actuals.js';
 import { forecastAuto } from './forecast.js';
-import { pnl, fixedSplit, closingOf, firstFactDate } from './pnl.js';
+import { pnl, fixedSplit, closingOf, firstFactDate, fixedRows, statusVersion } from './pnl.js';
 
 const n0 = v => (v == null || v === '' || !Number.isFinite(+v) ? 0 : +v);
 const has = v => v != null && v !== '' && Number.isFinite(+v);
@@ -17,18 +17,32 @@ const monthName = m => ['gennaio', 'febbraio', 'marzo', 'aprile', 'maggio', 'giu
 
 const todayOf = (d, ctx) => ctx?.today || (d?.settings?.dataset === 'demo' && d.settings.demoAnchor) || todayLocal();
 
-/** Stato del budget dell'anno: {year, version, status: 'bozza'|'approvato', approvedAt, approvedBy} o null. */
+/**
+ * Stato del budget di riferimento dell'anno: {year, version, status: 'bozza'|'approvato', approvedAt, approvedBy} o null.
+ * È la versione approvata (o, senza approvazioni, l'ultima bozza): quella dei confronti «vs budget».
+ */
 export function budgetStatus(d, year) {
   const fin = d?.settings?.finance || {};
   const s = fin.budgetStatus?.[year];
   if (s) return s;
   return fin.budget && +fin.budget.year === +year ? fin.budget : null;
 }
+/** Stato di una singola versione (settings.finance.budgetVersions, altrimenti lo stato dell'anno se è la stessa versione). */
+export function versionStatus(d, year, version) {
+  const v = d?.settings?.finance?.budgetVersions?.[year]?.[version];
+  if (v) return v;
+  const s = budgetStatus(d, year);
+  return s && (s.version || 'B') === version ? s : null;
+}
+/** Vero se la versione è approvata (bloccata: non si rigenera, i suoi costi fissi non si modificano). */
+export const isLocked = (d, year, version) => versionStatus(d, year, version)?.status === 'approvato';
 /** Versioni di budget presenti per l'anno (in ordine di creazione). */
 export function budgetVersions(d, year) {
   const seen = [];
   for (const r of d?.budget || EMPTY) if (+r.year === +year || String(r.month || '').startsWith(year + '-')) { const v = r.version || 'B'; if (!seen.includes(v)) seen.push(v); }
-  return seen;
+  // B, poi le revisioni R1, R2… in ordine, poi le altre (le righe nuove possono stare in testa alla raccolta)
+  const rank = v => (v === 'B' ? [0, 0] : /^R(\d+)$/.test(v) ? [1, +v.slice(1)] : [2, 0]);
+  return seen.sort((a, b) => { const x = rank(a), y = rank(b); return x[0] - y[0] || x[1] - y[1] || (a < b ? -1 : a > b ? 1 : 0); });
 }
 /** Versione attiva dell'anno: quella dello stato, altrimenti l'ultima presente, altrimenti 'B'. */
 export function activeVersion(d, year) {
@@ -85,8 +99,10 @@ export function budgetMonth(d, year, month, version = 'B') {
   o.mc2 = o.mc1 - o.logistics - o.commission;
   // costi fissi di budget del mese (della versione; altrimenti quelli presenti senza versione o di un'altra versione)
   const fr = (d.fixedCosts || EMPTY).filter(r => r.kind === 'budget' && String(r.month || '').slice(0, 7) === m);
-  const mine = fr.filter(r => (r.version || version) === version);
-  const use = mine.length ? mine : fr;
+  const mine = fr.filter(r => (r.version || 'B') === version);
+  // versione senza costi fissi propri: quelli della versione di riferimento (mai la somma di più versioni)
+  const ref = statusVersion(d, m.slice(0, 4)), refRows = fr.filter(r => (r.version || 'B') === ref);
+  const use = mine.length ? mine : refRows.length ? refRows : fr.filter(r => (r.version || 'B') === (fr[0]?.version || 'B'));
   const fixed = fixedFor(use, d.costCenters || EMPTY, { from: m + '-01', to: endOfMonth(m) }, { kind: 'budget', openMonthFallback: null });
   fixed.split = fixedSplit(fixed, d.costCenters || EMPTY);
   o.fixed = fixed.total; o.fixedDetail = fixed;
@@ -183,7 +199,7 @@ export function actualMonth(d, ctx, month) {
     return { month, tonnes: t, revenue: n0(c.pnl.revenue), mc1: n0(c.pnl.mc1), mc2, fixed, ebit: mc2 - fixed, frozen: true, open: false, estimatedFixed: false };
   }
   const a = aggregateFacts(ctx?.facts || makeCtx(d, today).facts, d.salesHistory || EMPTY, P).total;
-  const f = fixedFor(d.fixedCosts || EMPTY, d.costCenters || EMPTY, P);
+  const f = fixedFor(fixedRows(d), d.costCenters || EMPTY, P);
   return { month, tonnes: a.tonnes, revenue: a.revenue, mc1: a.mc1, mc2: a.mc2, fixed: f.total, ebit: a.mc2 - f.total, frozen: false, open, estimatedFixed: f.estimatedMonths.length > 0 };
 }
 
@@ -263,7 +279,7 @@ function landingCalc(d, ctx, year, version, today) {
   let ebitYtd = 0, mc2Ytd = 0, fixedYtd = 0;
   if (ytdTo >= y0) {
     const a = aggregateFacts(ctx.facts, d.salesHistory || EMPTY, { from: y0, to: ytdTo }).total;
-    const f = fixedFor(d.fixedCosts || EMPTY, d.costCenters || EMPTY, { from: y0, to: ytdTo });
+    const f = fixedFor(fixedRows(d), d.costCenters || EMPTY, { from: y0, to: ytdTo });
     mc2Ytd = a.mc2; fixedYtd = f.total; ebitYtd = a.mc2 - f.total;
   }
   const restFrom = addDays(today, 1) > y0 ? addDays(today, 1) : y0;
@@ -310,7 +326,7 @@ function landingCalc(d, ctx, year, version, today) {
     }
     for (const m of Object.keys(byMonth)) {
       const P = { from: m + '-01' < restFrom ? restFrom : m + '-01', to: endOfMonth(m) > y1 ? y1 : endOfMonth(m) };
-      const f = fixedFor(d.fixedCosts || EMPTY, d.costCenters || EMPTY, P).total;
+      const f = fixedFor(fixedRows(d), d.costCenters || EMPTY, P).total;
       byMonth[m].fixed = f; byMonth[m].ebit = byMonth[m].mc2 - f; restFixed += f;
     }
   }
@@ -332,7 +348,15 @@ function landingCalc(d, ctx, year, version, today) {
 export function approveBudgetOps(d, year, version, by, at) {
   const day = at || todayOf(d);
   const st = { year: +year, version: version || activeVersion(d, year), status: 'approvato', approvedAt: day, approvedBy: String(by || '').trim() || 'Direzione' };
-  return [{ kind: 'settings', value: s => ({ ...s, finance: { ...(s.finance || {}), budget: st, budgetStatus: { ...(s.finance?.budgetStatus || {}), [year]: st } } }) }];
+  return [{ kind: 'settings', value: s => {
+    const fin = s.finance || {}, old = fin.budgetStatus?.[year] || (fin.budget && +fin.budget.year === +year ? fin.budget : null);
+    const vers = { ...(fin.budgetVersions?.[year] || {}) };
+    // la versione approvata prima resta approvata ma superata (si vede ancora nello storico delle versioni)
+    if (old && old.status === 'approvato' && (old.version || 'B') !== st.version) vers[old.version || 'B'] = { ...old, ...(vers[old.version || 'B'] || {}), status: 'approvato', supersededAt: day };
+    vers[st.version] = { ...(vers[st.version] || {}), ...st };
+    const keepCur = fin.budget && +fin.budget.year > +year && fin.budget.status === 'approvato';
+    return { ...s, finance: { ...fin, budget: keepCur ? fin.budget : st, budgetStatus: { ...(fin.budgetStatus || {}), [year]: st }, budgetVersions: { ...(fin.budgetVersions || {}), [year]: vers } } };
+  } }];
 }
 
 /** Mese con dati (fatti interi, storico, o primo mese parziale riportato al mese intero) per la stessa stagione. */
@@ -421,9 +445,11 @@ export function seedBudget(d, ctx, opts = {}) {
 
 /** Operazioni di scrittura di un budget già calcolato (righe e fissi), con lo stato 'bozza'. */
 export function budgetWriteOps(d, year, version, rows, fixed, { by = null, at = null, basedOn = null } = {}) {
+  if (isLocked(d, year, version)) return null; // versione approvata: si cambia solo con una revisione
   const y = String(year);
-  const oldRows = (d.budget || EMPTY).filter(r => (r.version || 'B') === version && String(r.month || '').startsWith(y + '-')).map(r => r.id);
-  const oldFixed = (d.fixedCosts || EMPTY).filter(r => r.kind === 'budget' && String(r.month || '').startsWith(y + '-')).map(r => r.id);
+  const inYear = r => String(r.month || '').startsWith(y + '-') && (r.version || 'B') === version;
+  const oldRows = (d.budget || EMPTY).filter(inYear).map(r => r.id);
+  const oldFixed = (d.fixedCosts || EMPTY).filter(r => r.kind === 'budget' && inYear(r)).map(r => r.id);
   const st = { year: +year, version, status: 'bozza', createdAt: at || todayOf(d), createdBy: by || null, basedOn: basedOn || null };
   return [
     oldRows.length ? { kind: 'removeMany', coll: 'budget', ids: oldRows } : null,
@@ -432,8 +458,12 @@ export function budgetWriteOps(d, year, version, rows, fixed, { by = null, at = 
     { kind: 'addMany', coll: 'fixedCosts', objs: fixed },
     { kind: 'settings', value: s => {
       const fin = s.finance || {};
-      const keepCur = fin.budget && +fin.budget.year !== +year && fin.budget.status === 'approvato';
-      return { ...s, finance: { ...fin, budget: keepCur ? fin.budget : st, budgetStatus: { ...(fin.budgetStatus || {}), [year]: st } } };
+      const cur = fin.budgetStatus?.[year] || (fin.budget && +fin.budget.year === +year ? fin.budget : null);
+      // una bozza non sostituisce la versione approvata dell'anno: resta il riferimento finché la revisione non è approvata
+      const keepYear = cur && cur.status === 'approvato' && (cur.version || 'B') !== version;
+      const keepCur = fin.budget && fin.budget.status === 'approvato' && (+fin.budget.year !== +year || keepYear);
+      return { ...s, finance: { ...fin, budget: keepCur ? fin.budget : st, budgetStatus: { ...(fin.budgetStatus || {}), [year]: keepYear ? cur : st },
+        budgetVersions: { ...(fin.budgetVersions || {}), [year]: { ...(fin.budgetVersions?.[year] || {}), [version]: st } } } };
     } },
   ].filter(Boolean);
 }

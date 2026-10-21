@@ -6,7 +6,7 @@
 import { addMonths, endOfMonth, addDays, daysBetween, todayLocal, monthLabel } from '../core/util.js';
 import { aggregateFacts, fixedFor, makeCtx, FACT_SUMS } from './actuals.js';
 import { runRules } from './dataquality.js';
-import { pnl, pnlBy, fixedSplit, frozenFor, closingOf } from './pnl.js';
+import { pnl, pnlBy, fixedSplit, frozenFor, closingOf, fixedRows } from './pnl.js';
 import { budgetStatus, hasBudget } from './budget.js';
 
 export { frozenFor, closingOf };
@@ -42,7 +42,7 @@ export function snapshotMonth(d, ctx, month, { by = null, at = null, comments = 
   ctx = ctx?.facts ? ctx : makeCtx(d);
   const P = { from: month + '-01', to: endOfMonth(month) };
   const a = aggregateFacts(ctx.facts, d.salesHistory || EMPTY, P).total;
-  const fixed = fixedFor(d.fixedCosts || EMPTY, d.costCenters || EMPTY, P);
+  const fixed = fixedFor(fixedRows(d), d.costCenters || EMPTY, P);
   const split = fixedSplit(fixed, d.costCenters || EMPTY);
   const p = pnl(a, { ...fixed, split });
   const sums = Object.fromEntries([...FACT_SUMS, 'n'].map(k => [k, n0(a[k])]));
@@ -172,7 +172,7 @@ export function frozenVsLive(d, ctx, month) {
   ctx = ctx?.facts ? ctx : makeCtx(d);
   const P = { from: month + '-01', to: endOfMonth(month) };
   const a = aggregateFacts(ctx.facts, d.salesHistory || EMPTY, P).total;
-  const fixed = fixedFor(d.fixedCosts || EMPTY, d.costCenters || EMPTY, P);
+  const fixed = fixedFor(fixedRows(d), d.costCenters || EMPTY, P);
   const live = pnl(a, { ...fixed, split: fixedSplit(fixed, d.costCenters || EMPTY) });
   const fr = frozenFor(d, [month]);
   return live.lines.map(l => ({ id: l.id, label: l.label, frozen: fr.by[l.id], live: l.value, delta: l.value - fr.by[l.id] })).filter(x => Math.abs(x.delta) > 1);

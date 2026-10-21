@@ -5,6 +5,7 @@
 import { monthOf, monthFraction, sum, nf, sf } from '../core/util.js';
 import { makeCtx, makeIndex, energyPriceAt, fixedFor } from './actuals.js';
 import { SPECIES } from './nutrients.js';
+import { fixedRows } from './pnl.js';
 
 const n0 = v => (v == null || v === '' || !Number.isFinite(+v) ? 0 : +v);
 const has = v => v != null && v !== '' && Number.isFinite(+v);
@@ -101,7 +102,7 @@ export function basis(d, ctx, P, by = 'productId', { filter = null, fixed: withF
     r.estEnergy += en; r.energy += en;
   }
   let fixedDetail = null;
-  if (withFixed) fixedDetail = fixedFor(d.fixedCosts || EMPTY, d.costCenters || EMPTY, P);
+  if (withFixed) fixedDetail = fixedFor(fixedRows(d), d.costCenters || EMPTY, P);
   return { rows, fixed: fixedDetail ? fixedDetail.total : 0, fixedDetail, by, P };
 }
 

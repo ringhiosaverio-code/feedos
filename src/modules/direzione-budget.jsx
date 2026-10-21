@@ -9,7 +9,7 @@ import { nf, sf, monthLabel, dateIt, addDays } from '../core/util.js';
 import { toCSV, download, stamp } from '../core/io.js';
 import { SPECIES } from '../engine/nutrients.js';
 import { pnlFor } from '../engine/pnl.js';
-import { budgetVsActual, budgetTotals, landing, activeVersion, budgetStatus, budgetVersions, hasBudget, seedBudgetRows, budgetWriteOps, approveBudgetOps, nextRevision } from '../engine/budget.js';
+import { budgetVsActual, budgetTotals, landing, activeVersion, budgetStatus, versionStatus, isLocked, budgetVersions, hasBudget, seedBudgetRows, budgetWriteOps, approveBudgetOps, nextRevision } from '../engine/budget.js';
 import { Panel, Kpi, Btn, Chip, Seg, Select, Table, Drawer, Empty, Field, Kv, confirm } from '../ui/ui.jsx';
 import { useDir, money, eurTxt, kEur, MonthBars, Def } from './direzione-conto.jsx';
 
@@ -43,8 +43,9 @@ export function Budget({ d }) {
   const versions = budgetVersions(d, year);
   const active = activeVersion(d, year);
   const version = verSel && versions.includes(verSel) ? verSel : active;
-  const st = budgetStatus(d, year);
-  const locked = st?.status === 'approvato' && st.version === version;
+  const st = versionStatus(d, year, version);
+  const locked = isLocked(d, year, version);
+  const superseded = locked && version !== active;
   const has = hasBudget(d, year, version);
   const years = [...new Set([curYear - 1, curYear, curYear + 1, ...(d.budget || []).map(r => +String(r.month).slice(0, 4))])].filter(y => y === curYear || hasBudget(d, y)).sort();
   const yP = { from: `${year}-01-01`, to: `${year}-12-31` };
@@ -52,32 +53,34 @@ export function Budget({ d }) {
   const bva = useMemo(() => (has ? budgetVsActual(d, ctx, year, version) : null), [d, ctx, year, version, has]);
   const L = useMemo(() => (has && year === curYear ? landing(d, ctx, year, version) : null), [d, ctx, year, version, has, curYear]);
   const openWiz = (y, mode) => setWiz({ year: y, version: mode === 'revisione' ? nextRevision(d, y) : (mode === 'rigenera' ? version : 'B'), mode });
-  const approve = () => {
-    name.current = getPrefs().role === 'direzione' ? 'Direzione' : '';
+  const approve = (keep = false) => {
+    if (!keep) name.current = getPrefs().role === 'direzione' ? 'Direzione' : '';
     confirm(`Approvare il budget ${year} (versione ${version})?`, <>
-      <p>La versione approvata diventa il riferimento dei confronti «vs budget» e non si può più rigenerare: per cambiarla si crea una revisione.</p>
+      <p>La versione approvata diventa il riferimento dei confronti «vs budget» e della stima di chiusura, e non si può più rigenerare: per cambiarla si crea una revisione.{active !== version && isLocked(d, year, active) ? ` La versione ${active}, oggi di riferimento, resta nello storico come superata.` : ''}</p>
       <PromptBody label="Approvato da" init={name.current} box={name} hint="Nome e ruolo di chi approva (resta nel registro delle modifiche)" />
     </>, () => {
       const by = String(name.current || '').trim();
-      if (!by) { toast('Indica chi approva il budget', 'err'); return; }
-      store.batch(approveBudgetOps(d, year, version, by, today), `Budget ${year} versione ${version} approvato da ${by}`);
-      toast(`Budget ${year} approvato`, 'ok', { label: 'Annulla', fn: () => store.undo() });
+      if (!by) { toast('Indica chi approva il budget', 'err'); approve(true); return; }
+      if (store.batch(approveBudgetOps(d, year, version, by, today), `Budget ${year} versione ${version} approvato da ${by}`) !== false)
+        toast(`Budget ${year} (versione ${version}) approvato: è il nuovo riferimento`, 'ok', { label: 'Annulla', fn: () => store.undo() });
     }, { ok: 'Approva' });
   };
   const head = (
     <div className="dz-tools">
       <span className="lbl">Anno</span>
       <Seg label="Anno del budget" value={String(year)} onChange={v => { setYear(+v); setVerSel(null); }} options={years.map(y => ({ id: String(y), label: String(y) }))} />
-      {versions.length > 1 && <><span className="lbl">Versione</span><Select className="slim" ariaLabel="Versione" value={version} onChange={setVerSel} options={versions.map(v => ({ id: v, label: v === active ? `${v} (attiva)` : v }))} /></>}
-      {has && (locked ? <Chip kind="good" icon={LuLock} title={`Approvato il ${dateIt(st.approvedAt)} da ${st.approvedBy}`}>approvato · {st.approvedBy}</Chip> : <Chip kind="maize">bozza</Chip>)}
+      {versions.length > 1 && <><span className="lbl">Versione</span><Select className="slim" ariaLabel="Versione" value={version} onChange={setVerSel} options={versions.map(v => ({ id: v, label: `${v}${v === active ? ' · riferimento' : ''}${isLocked(d, year, v) ? (v === active ? ' · approvata' : ' · superata') : ' · bozza'}` }))} /></>}
+      {has && (locked
+        ? <Chip kind={superseded ? 'outline' : 'good'} icon={LuLock} title={`Approvato il ${dateIt(st.approvedAt)} da ${st.approvedBy}${st.supersededAt ? ` · superato il ${dateIt(st.supersededAt)}` : ''}`}>{superseded ? 'approvato · superato' : `approvato · ${st.approvedBy}`}</Chip>
+        : <Chip kind="maize" title={version !== active ? `I confronti usano ancora la versione ${active}` : undefined}>bozza{version !== active ? ` · riferimento ${active}` : ''}</Chip>)}
       <span className="sp" />
       {!hasBudget(d, curYear + 1) && <Btn small kind={year === curYear + 1 ? 'primary' : ''} icon={LuPlus} onClick={() => openWiz(curYear + 1, 'nuovo')}>Crea budget {curYear + 1}</Btn>}
       {has && !locked && <Btn small icon={LuRotateCcw} onClick={() => openWiz(year, 'rigenera')} title="Ricalcola questa versione con nuove ipotesi">Rigenera</Btn>}
       {has && <Btn small icon={LuGitBranch} onClick={() => openWiz(year, 'revisione')} title="Nuova versione del budget dell’anno, con ipotesi aggiornate">Revisione</Btn>}
-      {has && !locked && <Btn small kind="primary" icon={LuStamp} onClick={approve}>Approva</Btn>}
+      {has && !locked && <Btn small kind="primary" icon={LuStamp} onClick={() => approve()}>Approva</Btn>}
     </div>
   );
-  const wizard = wiz && <BudgetWizard d={d} ctx={ctx} today={today} {...wiz} basedOn={wiz.mode === 'revisione' ? version : null} onClose={() => setWiz(null)} onSaved={y => { setYear(y); setVerSel(null); }} />;
+  const wizard = wiz && <BudgetWizard d={d} ctx={ctx} today={today} {...wiz} basedOn={wiz.mode === 'revisione' ? version : null} onClose={() => setWiz(null)} onSaved={(y, v) => { setYear(y); setVerSel(v || null); }} />;
   if (!has) return (
     <>
       {head}
@@ -182,8 +185,9 @@ function BudgetWizard({ d, ctx, today, year, version, mode, basedOn, onClose, on
   const save = () => {
     if (!seed.rows.length) { toast('Nessun volume da cui partire: servono consegne o storico mensile', 'err'); return; }
     const ops = budgetWriteOps(d, year, version, seed.rows, seed.fixed, { by: getPrefs().role || 'direzione', at: today, basedOn });
+    if (!ops) { toast(`La versione ${version} è approvata: per cambiarla crea una revisione`, 'err'); return; }
     const label = `${mode === 'revisione' ? 'Revisione' : mode === 'rigenera' ? 'Ricalcolo' : 'Creazione'} del budget ${year} (versione ${version})`;
-    if (store.batch(ops, label) !== false) { toast(`${label}: salvato come bozza`, 'ok', { label: 'Annulla', fn: () => store.undo() }); onSaved?.(year); onClose(); }
+    if (store.batch(ops, label) !== false) { toast(`${label}: salvato come bozza`, 'ok', { label: 'Annulla', fn: () => store.undo() }); onSaved?.(year, version); onClose(); }
   };
   const row = (label, v, c, fmt = eurTxt) => [label, <>{fmt(v)}{c != null && <span className="muted"> · {fmt(c)}</span>}</>];
   return (

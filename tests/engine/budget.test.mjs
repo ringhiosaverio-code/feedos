@@ -5,7 +5,9 @@ import assert from 'node:assert/strict';
 import { demoData } from '../../src/data/demo/index.js';
 import { makeCtx, aggregateFacts, fixedFor } from '../../src/engine/actuals.js';
 import { applyOpsTo } from '../../src/core/ops.js';
-import { seedBudget, seedBudgetRows, budgetMonth, budgetTotals, budgetVsActual, landing, approveBudgetOps, budgetSignals, budgetStatus, activeVersion, nextRevision, hasBudget } from '../../src/engine/budget.js';
+import { seedBudget, seedBudgetRows, budgetMonth, budgetTotals, budgetVsActual, landing, approveBudgetOps, budgetSignals, budgetStatus, versionStatus, isLocked, budgetVersions, activeVersion, nextRevision, hasBudget } from '../../src/engine/budget.js';
+import { pnlFor, fixedRows } from '../../src/engine/pnl.js';
+import { resolvePeriod } from '../../src/core/period.js';
 import { sum } from '../../src/core/util.js';
 
 const today = '2026-10-16';
@@ -135,4 +137,32 @@ test('segnali di budget: scostamento oltre la materialità, stima di chiusura, b
   assert.ok(!budgetSignals(open, { ...ctx, today: '2026-10-04' }).some(x => x.key.startsWith('close:')));
   // archivio vuoto: nessun errore, nessun segnale
   assert.deepEqual(budgetSignals({ settings: {}, products: [], shipments: [] }, { today, facts: [] }), []);
+});
+
+test('revisione: nuova versione in bozza, il budget approvato resta il riferimento e i fissi non si sommano', () => {
+  const Y = { from: '2026-01-01', to: '2026-12-31' }, P12 = resolvePeriod({ preset: '12m' }, today);
+  const v = nextRevision(d, 2026);
+  assert.equal(v, 'R1');
+  const ops = seedBudget(d, ctx, { year: 2026, version: v, mpDeltaPct: 8, fixedInflPct: 4 });
+  const r = applyOpsTo(d, ops).data;
+  assert.equal(activeVersion(r, 2026), 'B'); assert.equal(budgetStatus(r, 2026).status, 'approvato');
+  assert.equal(versionStatus(r, 2026, v).status, 'bozza'); assert.ok(isLocked(r, 2026, 'B') && !isLocked(r, 2026, v));
+  assert.deepEqual(budgetVersions(r, 2026), ['B', v]);
+  assert.equal(r.settings.finance.budget.version, 'B', 'settings.finance.budget resta la versione approvata');
+  // il budget B (righe e costi fissi) non cambia
+  close(budgetTotals(r, Y, 'B').ebit, budgetTotals(d, Y, 'B').ebit, 1e-6, 'EBIT di budget B');
+  close(budgetTotals(r, Y, 'B').fixed, budgetTotals(d, Y, 'B').fixed, 1e-6, 'fissi di budget B');
+  assert.ok(Math.abs(budgetTotals(r, Y, v).fixed - budgetTotals(r, Y, 'B').fixed) > 1000, 'R1 ha i suoi fissi');
+  // ottobre (aperto) stima i fissi dal budget di riferimento, non da B + R1
+  close(pnlFor(r, ctx, P12).fixedTotal, pnlFor(d, ctx, P12).fixedTotal, 1e-6, 'fissi del periodo con due versioni');
+  assert.ok(fixedRows(r).filter(f => f.kind === 'budget' && f.month.startsWith('2026-')).every(f => (f.version || 'B') === 'B'));
+  // la versione approvata non si rigenera
+  assert.equal(seedBudget(r, ctx, { year: 2026, version: 'B' }), null);
+  // approvare la revisione la rende il riferimento; B resta approvato ma superato
+  const r2 = applyOpsTo(r, approveBudgetOps(r, 2026, v, 'Consiglio', '2026-10-20')).data;
+  assert.equal(activeVersion(r2, 2026), v);
+  assert.equal(versionStatus(r2, 2026, 'B').status, 'approvato'); assert.equal(versionStatus(r2, 2026, 'B').supersededAt, '2026-10-20');
+  assert.ok(fixedRows(r2).filter(f => f.kind === 'budget' && f.month.startsWith('2026-')).every(f => f.version === v));
+  const ref = r2.fixedCosts.filter(f => f.kind !== 'budget' || f.version === v);
+  close(pnlFor(r2, ctx, P12).fixedTotal, fixedFor(ref, r2.costCenters, P12).total, 1e-6, 'fissi stimati dalla revisione approvata');
 });

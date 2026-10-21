@@ -40,10 +40,12 @@ function SectionBody({ s }) {
         <div key={i}><span>{k.label}</span><b>{kpiValue(k)}</b>{dl && <small className={dl.cls}>{dl.text}</small>}{k.note && <small>{k.note}</small>}</div>); })}</div>}
       {s.id === 'ponte' && s.steps && <HWaterfall steps={[{ key: 'a', label: 'Partenza', value: s.start, kind: 'total' }, ...s.steps.filter(x => Math.abs(x.value) >= 0.5).map(x => ({ ...x, kind: 'step', def: null })), { key: 'b', label: 'Arrivo', value: s.end, kind: 'total' }]} ariaLabel="Ponte del margine" />}
       {s.table?.rows?.length > 0 && s.id !== 'ponte' && (
-        <table className="dz-rt">
-          <thead><tr>{s.table.cols.map(c => <th key={c.key} className={c.align === 'r' ? 'r' : ''}>{c.label}</th>)}</tr></thead>
-          <tbody>{s.table.rows.map((r, i) => <tr key={i} className={r.total || r.kind === 'total' ? 'tot' : ''}>{s.table.cols.map(c => <td key={c.key} className={c.align === 'r' ? 'r' : ''}>{fmtCell(r[c.key], c.fmt)}</td>)}</tr>)}</tbody>
-        </table>
+        <div className="dz-rtw">
+          <table className="dz-rt">
+            <thead><tr>{s.table.cols.map(c => <th key={c.key} className={c.align === 'r' ? 'r' : ''}>{c.label}</th>)}</tr></thead>
+            <tbody>{s.table.rows.map((r, i) => <tr key={i} className={r.total || r.kind === 'total' ? 'tot' : ''}>{s.table.cols.map(c => <td key={c.key} className={c.align === 'r' ? 'r' : ''}>{fmtCell(r[c.key], c.fmt)}</td>)}</tr>)}</tbody>
+          </table>
+        </div>
       )}
       {s.narrative?.length > 0 && <div className="dz-rn">{s.narrative.map((t, i) => <p key={i}>{t}</p>)}</div>}
     </>

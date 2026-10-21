@@ -15,7 +15,7 @@ import { AREA_META } from '../core/roles.js';
 import { NAV } from '../app/nav.js';
 import { monthlySeries, lastMonths, firstFactDate, effectiveCoverage } from '../engine/pnl.js';
 import { basis, pvm, narrative, basisLabel, LEVELS } from '../engine/pvm.js';
-import { budgetBasis, landing, activeVersion, hasBudget } from '../engine/budget.js';
+import { budgetBasis, landing, activeVersion, hasBudget, isLocked, budgetVersions } from '../engine/budget.js';
 import { checklist, closeMonthOps, reopenMonthOps, reopenLabel, closeLabel, closingRecord, closedThrough, nextToClose, frozenVsLive } from '../engine/closing.js';
 import { PageHead, Panel, Kpi, Btn, Chip, Seg, Select, Table, Empty, Field, NumInput, Kv, confirm } from '../ui/ui.jsx';
 import { SignalList } from './shared.jsx';
@@ -81,7 +81,7 @@ function Sintesi() {
   const ebitdaPct = cur.revenueNet ? by.ebitda / cur.revenueNet : null, ebitdaPctC = cmp?.revenueNet ? cb.ebitda / cmp.revenueNet : null;
   const behind = toClose && toClose < tm ? (toClose < addMonths(tm, -1) ? 'bad' : +today.slice(8) > 5 ? 'warn' : 'ok') : 'ok';
   const cols = series.map(m => ({
-    key: m.month, label: monthLabel(m.month).split(' ')[0], title: monthLabel(m.month, false), note: m.open ? 'in corso' : null, m,
+    key: m.month, label: monthLabel(m.month).split(' ')[0], title: monthLabel(m.month, false), note: m.open ? 'in corso' : m.partial ? `mese parziale: consegne dal ${dateIt(m.firstDay)}` : null, m,
     bars: [{ key: 'mdc2', label: 'MdC II', value: m.mdc2 / 1000, color: 'var(--s1)', hatch: m.open }, { key: 'ebit', label: 'EBIT', value: m.ebit / 1000, color: 'var(--s3)', hatch: m.open }],
   }));
   const tip = c => [
@@ -266,12 +266,21 @@ function CostiFissi() {
   const years = [...new Set([curYear, curYear + 1, ...(d.fixedCosts || []).map(f => +String(f.month).slice(0, 4))])].filter(Boolean).sort();
   const [year, setYear] = useState(curYear);
   const [kind, setKind] = useState('consuntivo');
+  const [verSel, setVerSel] = useState(null);
   const centers = d.costCenters || [];
+  // versioni del budget dell'anno: righe di budget e costi fissi di budget
+  const vers = useMemo(() => {
+    const s = new Set(budgetVersions(d, year));
+    for (const f of d.fixedCosts || []) if (f.kind === 'budget' && String(f.month).startsWith(year + '-')) s.add(f.version || 'B');
+    return [...s];
+  }, [d.budget, d.fixedCosts, year]);
+  const version = kind === 'budget' ? (verSel && vers.includes(verSel) ? verSel : activeVersion(d, year)) : null;
+  const verLocked = kind === 'budget' && isLocked(d, year, version);
   const cell = useMemo(() => {
     const m = {};
-    for (const f of d.fixedCosts || []) if ((f.kind || 'consuntivo') === kind && String(f.month).startsWith(year + '-')) (m[`${String(f.month).slice(0, 7)}|${f.centerId}`] ||= []).push(f);
+    for (const f of d.fixedCosts || []) if ((f.kind || 'consuntivo') === kind && String(f.month).startsWith(year + '-') && (kind !== 'budget' || (f.version || 'B') === version)) (m[`${String(f.month).slice(0, 7)}|${f.centerId}`] ||= []).push(f);
     return m;
-  }, [d.fixedCosts, year, kind]);
+  }, [d.fixedCosts, year, kind, version]);
   const months = Array.from({ length: 12 }, (_, i) => `${year}-${String(i + 1).padStart(2, '0')}`);
   const val = (m, c) => { const r = cell[`${m}|${c}`]; return r ? r.reduce((s, x) => s + (+x.amount || 0), 0) : null; };
   const setVal = (m, c, v) => {
@@ -281,13 +290,13 @@ function CostiFissi() {
     if (v == null) ops = rows.length ? [{ kind: 'removeMany', coll: 'fixedCosts', ids: rows.map(r => r.id) }] : [];
     else if (rows.length) ops = [{ kind: 'update', coll: 'fixedCosts', id: rows[0].id, patch: { amount: v, source: rows[0].source === 'demo' ? 'manuale' : rows[0].source || 'manuale' } }, ...(rows.length > 1 ? [{ kind: 'removeMany', coll: 'fixedCosts', ids: rows.slice(1).map(r => r.id) }] : [])];
     else {
-      const base = `${kind === 'budget' ? 'fb' : 'fc'}-${m}-${c.id.replace(/^cc-/, '')}`;
+      const base = `${kind === 'budget' ? `fb-${version}` : 'fc'}-${m}-${c.id.replace(/^cc-/, '')}`;
       const id = (d.fixedCosts || []).some(f => f.id === base) ? uid('fc') : base;
-      ops = [{ kind: 'add', coll: 'fixedCosts', obj: { id, month: m, centerId: c.id, kind, amount: v, source: 'manuale', note: '', ...(kind === 'budget' ? { version: activeVersion(d, year) } : {}) } }];
+      ops = [{ kind: 'add', coll: 'fixedCosts', obj: { id, month: m, centerId: c.id, kind, amount: v, source: 'manuale', note: '', ...(kind === 'budget' ? { version } : {}) } }];
     }
     if (ops.length && store.batch(ops, lab) !== false) toast('Salvato', 'ok', { label: 'Annulla', fn: () => store.undo() });
   };
-  const closed = m => kind === 'consuntivo' && isClosedMonth(d, m);
+  const closed = m => (kind === 'consuntivo' && isClosedMonth(d, m)) || verLocked;
   const groups = [...GROUPS.map(g => ({ ...g, rows: centers.filter(c => c.cash !== false && (GROUPS.some(x => x.id === c.group) ? c.group : 'struttura') === g.id) })), { id: 'nonCash', label: 'Non monetari (ammortamenti)', rows: centers.filter(c => c.cash === false) }].filter(g => g.rows.length);
   const colTot = m => centers.reduce((s, c) => s + (val(m, c.id) || 0), 0);
   const rowTot = c => months.reduce((s, m) => s + (val(m, c.id) || 0), 0);
@@ -297,11 +306,12 @@ function CostiFissi() {
       <div className="dz-tools">
         <span className="lbl">Anno</span><Seg label="Anno" value={String(year)} onChange={v => setYear(+v)} options={years.map(y => ({ id: String(y), label: String(y) }))} />
         <span className="lbl">Tipo</span><Seg label="Tipo di costo" value={kind} onChange={setKind} options={[{ id: 'consuntivo', label: 'Consuntivo' }, { id: 'budget', label: 'Budget' }]} />
+        {kind === 'budget' && vers.length > 1 && <><span className="lbl">Versione</span><Select className="slim" ariaLabel="Versione del budget" value={version} onChange={setVerSel} options={vers.map(v => ({ id: v, label: v + (v === activeVersion(d, year) ? ' · riferimento' : '') }))} /></>}
         <span className="sp" />
         <span className="small muted">Totale {kind} {year}: <b>{eurTxt(total)}</b></span>
       </div>
       {!centers.length ? <Panel title="Costi fissi per centro"><Empty title="Nessun centro di costo">Aggiungi i centri di costo qui sotto (personale, manutenzione, amministrazione…): i costi fissi mensili si registrano per centro e alimentano EBITDA ed EBIT.</Empty></Panel> : (
-        <Panel title={`Costi fissi ${kind === 'budget' ? 'di budget' : 'a consuntivo'} ${year}`} sub={kind === 'consuntivo' ? 'Importi mensili in euro per centro di costo; i mesi chiusi sono bloccati (si riaprono da Chiusura del mese). Un mese senza consuntivo usa il budget o la media degli ultimi 12 mesi, segnato «stimato».' : `Budget della versione ${activeVersion(d, year)}: si può correggere anche nei mesi chiusi.`} flush className="dz-grid">
+        <Panel title={`Costi fissi ${kind === 'budget' ? 'di budget' : 'a consuntivo'} ${year}`} sub={kind === 'consuntivo' ? 'Importi mensili in euro per centro di costo; i mesi chiusi sono bloccati (si riaprono da Chiusura del mese). Un mese senza consuntivo usa il budget o la media degli ultimi 12 mesi, segnato «stimato».' : verLocked ? `Versione ${version} approvata: bloccata. Per cambiare i costi fissi di budget crea una revisione da Direzione › Budget.` : `Budget della versione ${version} (bozza): si può correggere anche nei mesi chiusi.`} flush className="dz-grid">
           <div className="tw">
             <table className="t">
               <thead><tr><th>Centro</th>{MESI.map(m => <th key={m} className="r">{m}</th>)}<th className="r">Totale</th></tr></thead>
@@ -313,7 +323,7 @@ function CostiFissi() {
                       <tr key={c.id}>
                         <td><b>{c.name}</b><span className="sub">{c.code || c.id}</span></td>
                         {months.map(m => closed(m)
-                          ? <td key={m} className="r lock" title="Mese chiuso">{val(m, c.id) == null ? '—' : nf(val(m, c.id))}<LuLock aria-hidden="true" /></td>
+                          ? <td key={m} className="r lock" title={verLocked ? `Versione ${version} approvata` : 'Mese chiuso'}>{val(m, c.id) == null ? '—' : nf(val(m, c.id))}<LuLock aria-hidden="true" /></td>
                           : <td key={m} className="r"><NumInput slim decimals={0} min={0} value={val(m, c.id)} onChange={v => { if ((v ?? null) !== val(m, c.id)) setVal(m, c, v); }} ariaLabel={`${c.name} ${monthLabel(m, false)}`} /></td>)}
                         <td className="r"><b>{nf(rowTot(c))}</b></td>
                       </tr>
@@ -395,10 +405,14 @@ function TrialBalance({ d, today }) {
     if (!keys.length) { toast('Assegna almeno un conto a un centro di costo', 'err'); return; }
     const objs = keys.map(k => { const [m, c] = k.split('|'); return { id: `fc-${m}-${c.replace(/^cc-/, '')}-bv`, month: m, centerId: c, kind: 'consuntivo', amount: Math.round(totals[k] * 100) / 100, source: 'bilancio', note: 'Da bilancio di verifica' }; });
     const newMap = { ...saved, ...Object.fromEntries(Object.entries(map).filter(([, v]) => v !== undefined)) };
+    // il bilancio sostituisce il consuntivo del centro nel mese: si aggiorna la prima riga e si tolgono le altre (niente doppi)
+    const extra = [];
+    for (const o of objs) extra.push(...(d.fixedCosts || []).filter(f => (f.kind || 'consuntivo') === 'consuntivo' && String(f.month).slice(0, 7) === o.month && f.centerId === o.centerId).slice(1).map(f => f.id));
     const ok = store.batch([
+      extra.length ? { kind: 'removeMany', coll: 'fixedCosts', ids: extra } : null,
       { kind: 'upsertMany', coll: 'fixedCosts', objs, key: ['month', 'centerId', 'kind'] },
       { kind: 'settings', value: s => ({ ...s, finance: { ...(s.finance || {}), chartMap: newMap } }) },
-    ], `Costi fissi da bilancio di verifica: ${objs.length} righe (${[...new Set(objs.map(o => monthLabel(o.month, false)))].join(', ')})`);
+    ].filter(Boolean), `Costi fissi da bilancio di verifica: ${objs.length} righe (${[...new Set(objs.map(o => monthLabel(o.month, false)))].join(', ')})`);
     if (ok !== false) { toast(`${objs.length} costi fissi aggiornati`, 'ok', { label: 'Annulla', fn: () => store.undo() }); setText(''); setMap({}); }
   };
   const onFile = async e => { const f = e.target.files?.[0]; if (f) setText(await readFile(f)); e.target.value = ''; };
@@ -432,7 +446,7 @@ function TrialBalance({ d, today }) {
 const STATUS = { chiuso: ['accent', 'chiuso'], riaperto: ['warn', 'riaperto'], aperto: ['outline', 'aperto'] };
 
 function CloseBody({ box, blocking }) {
-  const [v, setV] = useState({ sintesi: '', conto: '', ponte: '', budget: '', force: false, note: '' });
+  const [v, setV] = useState(() => ({ sintesi: '', conto: '', ponte: '', budget: '', force: false, note: '', ...(box.current || {}) }));
   const set = patch => { const n = { ...v, ...patch }; setV(n); box.current = n; };
   return (
     <div className="stack" style={{ gap: 10 }}>
@@ -451,7 +465,7 @@ function CloseBody({ box, blocking }) {
   );
 }
 function ReopenBody({ box }) {
-  const [v, setV] = useState('');
+  const [v, setV] = useState(() => String(box.current || ''));
   return (
     <div className="stack" style={{ gap: 10 }}>
       <p>Riaprendo il mese (e gli eventuali mesi chiusi dopo) i movimenti tornano modificabili e i numeri congelati non valgono più finché non lo si richiude. La nota resta nel registro delle modifiche.</p>
@@ -483,12 +497,13 @@ function Chiusura({ sel }) {
   const isClosed = rec?.status === 'chiuso';
   const blocking = items.filter(i => i.blocking && !i.ok);
   const canClose = !isClosed && m < tm && !items.find(i => i.id === 'fine' && !i.ok) && !items.find(i => i.id === 'prev' && !i.ok);
-  const doClose = () => {
-    box.current = { force: false, note: '' };
+  // con una voce mancante la finestra si riapre con quanto già scritto
+  const doClose = (keep = false) => {
+    if (!keep) box.current = { force: false, note: '' };
     confirm(`Chiudere ${monthLabel(m, false)}?`, <CloseBody box={box} blocking={blocking} />, () => {
       const v = box.current || {};
-      if (blocking.length && !v.force) { toast('Lista di controllo con voci bloccanti: spunta «Chiudi comunque» e indica il motivo', 'err'); return; }
-      if (blocking.length && !String(v.note || '').trim()) { toast('Indica il motivo della forzatura', 'err'); return; }
+      if (blocking.length && !v.force) { toast('Lista di controllo con voci bloccanti: spunta «Chiudi comunque» e indica il motivo', 'err'); doClose(true); return; }
+      if (blocking.length && !String(v.note || '').trim()) { toast('Indica il motivo della forzatura', 'err'); doClose(true); return; }
       const comments = Object.fromEntries(['sintesi', 'conto', 'ponte', 'budget'].filter(k => String(v[k] || '').trim()).map(k => [k, v[k].trim()]));
       const ops = closeMonthOps(d, ctx, m, { by: roleName(), comments, force: !!v.force, note: v.note });
       if (!ops) { toast('Il mese non si può chiudere: controlla le voci bloccanti', 'err'); return; }
@@ -496,11 +511,11 @@ function Chiusura({ sel }) {
         toast(`${monthLabel(m, false)} chiuso: consegne, lavorazioni, costi fissi e fatture del mese sono bloccati`, 'ok', { label: 'Annulla', fn: () => store.undo() });
     }, { ok: 'Chiudi il mese' });
   };
-  const doReopen = () => {
-    box.current = '';
+  const doReopen = (keep = false) => {
+    if (!keep) box.current = '';
     confirm(`Riaprire ${monthLabel(m, false)}?`, <ReopenBody box={box} />, () => {
       const note = String(box.current || '').trim();
-      if (!note) { toast('La nota è obbligatoria per riaprire un mese', 'err'); return; }
+      if (!note) { toast('La nota è obbligatoria per riaprire un mese', 'err'); doReopen(true); return; }
       const ops = reopenMonthOps(d, m, { by: roleName(), note });
       if (store.batch(ops, reopenLabel(m, note)) !== false) toast(`${monthLabel(m, false)} riaperto`, 'ok', { label: 'Annulla', fn: () => store.undo() });
     }, { ok: 'Riapri', danger: true });
@@ -528,8 +543,8 @@ function Chiusura({ sel }) {
       <div className="stack">
         <Panel title={monthLabel(m, false)} sub={rec?.source === 'storico' ? 'Mese dallo storico mensile (gestionale precedente)' : isClosed ? `Chiuso il ${dateIt(rec.closedAt?.slice(0, 10))} da ${rec.closedBy || '—'}` : m === tm ? 'Mese in corso: si chiude dal giorno dopo la fine del mese' : 'Mese da chiudere'}
           actions={<div className="row gap-s"><Chip kind={st[0]} icon={isClosed ? LuSnowflake : undefined}>{st[1]}</Chip>
-            {isClosed && ct && m <= ct && <Btn small icon={LuLockOpen} onClick={doReopen}>Riapri</Btn>}
-            {!isClosed && <Btn small kind="primary" icon={LuLock} onClick={doClose} disabled={!canClose} title={canClose ? undefined : 'Il mese deve essere finito e il mese precedente chiuso'}>Chiudi il mese</Btn>}</div>}>
+            {isClosed && ct && m <= ct && <Btn small icon={LuLockOpen} onClick={() => doReopen()}>Riapri</Btn>}
+            {!isClosed && <Btn small kind="primary" icon={LuLock} onClick={() => doClose()} disabled={!canClose} title={canClose ? undefined : 'Il mese deve essere finito e il mese precedente chiuso'}>Chiudi il mese</Btn>}</div>}>
           <div className="stack" style={{ gap: 12 }}>
             {s && <div className="kpis">
               <Kpi label="Ricavi netti" {...money(rec?.status === 'chiuso' ? rec.pnl?.revenue : s.revenue)} foot={`${nf(rec?.status === 'chiuso' ? rec.pnl?.tonnes : s.tonnes)} t`} />

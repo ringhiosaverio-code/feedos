@@ -105,7 +105,7 @@ th .dz-tip { font-weight: 500; }
 .dz-paste textarea.input { font-family: var(--f-mono); font-size: 12px; min-height: 120px; }
 
 /* chiusura del mese */
-.dz-mlist { display: grid; }
+.dz-mlist { display: grid; max-height: min(760px, calc(100vh - 220px)); overflow-y: auto; overscroll-behavior: contain; }
 .dz-mlist button { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 10px; align-items: center; text-align: left; padding: 10px 14px; border: 0; border-top: 1px solid var(--line); background: none; cursor: pointer; color: inherit; font: inherit; }
 .dz-mlist button:first-child { border-top: 0; }
 .dz-mlist button:hover { background: var(--surface-2); }
@@ -125,14 +125,16 @@ th .dz-tip { font-weight: 500; }
 .dz-frozen { display: grid; gap: 6px; }
 
 /* report CdA: fogli A4 */
-.dz-report { display: grid; gap: 0; }
-.dz-rk { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+/* min-width 0: il foglio largo 210 mm non deve allargare la griglia della pagina sui telefoni */
+.dz-report { display: block; min-width: 0; }
+.dz-rk { display: grid; grid-template-columns: repeat(auto-fit, minmax(126px, 1fr)); gap: 8px; }
 .dz-rk > div { border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; display: grid; gap: 2px; break-inside: avoid; }
 .dz-rk span { font-size: 11px; color: var(--ink-2); }
 .dz-rk b { font-size: 17px; letter-spacing: -.01em; font-variant-numeric: tabular-nums; }
 .dz-rk small { font-size: 10.5px; color: var(--muted); }
 .dz-rk .good { color: var(--good-ink); font-weight: 700; }
 .dz-rk .bad { color: var(--crit-ink); font-weight: 700; }
+.dz-rtw { min-width: 0; overflow-x: auto; }
 .dz-rt { width: 100%; border-collapse: collapse; font-size: 11.5px; font-variant-numeric: tabular-nums; }
 .dz-rt th { text-align: left; font-size: 10px; text-transform: uppercase; letter-spacing: .04em; color: var(--ink-2); border-bottom: 1.5px solid var(--ink); padding: 4px 6px; }
 .dz-rt td { padding: 3px 6px; border-bottom: 1px solid var(--line); }
@@ -151,8 +153,10 @@ th .dz-tip { font-weight: 500; }
   .dz-center { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
   .dz-pnl .hide-s { display: none; }
   .dz-sheet-tools { position: static; }
+  .dz-mlist { max-height: 340px; }
 }
 @media print {
+  .dz-rtw { overflow: visible; }
   .dz-comment textarea { display: none !important; }
   .dz-rk > div { border-color: #BFCAC1; }
 }

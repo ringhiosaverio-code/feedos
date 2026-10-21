@@ -99,6 +99,31 @@ export function pnl(total, fixed, centers) {
 
 const isWhole = P => !!P?.from && P.from.slice(8) === '01' && P.to === endOfMonth(P.to);
 
+// ---------------- costi fissi con una sola versione di budget ----------------
+/** Versione di budget di riferimento dell'anno secondo le impostazioni (approvata, altrimenti l'ultima bozza), o null. */
+export function statusVersion(d, year) {
+  const fin = d?.settings?.finance || {};
+  return fin.budgetStatus?.[year]?.version ?? (fin.budget && +fin.budget.year === +year ? fin.budget.version : null) ?? null;
+}
+const frCache = new WeakMap();
+/**
+ * Costi fissi da passare a fixedFor: tutti i consuntivi e, negli anni con più versioni di budget (revisioni),
+ * i soli costi di budget della versione di riferimento. Senza questo filtro un mese stimato sommerebbe B e R1.
+ */
+export function fixedRows(d) {
+  const rows = d?.fixedCosts || EMPTY;
+  const fin = d?.settings?.finance;
+  const hit = frCache.get(rows);
+  if (hit && hit.fin === fin) return hit.out;
+  const vers = {};
+  for (const r of rows) if (r.kind === 'budget') (vers[String(r.month).slice(0, 4)] ||= new Set()).add(r.version || 'B');
+  const keep = {};
+  for (const [y, s] of Object.entries(vers)) if (s.size > 1) { const sv = statusVersion(d, y); keep[y] = sv && s.has(sv) ? sv : [...s].pop(); }
+  const out = Object.keys(keep).length ? rows.filter(r => { if (r.kind !== 'budget') return true; const k = keep[String(r.month).slice(0, 4)]; return !k || (r.version || 'B') === k; }) : rows;
+  frCache.set(rows, { fin, out });
+  return out;
+}
+
 /** Primo giorno con fatti di spedizione (memorizzato per elenco). */
 const firstCache = new WeakMap();
 export function firstFactDate(facts) {
@@ -207,7 +232,7 @@ export function pnlFor(d, ctx, P) {
   if (isWhole(P)) { const fr = frozenFor(d, months); if (fr) return fr; }
   const facts = ctx?.facts || makeCtx(d).facts;
   const a = aggregate(facts, d.salesHistory || EMPTY, P);
-  const fixed = fixedFor(d.fixedCosts || EMPTY, d.costCenters || EMPTY, P);
+  const fixed = fixedFor(fixedRows(d), d.costCenters || EMPTY, P);
   fixed.split = fixedSplit(fixed, d.costCenters || EMPTY);
   return { ...pnl(a.total, fixed), frozen: false, fixed, estimatedMonths: fixed.estimatedMonths, missingMonths: fixed.missingMonths, historyMonths: a.historyMonths, partialMonths: a.partialMonths, months };
 }
@@ -259,14 +284,18 @@ export function stockEffect(total) {
 export const STOCK_EFFECT_LABEL = 'Effetto scorte';
 
 /**
- * Serie mensile: per ogni mese 'YYYY-MM' {month, tonnes, revenue, mdc1, mdc2, mdc2T, fixed, ebitda, ebit, bepT, open, frozen, estimatedFixed}.
+ * Serie mensile: per ogni mese 'YYYY-MM' {month, tonnes, revenue, mdc1, mdc2, mdc2T, fixed, ebitda, ebit, bepT, open, frozen, estimatedFixed, partial}.
  * Il mese in corso arriva a oggi (open); i mesi chiusi usano i numeri congelati; bepT = fissi / MdC II per t.
  */
 export function monthlySeries(d, ctx, months) {
   const today = ctx?.today || null, tm = today ? today.slice(0, 7) : null;
   const facts = ctx?.facts || makeCtx(d).facts;
+  const first = firstFactDate(facts);
+  const hist = new Set((d.salesHistory || EMPTY).map(h => String(h.month || '').slice(0, 7)));
   return (months || EMPTY).map(m => {
     const open = !!tm && m === tm;
+    // primo mese dei fatti iniziato a metà (e senza storico): i confronti non sono omogenei
+    const partial = !!first && first.slice(0, 7) === m && first > m + '-01' && !hist.has(m);
     const future = !!tm && m > tm;
     const P = { from: m + '-01', to: open ? today : endOfMonth(m) };
     let p, frozen = false, estimatedFixed = false, missingFixed = false;
@@ -275,7 +304,7 @@ export function monthlySeries(d, ctx, months) {
     else if (future) p = pnl({}, null);
     else {
       const a = aggregateFacts(facts, d.salesHistory || EMPTY, P);
-      const fixed = fixedFor(d.fixedCosts || EMPTY, d.costCenters || EMPTY, P);
+      const fixed = fixedFor(fixedRows(d), d.costCenters || EMPTY, P);
       fixed.split = fixedSplit(fixed, d.costCenters || EMPTY);
       p = pnl(a.total, fixed);
       estimatedFixed = fixed.estimatedMonths.includes(m); missingFixed = fixed.missingMonths.includes(m);
@@ -283,7 +312,7 @@ export function monthlySeries(d, ctx, months) {
     const t = p.tonnes, mc2 = p.by.mdc2, fixedTot = p.fixedTotal, mdc2T = t > 0 ? mc2 / t : null;
     return {
       month: m, tonnes: t, revenue: p.revenueNet, mdc1: p.by.mdc1, mdc2: mc2, mdc2T, fixed: fixedTot, ebitda: p.by.ebitda, ebit: p.by.ebit,
-      bepT: mdc2T > 0 ? fixedTot / mdc2T : null, open, future, frozen, estimatedFixed, missingFixed,
+      bepT: mdc2T > 0 ? fixedTot / mdc2T : null, open, future, frozen, estimatedFixed, missingFixed, partial, firstDay: partial ? first : null,
       days: open ? daysBetween(P.from, P.to) + 1 : daysInMonth(m),
     };
   });
