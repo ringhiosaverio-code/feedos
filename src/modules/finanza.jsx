@@ -12,7 +12,7 @@ import { ctxOf, idx, appToday } from '../core/derived.js';
 import { nf, sum, dateIt, daysBetween, addDays, endOfMonth, monthLabel, pct } from '../core/util.js';
 import { creditSummary, ledger, invoicesOf, registerPaymentOps, allocatePaymentOps, dunningOps, AGING_BUCKETS, pdOf, lgdOf, PD_DEFAULT, LGD_DEFAULT, customerTerms } from '../engine/credit.js';
 import { workingCapital, workingCapitalHistory, payables, finOf, vatOf, purchaseVatOf, rateOf } from '../engine/cash.js';
-import { inventorySummary, valuationAt, finishedAt, stockHistory, abcXyz, slowMovers, carryRate, costBase12 } from '../engine/inventory.js';
+import { inventorySummary, valuationAt, finishedAt, stockHistory, abcXyz, slowMovers, carryRate } from '../engine/inventory.js';
 import { PageHead, Panel, Btn, Table, Chip, Kpi, Field, Select, NumInput, Empty, SearchBox, filterRows, Seg, Kv, Bullet } from '../ui/ui.jsx';
 import { LineChart, StackBar, Legend, SERIES } from '../ui/charts.jsx';
 import { usePeriod } from '../ui/period.jsx';
@@ -523,7 +523,6 @@ function Rimanenze({ d, sel }) {
   const mpC = cTo ? valuationAt(d, cTo, mpM, { today }) : null;
   const fg = useMemo(() => finishedAt(d, ctx, at), [d, ctx, at]);
   const fgVal = fgM === 'pieno' ? fg.valueFull : fg.valueVar;
-  const base = costBase12(d, ctx, at);
   const hist = useMemo(() => stockHistory(d, 12, ctx, at), [d, ctx, at]);
   const abc = useMemo(() => abcXyz(d, ctx, P), [d, ctx, P]);
   const slow = useMemo(() => slowMovers(d, ctx), [d, ctx]);
@@ -535,10 +534,9 @@ function Rimanenze({ d, sel }) {
   for (const r of rows) if (r.xyz) { const k = r.abc + r.xyz; (grid[k] ||= { n: 0, v: 0, s: 0 }); grid[k].n++; grid[k].v += r.value; grid[k].s += r.stockV; }
   const totV = sum(rows, r => r.value) || 1;
   const view = cell ? rows.filter(r => r.abc + r.xyz === cell) : rows;
-  // giorni di magazzino alla data: come inventorySummary (che è a oggi), sui 12 mesi che finiscono alla data
-  const perDay = base.cogs / base.days, rawDay = base.raw / base.days, stockAt = mpFifo.value + fg.valueFull;
-  const dio = rawDay > 0 ? mpFifo.value / rawDay : null, dioTotal = perDay > 0 ? stockAt / perDay : null;
-  const mpDays = perDay > 0 ? mpFifo.value / perDay : null, fgDays = perDay > 0 ? fg.valueFull / perDay : null;
+  // giorni di magazzino e mantenimento alla data dal contratto inventorySummary (12 mesi che finiscono alla data)
+  const { dio, dioTotal, dioMpShare: mpDays, dioFgShare: fgDays } = sumy;
+  const rawDay = sumy.days12 > 0 ? sumy.raw12 / sumy.days12 : 0, stockAt = sumy.mpFifo + sumy.fgValue;
   return (
     <>
       <div className="row between fin-tools">
@@ -553,7 +551,7 @@ function Rimanenze({ d, sel }) {
           foot={mpM === 'fifo' ? `${nf(mp.t)} t · sostituzione ${mila(mpRepl.value, 1)} mila` : `FIFO ${mila(mpFifo.value, 1)} mila · Δ ${mila(mp.value - mpFifo.value, 1)}`} title={`${MP_METHODS.find(m => m.id === mpM).title}, al ${dateIt(at)}`} />
         <Kpi label={`Prodotto finito · costo ${fgM}`} value={mila(fgVal, 1)} unit="mila €" foot={`${nf(fg.t)} t in ${sum(fg.byProduct, r => r.lots)} lotti`} title={`Lotti prodotti e non ancora spediti al ${dateIt(at)} (esclusi i bloccati), al costo effettivo del lotto`} />
         <Kpi label="Giorni di magazzino MP" value={gg(dio)} unit="giorni" foot={`rotazione ${dio ? nf(365 / dio, 1) : '—'} volte l’anno · MP + PF ${gg(dioTotal)} gg`}
-          title={`DIO delle materie prime = MP al FIFO ÷ (materie prime e calo consumati nei 12 mesi ÷ ${base.days} giorni con dati) = ${eur(mpFifo.value)} ÷ ${eur(rawDay)} al giorno. Rotazione = 365 ÷ DIO.\nCon il prodotto finito: (MP + PF al costo pieno) ÷ (costo del venduto industriale dei 12 mesi ÷ giorni) = ${gg(mpDays)} gg di MP + ${gg(fgDays)} gg di PF = ${gg(dioTotal)} giorni, il DIO del capitale circolante.`} />
+          title={`DIO delle materie prime = MP al FIFO ÷ (materie prime e calo consumati nei 12 mesi ÷ ${sumy.days12} giorni con dati) = ${eur(sumy.mpFifo)} ÷ ${eur(rawDay)} al giorno. Rotazione = 365 ÷ DIO.\nCon il prodotto finito: (MP + PF al costo pieno) ÷ (costo del venduto industriale dei 12 mesi ÷ giorni) = ${gg(mpDays)} gg di MP + ${gg(fgDays)} gg di PF = ${gg(dioTotal)} giorni, il DIO del capitale circolante.`} />
         <Kpi label="Capitale in eccesso" value={mila(sumy.excessValue, 1)} unit="mila €" status={sumy.excessValue > 50000 ? 'warn' : 'ok'} foot={`${past ? 'oggi · ' : ''}mantenerlo costa ${eur(sumy.excessCarryingCost)}/anno`} title="Giacenza di oggi oltre fabbisogno a 8 settimane + scorta di sicurezza delle materie prime lente o in eccesso, ai prezzi dei lotti più recenti" />
         <Kpi label="Costo di mantenimento" value={mila(stockAt * rate / 100, 1)} unit="mila €/anno" foot={`${nf(rate, 1)}% annuo su ${mila(stockAt)} mila`} title="Oneri finanziari, magazzino, assicurazione e cali sul valore delle rimanenze (MP al FIFO + PF al costo pieno; tasso nei Parametri)" />
       </div>

@@ -107,6 +107,13 @@ test('andamento mensile e sintesi: ultimo mese = valori di oggi; DIO e costo di 
   close(s.turnover, 365 / s.dio, 1e-9, 'rotazione');
   close(s.dioMpShare + s.dioFgShare, s.dioTotal, 1e-9, 'quote MP + PF = DIO totale');
   console.log(`DIO MP ${s.dio.toFixed(1)} giorni (MP + PF ${s.dioTotal.toFixed(1)}) · rotazione ${s.turnover.toFixed(1)} · eccesso ${Math.round(s.excessValue)} € · mantenimento ${Math.round(s.carryingCost)} €/anno`);
+  // periodo chiuso: valori alla fine del periodo, medie sui giorni con dati di quei 12 mesi
+  const Pa = resolvePeriod({ preset: 'anno-prec' }, today);
+  const sa = inventorySummary(D, ctx, Pa);
+  assert.equal(sa.at, Pa.to);
+  close(sa.mpFifo, valuationAt(D, Pa.to, 'fifo').value, 1e-6, 'MP alla fine del periodo');
+  close(sa.fgValue, finishedAt(D, ctx, Pa.to).valueFull, 1e-6, 'PF alla fine del periodo');
+  assert.ok(sa.days12 < 120 && sa.dio > 5 && sa.dio < 60, `DIO MP a fine anno: ${sa.dio} su ${sa.days12} giorni`);
   // archivio vuoto
   const e = inventorySummary({ settings: {}, ingLots: [], lots: [], shipments: [], ingredients: [], products: [] }, null, P);
   assert.equal(e.mpFifo, 0); assert.equal(e.dio, null);

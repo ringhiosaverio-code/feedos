@@ -305,23 +305,36 @@ export function cogs12(d, ctx, at) { return costBase12(d, ctx, at).cogs; }
  * dioTotal = (MP + PF) ÷ (costo del venduto industriale dei 12 mesi ÷ giorni con dati), lo stesso DIO del capitale circolante;
  * giorni con dati = 365 con un anno di storico (days12), meno in un archivio più giovane;
  * dioMpShare e dioFgShare = le due quote che sommano dioTotal.
+ * Valori alla fine del periodo P (a oggi se il periodo è in corso, at); il capitale in eccesso guarda sempre il piano di oggi.
  */
 export function inventorySummary(d, ctx, P) {
-  const shipped = {};
-  for (const s of d.shipments || EMPTY) shipped[s.lotId] = (shipped[s.lotId] || 0) + (+s.tonnes || 0);
-  const ix = ctx?.ix || makeIndex(d);
-  const v = inventoryValuation(d, { ix, costsToday: ctx?.costs || costsOf(d, ix), shipped });
-  const { cogs: c12, raw: raw12, days } = costBase12(d, ctx);
-  const stock = v.mp.fifo + v.fg.valueFull;
-  const dio = raw12 > 0 ? v.mp.fifo / (raw12 / days) : null;
+  const today = ctx?.today || todayOf(d);
+  const at = P?.to && P.to < today ? P.to : today;
+  let mp, fg;
+  if (at === today) {
+    const shipped = {};
+    for (const s of d.shipments || EMPTY) shipped[s.lotId] = (shipped[s.lotId] || 0) + (+s.tonnes || 0);
+    const ix = ctx?.ix || makeIndex(d);
+    const v = inventoryValuation(d, { ix, costsToday: ctx?.costs || costsOf(d, ix), shipped });
+    mp = { fifo: v.mp.fifo, replacement: v.mp.replacement, quarantine: v.mp.quarantine };
+    fg = v.fg;
+  } else {
+    // a una data passata: giacenze ricostruite dai movimenti dei lotti
+    const f = valuationAt(d, at, 'fifo', { today });
+    mp = { fifo: f.value, replacement: valuationAt(d, at, 'sostituzione', { today }).value, quarantine: f.quarantine };
+    fg = finishedAt(d, ctx, at);
+  }
+  const { cogs: c12, raw: raw12, days } = costBase12(d, ctx, at);
+  const stock = mp.fifo + fg.valueFull;
+  const dio = raw12 > 0 ? mp.fifo / (raw12 / days) : null;
   const dioTotal = c12 > 0 ? stock / (c12 / days) : null;
   const slow = slowMovers(d, ctx);
   const excessValue = sum(slow, r => r.excessValue);
   const rate = carryRate(d) / 100;
   return {
-    mpFifo: v.mp.fifo, fgValue: v.fg.valueFull, dio, excessValue, carryingCost: stock * rate,
-    fgValueVar: v.fg.valueVar, fgT: v.fg.t, mpReplacement: v.mp.replacement, mpQuarantine: v.mp.quarantine,
+    mpFifo: mp.fifo, fgValue: fg.valueFull, dio, excessValue, carryingCost: stock * rate,
+    at, fgValueVar: fg.valueVar, fgT: fg.t, mpReplacement: mp.replacement, mpQuarantine: mp.quarantine,
     excessCarryingCost: excessValue * rate, turnover: dio ? 365 / dio : null, cogs12: c12, raw12, days12: days, slowCount: slow.length,
-    dioTotal, dioMpShare: c12 > 0 ? v.mp.fifo / (c12 / days) : null, dioFgShare: c12 > 0 ? v.fg.valueFull / (c12 / days) : null,
+    dioTotal, dioMpShare: c12 > 0 ? mp.fifo / (c12 / days) : null, dioFgShare: c12 > 0 ? fg.valueFull / (c12 / days) : null,
   };
 }
