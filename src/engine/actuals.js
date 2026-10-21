@@ -216,6 +216,14 @@ export function coverage(P, start) {
   return lo > P.to ? 0 : (daysBetween(lo, P.to) + 1) / days;
 }
 
+/** Confrontabilità di un saldo alla data (crediti, magazzino, debiti): il saldo è completo solo se sono registrati tutti i movimenti
+ * che a quella data possono essere ancora aperti, cioè se i dati cominciano almeno `horizon` giorni prima. 0…1; senza dati 0. */
+export function balanceCoverage(date, start, horizon) {
+  if (!date) return null;
+  if (!start || start > date) return 0;
+  return horizon > 0 ? Math.min(1, daysBetween(start, date) / horizon) : 1;
+}
+
 /**
  * Costi fissi del periodo: Σ righe del mese × quota del mese dentro P.
  * Un mese senza consuntivo usa il budget (openMonthFallback 'budget'), altrimenti la media degli ultimi 12 mesi

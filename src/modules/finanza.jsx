@@ -10,9 +10,10 @@ import { usePrefs } from '../core/prefs.js';
 import { AREA_META } from '../core/roles.js';
 import { ctxOf, idx, appToday } from '../core/derived.js';
 import { nf, sum, dateIt, daysBetween, addDays, endOfMonth, monthLabel, pct } from '../core/util.js';
-import { creditSummary, ledger, invoicesOf, registerPaymentOps, allocatePaymentOps, dunningOps, AGING_BUCKETS, pdOf, lgdOf, PD_DEFAULT, LGD_DEFAULT, customerTerms } from '../engine/credit.js';
+import { creditSummary, ledger, invoicesOf, registerPaymentOps, allocatePaymentOps, dunningOps, AGING_BUCKETS, pdOf, lgdOf, PD_DEFAULT, LGD_DEFAULT, customerTerms, creditStart, AR_HORIZON } from '../engine/credit.js';
 import { workingCapital, workingCapitalHistory, finOf, vatOf } from '../engine/cash.js';
-import { inventorySummary, valuationAt, finishedAt, stockHistory, abcXyz, slowMovers, carryRate } from '../engine/inventory.js';
+import { inventorySummary, valuationAt, finishedAt, stockHistory, abcXyz, slowMovers, carryRate, stockStart, STOCK_HORIZON } from '../engine/inventory.js';
+import { balanceCoverage } from '../engine/actuals.js';
 import { PageHead, Panel, Btn, Table, Chip, Kpi, Field, Select, NumInput, Empty, SearchBox, filterRows, Seg, Kv, Bullet } from '../ui/ui.jsx';
 import { LineChart, StackBar, Legend, SERIES } from '../ui/charts.jsx';
 import { usePeriod } from '../ui/period.jsx';
@@ -85,6 +86,8 @@ function Crediti({ d, sel }) {
   const csNow = past ? creditSummary(d, today) : cs;
   const cTo = C && !C.budget ? (C.to < today ? C.to : today) : null;
   const csC = cTo ? creditSummary(d, cTo) : null;
+  // un saldo alla data di confronto è confrontabile solo se i dati dei crediti cominciano abbastanza prima
+  const covB = cTo ? Math.min(cov ?? 1, balanceCoverage(cTo, creditStart(d), AR_HORIZON)) : cov;
   const [q, setQ] = useState('');
   const [flt, setFlt] = useState('tutti');
   const [pay, setPay] = useState(null);
@@ -120,12 +123,12 @@ function Crediti({ d, sel }) {
       {past && <div className="note">Saldi al <b>{dateIt(asOf)}</b>, fine del periodo scelto{cTo ? `, confrontati con il ${dateIt(cTo)}` : ''}. Incassi e solleciti si registrano comunque a oggi ({dateIt(today)}).</div>}
       <div className="kpis">
         <Kpi label={<>Crediti aperti {est && <Est />}</>} value={mila(cs.open)} unit="mila €" raw={cs.open}
-          cmp={csC ? { cur: cs.open, value: csC.open, kind: 'flow', good: 'down', label: 'al ' + dateIt(cTo, 'dm'), cov } : undefined}
+          cmp={csC ? { cur: cs.open, value: csC.open, kind: 'flow', good: 'down', label: 'al ' + dateIt(cTo, 'dm'), cov: covB } : undefined}
           foot={`${cs.nOpen} partite al ${dateIt(asOf, 'dm')}`} title="Residuo delle fatture emesse e non incassate alla data (IVA compresa)" />
         <Kpi label={<>Scaduto {est && <Est />}</>} value={mila(cs.overdue)} unit="mila €" status={od30pct > 0.15 ? 'bad' : od30pct > 0.08 ? 'warn' : 'ok'}
           foot={`oltre 30 gg ${mila(cs.overdue30)} mila · ${pct(od30pct, 1)}`} title="Partite oltre la scadenza; il pallino guarda la quota scaduta da oltre 30 giorni (8% attenzione, 15% critico)" onClick={() => setFlt('scaduti')} />
         <Kpi label={<>DSO a ritroso {est && <Est />}</>} value={gg(cs.dso)} unit="giorni" status={cs.dso != null && cs.dsoContract != null ? (cs.dso - cs.dsoContract > 20 ? 'bad' : cs.dso - cs.dsoContract > 10 ? 'warn' : 'ok') : null}
-          cmp={csC?.dso != null ? { cur: cs.dso, value: csC.dso, kind: 'ratio', good: 'down', unit: 'gg', decimals: 0, label: 'al ' + dateIt(cTo, 'dm'), cov } : undefined}
+          cmp={csC?.dso != null ? { cur: cs.dso, value: csC.dso, kind: 'ratio', good: 'down', unit: 'gg', decimals: 0, label: 'al ' + dateIt(cTo, 'dm'), cov: covB } : undefined}
           foot={`contrattuale ${gg(cs.dsoContract)} gg`} title="Giorni di vendite lorde più recenti che servono a coprire i crediti aperti, mese per mese a ritroso dalla data. Il contrattuale è la media dei giorni di pagamento concordati, pesata sui ricavi dei 12 mesi." />
         <Kpi label="Fatture da emettere" value={mila(cs.uninvoiced.gross)} unit="mila €" foot={`${cs.uninvoiced.customers} clienti · si emettono il ${dateIt(endOfMonth(asOf), 'dm')}`} title="Consegne del mese non ancora fatturate alla data (IVA compresa)" />
         <Kpi label={<>Perdita attesa <Est title="Esposizione × probabilità di insolvenza della classe × perdita in caso di insolvenza (Parametri)." /></>} value={mila(cs.expectedLoss, 1)} unit="mila €" foot={`svalutazione suggerita ${mila(cs.writeDown, 1)} mila`} title="Svalutazione suggerita: scaduto 1–30 gg × 1%, 31–60 × 5%, 61–90 × 20%, oltre 90 × 50%" />
@@ -415,7 +418,9 @@ function Circolante({ d }) {
   const wc = useMemo(() => (cTo ? workingCapital(d, ctx, cTo) : null), [d, ctx, cTo]);
   const hist = useMemo(() => workingCapitalHistory(d, ctx, 12, asOf), [d, ctx, asOf]);
   if (!hasSales(d) && !(d.ingLots || []).length) return <NoData title="Nessun dato per il capitale circolante" />;
-  const cmp = (cur, val, good = 'down', kind = 'flow', unit) => (wc && val != null ? { cur, value: val, kind, good, unit, decimals: 0, label: 'al ' + dateIt(cTo, 'dm'), cov } : undefined);
+  // saldi confrontabili solo se crediti, lotti e debiti verso fornitori (dai lotti ricevuti) hanno dati abbastanza prima della data
+  const covB = cTo ? Math.min(cov ?? 1, balanceCoverage(cTo, creditStart(d), AR_HORIZON), balanceCoverage(cTo, stockStart(d), STOCK_HORIZON), balanceCoverage(cTo, stockStart(d, 'mp'), AR_HORIZON)) : cov;
+  const cmp = (cur, val, good = 'down', kind = 'flow', unit) => (wc && val != null ? { cur, value: val, kind, good, unit, decimals: 0, label: 'al ' + dateIt(cTo, 'dm'), cov: covB } : undefined);
   const parts = [
     { key: 'arI', label: 'Crediti fatturati', value: w.arInvoiced, color: SERIES[0], abs: eur(w.arInvoiced) },
     { key: 'arU', label: 'Da fatturare', value: w.arUninvoiced, color: SERIES[2], abs: eur(w.arUninvoiced) },
@@ -521,6 +526,7 @@ function Rimanenze({ d, sel }) {
   const mpRepl = valuationAt(d, at, 'sostituzione', { today });
   const cTo = C && !C.budget ? (C.to < today ? C.to : today) : null;
   const mpC = cTo ? valuationAt(d, cTo, mpM, { today }) : null;
+  const covB = cTo ? Math.min(cov ?? 1, balanceCoverage(cTo, stockStart(d, 'mp'), STOCK_HORIZON)) : cov;
   const fg = useMemo(() => finishedAt(d, ctx, at), [d, ctx, at]);
   const fgVal = fgM === 'pieno' ? fg.valueFull : fg.valueVar;
   const hist = useMemo(() => stockHistory(d, 12, ctx, at), [d, ctx, at]);
@@ -547,7 +553,7 @@ function Rimanenze({ d, sel }) {
       {past && <div className="note">Rimanenze al <b>{dateIt(at)}</b>, fine del periodo scelto. Lenti ed eccedenze guardano il piano e le giacenze di oggi.</div>}
       <div className="kpis">
         <Kpi label={`Materie prime · ${MP_METHODS.find(m => m.id === mpM).label}`} value={mila(mp.value, 1)} unit="mila €" raw={mp.value}
-          cmp={mpC ? { cur: mp.value, value: mpC.value, kind: 'flow', good: 'down', label: 'al ' + dateIt(cTo, 'dm'), cov } : undefined}
+          cmp={mpC ? { cur: mp.value, value: mpC.value, kind: 'flow', good: 'down', label: 'al ' + dateIt(cTo, 'dm'), cov: covB } : undefined}
           foot={mpM === 'fifo' ? `${nf(mp.t)} t · sostituzione ${mila(mpRepl.value, 1)} mila` : `FIFO ${mila(mpFifo.value, 1)} mila · Δ ${mila(mp.value - mpFifo.value, 1)}`} title={`${MP_METHODS.find(m => m.id === mpM).title}, al ${dateIt(at)}`} />
         <Kpi label={`Prodotto finito · costo ${fgM}`} value={mila(fgVal, 1)} unit="mila €" foot={`${nf(fg.t)} t in ${sum(fg.byProduct, r => r.lots)} lotti`} title={`Lotti prodotti e non ancora spediti al ${dateIt(at)} (esclusi i bloccati), al costo effettivo del lotto`} />
         <Kpi label="Giorni di magazzino MP" value={gg(dio)} unit="giorni" foot={`rotazione ${dio ? nf(365 / dio, 1) : '—'} volte l’anno · MP + PF ${gg(dioTotal)} gg`}

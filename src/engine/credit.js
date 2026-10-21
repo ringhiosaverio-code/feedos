@@ -107,6 +107,15 @@ export function riskScore({ exposure: ex = 0, overdue60 = 0, avgDelay = 0, delay
   const score = sum(parts, p => p.points);
   return { score, cls: score < 20 ? 'A' : score < 40 ? 'B' : score < 60 ? 'C' : 'D', parts };
 }
+/** Primo giorno dei dati dei crediti: la prima fattura o, se viene prima, la prima consegna (da cui si stimano le fatture). */
+export function creditStart(d) {
+  let s = null;
+  for (const x of [...(d.invoices || EMPTY), ...(d.shipments || EMPTY)]) if (x.date && (!s || x.date < s)) s = x.date;
+  return s;
+}
+/** Giorni di dati che servono prima di una data perché i suoi crediti aperti siano completi (termini di pagamento e ritardi). */
+export const AR_HORIZON = 90;
+
 /** Perdita attesa = esposizione × PD della classe × LGD. */
 export function expectedLoss(ex, cls, d) { return n0(ex) * (pdOf(d)[cls] ?? PD_DEFAULT.D) / 100 * lgdOf(d) / 100; }
 

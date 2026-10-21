@@ -65,7 +65,8 @@ function Sintesi() {
   const dir = useDir(d);
   const { ctx, today, cur, cmp, P, C } = dir;
   const y = +today.slice(0, 4);
-  const series = useMemo(() => monthlySeries(d, ctx, lastMonths(today, 13)), [d, ctx, today]);
+  // l'andamento parte dal primo mese con i dati completi: un mese iniziato a metà ha i costi fissi di tutto il mese e poche vendite
+  const series = useMemo(() => { const s = monthlySeries(d, ctx, lastMonths(today, 13)), k = s.findIndex(m => m.open || (m.tonnes > 0 && !m.partial)); return k > 0 ? s.slice(k) : s; }, [d, ctx, today]);
   const L = useMemo(() => (hasBudget(d, y) && dir.hasData ? landing(d, ctx, y) : null), [d, ctx, y, dir.hasData]);
   const br = useMemo(() => (C && dir.hasData ? bridgeOf(d, ctx, C, P, 'productId', 'mc2') : null), [d, ctx, C, P, dir.hasData]);
   const sig = signals(d).filter(s => s.area === 'direzione' || s.area === 'economia');
@@ -121,7 +122,7 @@ function Sintesi() {
         {C && <button className="linkish small" onClick={() => go('direzione', 'ponte')}>Scostamenti <LuArrowRight /></button>}
       </div>
       <div className="split">
-        <Panel title="Margine di contribuzione ed EBIT per mese" sub="Ultimi 13 mesi, migliaia di euro · il mese in corso è tratteggiato · mesi chiusi con i numeri congelati">
+        <Panel title="Margine di contribuzione ed EBIT per mese" sub={`${series.length < 13 ? `Ultimi ${series.length} mesi (dal primo completo di dati)` : 'Ultimi 13 mesi'}, migliaia di euro · il mese in corso è tratteggiato · mesi chiusi con i numeri congelati`}>
           <MonthBars cols={cols} height={250} unit="k€" tip={tip} ariaLabel="MdC II ed EBIT per mese"
             legend={[{ label: 'MdC II', color: 'var(--s1)' }, { label: 'EBIT', color: 'var(--s3)' }, { label: 'In corso', color: 'var(--ink-2)', hatch: true }]} />
         </Panel>

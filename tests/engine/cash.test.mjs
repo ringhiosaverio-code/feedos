@@ -3,9 +3,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { demoData } from '../../src/data/demo/index.js';
-import { makeCtx, inventoryValuation } from '../../src/engine/actuals.js';
+import { makeCtx, inventoryValuation, balanceCoverage } from '../../src/engine/actuals.js';
 import { cashForecast, cashLowPoint, payables, supplierTerms, dueDateFor, workingCapital, workingCapitalHistory, CASH_IN, CASH_OUT, ledger } from '../../src/engine/cash.js';
-import { creditSummary } from '../../src/engine/credit.js';
+import { creditSummary, creditStart, AR_HORIZON } from '../../src/engine/credit.js';
+import { stockStart, STOCK_HORIZON } from '../../src/engine/inventory.js';
 import { addDays, daysBetween, mondayOf, sum } from '../../src/core/util.js';
 
 const today = '2026-10-16';
@@ -135,4 +136,22 @@ test('capitale circolante: identità e componenti', () => {
   assert.equal(h.length, 12); assert.equal(h[11].date, today);
   close(h[11].nwc, w.nwc, 1, 'ultimo mese = oggi');
   for (const x of h) close(x.nwc, x.ar + x.mp + x.fg - x.ap, 1e-6, x.month);
+});
+
+test('saldi alla data: confrontabili solo se i dati cominciano abbastanza prima', () => {
+  assert.equal(balanceCoverage('2026-04-01', '2026-01-01', 90), 1, '90 giorni di dati');
+  assert.equal(balanceCoverage('2026-01-31', '2026-01-01', 90), 30 / 90);
+  assert.equal(balanceCoverage('2025-12-31', '2026-01-01', 90), 0, 'data prima dei dati');
+  assert.equal(balanceCoverage('2026-01-31', null, 90), 0, 'nessun dato');
+  assert.equal(balanceCoverage(null, '2026-01-01', 90), null);
+  // demo: consegne e fatture da fine ottobre 2025, lotti di materie prime da inizio ottobre
+  const ar = creditStart(D), mp = stockStart(D, 'mp'), all = stockStart(D);
+  assert.ok(ar && mp && all && mp <= all, `${ar} ${mp} ${all}`);
+  assert.equal(all, stockStart(D, 'pf') > mp ? stockStart(D, 'pf') : mp, 'servono entrambi i magazzini');
+  const yearAgo = addDays(today, -365);
+  assert.ok(balanceCoverage(yearAgo, ar, AR_HORIZON) < 0.9, 'un anno fa i crediti non erano ancora tutti registrati');
+  assert.ok(balanceCoverage(yearAgo, all, STOCK_HORIZON) < 0.9);
+  const monthAgo = addDays(today, -30);
+  assert.equal(balanceCoverage(monthAgo, ar, AR_HORIZON), 1);
+  assert.equal(balanceCoverage(monthAgo, all, STOCK_HORIZON), 1);
 });

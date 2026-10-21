@@ -59,6 +59,15 @@ function lotStockAt(l, date, M) {
   return t > 1e-9 ? t : 0;
 }
 
+/** Primo giorno con lotti registrati: 'mp' materie prime, 'pf' prodotto finito, 'all' il più tardo dei due (servono entrambi). */
+export function stockStart(d, kind = 'all') {
+  const first = a => { let s = null; for (const l of a || EMPTY) if (l.date && (!s || l.date < s)) s = l.date; return s; };
+  const mp = first(d.ingLots), pf = first(d.lots);
+  return kind === 'mp' ? mp : kind === 'pf' ? pf : mp && pf ? (mp > pf ? mp : pf) : mp || pf;
+}
+/** Giorni di dati che servono prima di una data perché il suo magazzino sia completo (permanenza dei lotti più lenti). */
+export const STOCK_HORIZON = 60;
+
 /**
  * Valore delle materie prime a una data passata (o di oggi).
  * method 'fifo' = giacenza dei lotti × prezzo del lotto · 'cmp' = giacenza × prezzo medio ponderato degli arrivi dei 12 mesi

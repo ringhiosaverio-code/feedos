@@ -19,11 +19,13 @@ Ogni numero ha una sola definizione e si ritrova uguale in tutte le pagine, nei 
 - **Scostamenti** prezzo–volume–mix e cascata dal periodo di confronto o dal budget.
 - **Budget** per mese e centro con versioni, revisioni e stima di chiusura dell'anno.
 - **Chiusura del mese** con lista di controllo bloccante (tra cui la qualità dei dati), numeri congelati e commenti; **report CdA** stampabile, in Markdown e CSV, con le sezioni di tutte le aree.
+- L'andamento mensile di margine ed EBIT parte dal primo mese con i dati completi: un mese iniziato a metà non mostra più una perdita che è solo l'effetto dei costi fissi del mese intero.
 
 **Finanza**
 - **Crediti e fidi**: scadenzario, anzianità, DSO, classi di rischio, perdita attesa, clienti oltre il fido; un'offerta oltre il fido richiede chi autorizza l'eccezione.
 - **Cassa a 13 settimane**: incassi attesi, pagamenti ai fornitori e agli agenti, rate, linee di credito.
 - **Capitale circolante** e **rimanenze** valorizzate al FIFO, al costo medio e a sostituzione, classi ABC/XYZ, materiali lenti ed eccedenze con il costo di mantenimento.
+- I **saldi alla data** (crediti, DSO, capitale circolante, rimanenze) si confrontano solo se i dati cominciano abbastanza prima della data di confronto (90 giorni per crediti e debiti, 60 per il magazzino); altrimenti il confronto è «non confrontabile» invece di una variazione inventata.
 
 **Economia**
 - **Redditività netta per cliente**: margine dopo logistica, ritardi d'incasso, reclami e visite; quadranti (difendere, rinegoziare, sviluppare, ristrutturare), curva della balena, prezzo necessario per arrivare all'obiettivo.
