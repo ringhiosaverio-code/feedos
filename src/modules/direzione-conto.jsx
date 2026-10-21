@@ -61,11 +61,14 @@ export function useDir(d) {
     if (per.C.budget) { const bt = budgetTotals(d, per.P, activeVersion(d, year)); return bt ? { ...bt.pnl, coverage: bt.coverage } : null; }
     return pnlFor(d, ctx, per.C);
   }, [d, ctx, per.P, per.C, year]);
-  // budget: quota del periodo coperta da un budget (un periodo a cavallo di due anni può averne solo una parte)
-  const cov = !per.C ? null : per.C.budget ? (cmp ? cmp.coverage : 0) : effectiveCoverage(d, ctx, per.C);
+  // copertura dei dati: un confronto è omogeneo se entrambi i periodi hanno dati per almeno il 90% dei giorni
+  // (budget: quota del periodo coperta da un budget, che è annuale; periodo scelto: es. il primo mese, parziale)
+  const covP = effectiveCoverage(d, ctx, per.P);
+  const covC = !per.C ? null : per.C.budget ? (cmp ? cmp.coverage : 0) : effectiveCoverage(d, ctx, per.C);
+  const cov = covC == null ? null : Math.min(covC, covP ?? 1);
   const cmpLabel = !per.C ? null : per.C.budget ? 'budget' : per.C.short;
   const hasData = !!cur && (cur.tonnes > 0 || Math.abs(cur.revenueNet) > 0);
-  return { ...per, ctx, year, cur, cmp, cov, cmpLabel, hasData };
+  return { ...per, ctx, year, cur, cmp, cov, covP, covC, cmpLabel, hasData };
 }
 /** Proprietà cmp di Kpi per un valore del conto. */
 export function kc(dir, cur, cmp, { kind = 'flow', good = 'up', unit = '', decimals = 1, scale = 1 } = {}) {
@@ -264,7 +267,7 @@ export function Conto({ d }) {
         actions={<div className="dz-head-chips">
           {cur.frozen ? <Chip kind="accent" icon={LuSnowflake} title={`Numeri congelati alla chiusura del mese${cur.closedAt ? ' (' + cur.closedAt.slice(0, 10).split('-').reverse().join('/') + ')' : ''}`}>congelato</Chip> : P.open ? <Chip kind="outline">in corso</Chip> : <Chip kind="outline">provvisorio</Chip>}
           {cur.estimatedMonths?.length > 0 && <Chip kind="maize" icon={LuTriangleAlert} title={`Costi fissi da budget o media per ${cur.estimatedMonths.map(m => monthLabel(m, false)).join(', ')}`}>fissi stimati</Chip>}
-          {dir.cov != null && dir.cov < 0.9 && <Chip kind="warn" title={`Dati per il ${pct(dir.cov, 0)} del periodo di confronto`}>non confrontabile</Chip>}
+          {dir.cov != null && dir.cov < 0.9 && <Chip kind="warn" title={dir.covP != null && dir.covP < 0.9 ? `Il periodo scelto ha dati solo per il ${pct(dir.covP, 0)} dei giorni (inizio dei dati)` : `Dati per il ${pct(dir.covC, 0)} del periodo di confronto`}>non confrontabile</Chip>}
           <Seg label="Dettaglio per" value={dim} onChange={v => setDim(v)} options={DIMS} />
         </div>}>
         <Table rows={rows} cols={cols} pageSize={500} rowKey={r => r.id} exportName="conto-economico" caption="Conto economico"

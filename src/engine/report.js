@@ -26,6 +26,14 @@ export const SECTION_TITLES = {
   kpi: 'Indicatori', redditivita: 'Redditività', commerciale: 'Commerciale', finanza: 'Finanza', acquisti: 'Acquisti', produzione: 'Produzione', dati: 'Qualità dei dati',
 };
 
+/** Copertura dei dati del confronto: il minimo tra periodo e confronto (budget: quota del periodo coperta dal budget). */
+function pairCoverage(d, ctx, P, C) {
+  if (!C) return 1;
+  const cP = effectiveCoverage(d, ctx, P) ?? 1;
+  const cC = C.budget ? (budgetTotals(d, P, activeVersion(d, +P.to.slice(0, 4)))?.coverage ?? 0) : effectiveCoverage(d, ctx, C) ?? 1;
+  return Math.min(cP, cC);
+}
+
 const vsText = C => (!C ? 'senza confronto' : C.budget ? 'sul budget' : C.compare === 'ap' ? 'sull’anno prima'
   : C.months?.length === 1 && C.from?.slice(8) === '01' && C.to === endOfMonth(C.to) ? 'sul mese prima' : 'sul periodo prima');
 
@@ -49,7 +57,7 @@ const AREA_LABEL = { oggi: 'Oggi', direzione: 'Direzione', finanza: 'Finanza', g
 
 function sintesi(d, ctx, P, C, cur, cmp, signals) {
   const by = cur.by, cb = cmp?.by;
-  const cov = C && !C.budget ? effectiveCoverage(d, ctx, C) : 1;
+  const cov = pairCoverage(d, ctx, P, C);
   const k = (label, value, unit, decimals, cv, kind = 'flow', good = 'up', scale = 1) => ({ label, value, unit, decimals, cmp: cv == null ? null : { value: cv, kind, good, scale, cov, label: C?.short || (C?.budget ? 'budget' : '') } });
   const year = +P.to.slice(0, 4);
   const kpis = [
@@ -66,7 +74,7 @@ function sintesi(d, ctx, P, C, cur, cmp, signals) {
   }
   const br = bridgeFor(d, ctx, P, C);
   if (br && cov >= 0.9) narr.push(...narrative(br, d.settings?.finance?.materiality, { vs: vsText(C) }));
-  else if (C && cov < 0.9) narr.push('Il periodo di confronto non ha dati completi: gli scostamenti non sono confrontabili.');
+  else if (C && cov < 0.9) narr.push('Uno dei due periodi non ha dati completi (per esempio il primo mese, parziale): gli scostamenti non sono confrontabili.');
   // decisioni principali: segnali già calcolati (opts.signals) o i fornitori dei pacchetti; per gravità e impatto
   let sig = signals;
   if (!sig) { sig = []; for (const p of SIGNAL_PROVIDERS) { try { for (const s of p(d, ctx) || EMPTY) sig.push(s); } catch { /* fornitore isolato */ } } }
@@ -91,12 +99,12 @@ function ponte(d, ctx, P, C) {
   if (!C) return null;
   const br = bridgeFor(d, ctx, P, C);
   if (!br) return null;
-  const cov = C.budget ? 1 : effectiveCoverage(d, ctx, C);
+  const cov = pairCoverage(d, ctx, P, C);
   const rows = [{ voce: C.budget ? 'Budget' : `Partenza (${C.short || 'confronto'})`, value: br.start, kind: 'total' }, ...br.steps.filter(s => Math.abs(s.value) >= 0.5).map(s => ({ voce: s.label, value: s.value, kind: 'step' })), { voce: `Arrivo (${P.short || 'periodo'})`, value: br.end, kind: 'total' }];
   return { id: 'ponte', title: SECTION_TITLES.ponte, order: 25, kpis: [
     { label: 'Margine di partenza', value: br.start, unit: '€', decimals: 0 }, { label: 'Margine di arrivo', value: br.end, unit: '€', decimals: 0 }, { label: 'Differenza', value: br.end - br.start, unit: '€', decimals: 0 },
   ], table: { cols: [{ key: 'voce', label: 'Effetto', fmt: 'text' }, { key: 'value', label: '€', align: 'r', fmt: 'eur' }], rows },
-  narrative: cov < 0.9 ? ['Periodo di confronto con dati incompleti: non confrontabile.'] : narrative(br, d.settings?.finance?.materiality, { vs: vsText(C) }), steps: br.steps, start: br.start, end: br.end, check: br.check };
+  narrative: cov < 0.9 ? ['Uno dei due periodi ha dati incompleti: non confrontabile.'] : narrative(br, d.settings?.finance?.materiality, { vs: vsText(C) }), steps: br.steps, start: br.start, end: br.end, check: br.check };
 }
 
 function budgetSec(d, ctx, P) {

@@ -115,7 +115,7 @@ function Sintesi() {
           foot={ct ? `chiuso fino a ${monthLabel(ct, false)}` : 'nessun mese chiuso'} />
       </div>
       <div className="note dz-oneline">
-        <p>{!C ? 'Scegli un confronto nella barra del periodo per leggere gli scostamenti del margine.' : dir.cov != null && dir.cov < 0.9 ? 'Il periodo di confronto non ha dati completi: gli scostamenti non sono confrontabili.' : narr.join(' ')}</p>
+        <p>{!C ? 'Scegli un confronto nella barra del periodo per leggere gli scostamenti del margine.' : dir.cov != null && dir.cov < 0.9 ? (dir.covP != null && dir.covP < 0.9 ? 'Il periodo scelto ha dati solo per una parte dei giorni (inizio dei dati): gli scostamenti non sono confrontabili.' : 'Il periodo di confronto non ha dati completi: gli scostamenti non sono confrontabili.') : narr.join(' ')}</p>
         {C && <button className="linkish small" onClick={() => go('direzione', 'ponte')}>Scostamenti <LuArrowRight /></button>}
       </div>
       <div className="split">
@@ -164,6 +164,7 @@ function Ponte() {
   const PA = a === 'bar' ? (C || comparePeriod(PB, 'prec', today)) : a === 'prec' || a === 'ap' ? comparePeriod(PB, a, today) : a === 'budget' ? { ...PB, budget: true, compare: 'budget' } : wholeP(a, today);
   const br = useMemo(() => bridgeOf(d, ctx, PA, PB, dim, level), [d, ctx, PA?.key, PA?.budget, PB.key, dim, level]);
   const covA = PA.budget ? (budgetTotals(d, PB, activeVersion(d, +PB.to.slice(0, 4)))?.coverage ?? 0) : effectiveCoverage(d, ctx, PA);
+  const covB = effectiveCoverage(d, ctx, PB) ?? 1; // es. il primo mese, con consegne solo da metà mese
   const drillBr = useMemo(() => {
     if (!drill || !br || PA.budget || br.by !== 'productId') return null;
     const f = x => x.productId === drill;
@@ -213,7 +214,7 @@ function Ponte() {
           <div className="dz-periods">
             <div className="dz-per"><span className="eyebrow">Periodo B</span>
               <Select ariaLabel="Periodo B" value={b} onChange={v => { setB(v); setDrill(null); }} options={[{ id: 'bar', label: `Periodo della barra · ${P.label}` }, ...months.map(m => ({ id: m, label: monthLabel(m, false) + (m === tm ? ' (in corso)' : '') }))]} />
-              <span className="small muted">{PB.label}{PB.open ? ' · in corso' : ''}</span>
+              <span className="small muted">{PB.label}{PB.open ? ' · in corso' : ''}{covB < 0.9 && <> · <Chip kind="warn" title={`Dati per il ${pct(covB, 0)} del periodo`}>non confrontabile</Chip></>}</span>
             </div>
             <div className="dz-per"><span className="eyebrow">Periodo A (riferimento)</span>
               <Select ariaLabel="Periodo A" value={a} onChange={v => { setA(v); setDrill(null); }} options={[{ id: 'bar', label: C ? `Confronto della barra · ${C.budget ? 'budget' : C.short}` : 'Confronto della barra (periodo prima)' }, { id: 'prec', label: 'Periodo precedente' }, { id: 'ap', label: 'Stesso periodo dell’anno prima' }, { id: 'budget', label: 'Budget dello stesso periodo' }, ...months.map(m => ({ id: m, label: monthLabel(m, false) }))]} />
@@ -242,6 +243,7 @@ function Ponte() {
         </Panel>
         <Panel title="Lettura" sub={`Soglia di materialità ${kEur(Math.max(mat.abs ?? 5000, (mat.pct ?? 2) / 100 * Math.abs(res.start)), 1)} (${nf(mat.pct ?? 2)}% del margine di A, minimo ${kEur(mat.abs ?? 5000, 0)})`}>
           <div className="dz-read">
+            {covB < 0.9 && <div className="note warn">Il periodo B ha dati solo per il {pct(covB, 0)} dei giorni (per esempio il primo mese, con consegne da metà mese): il confronto non è omogeneo.</div>}
             {covA < 0.9 && <div className="note warn">{PA.budget ? `Il budget copre solo il ${pct(covA, 0)} del periodo (un budget per anno): il confronto non è omogeneo.` : `Il periodo A ha dati solo per il ${pct(covA, 0)} dei giorni (per esempio il primo mese, parziale): il confronto non è omogeneo.`}</div>}
             {narrative(res, mat, { vs: vsText(PA, PB) }).map((t, i) => <p key={i}>{t}</p>)}
             <Kv items={[
