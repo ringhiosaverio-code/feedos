@@ -1,8 +1,21 @@
 /* FeedOS 16 · scambio di file: scaricamento, CSV all'italiana (punto e virgola, virgola decimale), lettura file. */
+import { toast } from './store.js';
 
-/** Scarica un contenuto come file (funziona offline, senza server). */
+/** Scarica un contenuto come file (funziona offline, senza server). Dentro una pagina ospite che offre il salvataggio
+ * (visualizzatore di claude.ai, permesso «downloads») il file passa da lì, con la conferma di chi guarda. */
 export function download(filename, content, mime = 'text/plain;charset=utf-8') {
   const blob = content instanceof Blob ? content : new Blob([content], { type: mime });
+  const host = typeof window !== 'undefined' ? window.claude : null;
+  if (!host?.use) { saveByLink(filename, blob); return; }
+  host.use('downloads').then(dl => {
+    if (!dl) { saveByLink(filename, blob); return; }
+    return dl.save({ filename, data: blob }).catch(e => {
+      if (e?.code === 'declined' || e?.code === 'rate_limited') return;
+      toast('Questa vista non permette di scaricare file: apri FeedOS dal file HTML per esportare', 'err');
+    });
+  }, () => saveByLink(filename, blob));
+}
+function saveByLink(filename, blob) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url; a.download = filename; a.rel = 'noopener';
