@@ -5,7 +5,7 @@
  * Contratto della fondazione: cashLowPoint(d, ctx) → {week, closing, headroom, …} | null. */
 import { energyPriceAt } from './actuals.js';
 import { requirements } from './mrp.js';
-import { valuationAt, finishedAt, cogs12, todayOf } from './inventory.js';
+import { valuationAt, finishedAt, costBase12, coveredDays, todayOf } from './inventory.js';
 import { addDays, addMonths, endOfMonth, daysBetween, daysInMonth, mondayOf, monthsIn, quarterOf, sum, byId, norm } from '../core/util.js';
 
 export { todayOf };
@@ -324,20 +324,24 @@ export function payables(d, today = todayOf(d)) {
     return out;
   });
 }
-/** Acquisti di materie prime dei 365 giorni alla data, lordi d'IVA (base del DPO). */
+/** Acquisti di materie prime dei 365 giorni alla data, lordi d'IVA (base del DPO), e i giorni con dati della finestra. → {sum, days} */
 function purchases12(d, today) {
   const pv = purchaseVatOf(d), from = addDays(today, -365);
-  let s = 0;
-  for (const l of d.ingLots || EMPTY) if (l.status !== 'bloccato' && l.date > from && l.date <= today) s += n0(l.tonnes) * n0(l.price) * (1 + pv / 100);
-  return s;
+  let s = 0, first = null;
+  for (const l of d.ingLots || EMPTY) {
+    if (l.status === 'bloccato' || !l.date || l.date > today) continue;
+    if (!first || l.date < first) first = l.date;
+    if (l.date > from) s += n0(l.tonnes) * n0(l.price) * (1 + pv / 100);
+  }
+  return { sum: s, days: coveredDays(first, addDays(from, 1), today) };
 }
 
 /* ---------- capitale circolante ---------- */
 /**
  * Capitale circolante gestionale alla data.
  * crediti = partite aperte + consegne da fatturare (lordi) · MP al FIFO (con quelle in quarantena) · PF al costo pieno ·
- * debiti = fatture fornitori stimate non ancora scadute. DSO a ritroso; DIO = (MP + PF) / (costo del venduto 12 mesi / 365);
- * DPO = debiti / acquisti lordi 12 mesi × 365; ciclo di cassa = DSO + DIO − DPO; costo annuo = capitale × costo del denaro.
+ * debiti = fatture fornitori stimate non ancora scadute. DSO a ritroso; DIO = (MP + PF) / (costo del venduto 12 mesi / giorni);
+ * DPO = debiti / acquisti lordi 12 mesi × giorni; giorni = 365, o quelli con dati se l'archivio ha meno di un anno; ciclo di cassa = DSO + DIO − DPO; costo annuo = capitale × costo del denaro.
  */
 export function workingCapital(d, ctx, today) {
   const T = today || ctx?.today || todayOf(d);
@@ -348,27 +352,30 @@ export function workingCapital(d, ctx, today) {
   const ap = sum(payables(d, T).filter(x => x.kind === 'lotto' && !x.paid), x => x.amount);
   const arInvoiced = L.totals.open, arUninvoiced = L.uninvoiced.gross, ar = arInvoiced + arUninvoiced;
   const dso = dsoCountBack(arInvoiced, monthlyGross(d, T), T);
-  const c12 = cogs12(d, ctx, T), p12 = purchases12(d, T);
-  const dio = c12 > 0 ? (mp + fg) / (c12 / 365) : null;
-  const dpo = p12 > 0 ? ap / p12 * 365 : null;
+  // medie giornaliere sui giorni con dati della finestra di 12 mesi (365 con un anno di storico)
+  const cb = costBase12(d, ctx, T), c12 = cb.cogs, pb = purchases12(d, T), p12 = pb.sum;
+  const dio = c12 > 0 ? (mp + fg) / (c12 / cb.days) : null;
+  const dpo = p12 > 0 ? ap / p12 * pb.days : null;
   const nwc = ar + mp + fg - ap, rate = rateOf(d);
-  const mg = monthlyGross(d, T, 13);
-  const gross12 = sum(mg.slice(1), m => m.gross); // 12 mesi chiusi
+  const mg = monthlyGross(d, T, 13).slice(1); // 12 mesi chiusi
+  const gross12 = sum(mg, m => m.gross);
+  const firstSale = mg.reduce((k, m, i) => (m.gross > 0 ? i : k), -1); // il mese chiuso più vecchio con vendite
+  const gDays = firstSale >= 0 ? sum(mg.slice(0, firstSale + 1), m => m.days) : 365;
   return {
     today: T, ar, arInvoiced, arUninvoiced, mp, mpQuarantine: mpV.quarantine, fg, fgVar: fgV.valueVar, ap, nwc,
     dso, dio, dpo, ccc: dso != null && dio != null && dpo != null ? dso + dio - dpo : null,
-    costPerYear: nwc * rate / 100, rate, cogs12: c12, purchases12: p12, gross12,
+    costPerYear: nwc * rate / 100, rate, cogs12: c12, purchases12: p12, gross12, days: { dio: cb.days, dpo: pb.days, dso: gDays },
     // quanto vale un giorno di ciascun indice (leve)
-    perDay: { dso: gross12 / 365, dio: c12 / 365, dpo: p12 / 365 },
+    perDay: { dso: gross12 / gDays, dio: c12 / cb.days, dpo: p12 / pb.days },
     estimated: L.hasEstimated,
   };
 }
 
-/** Capitale circolante a fine mese degli ultimi n mesi (il mese in corso a oggi): [{month, date, ar, mp, fg, ap, nwc}]. */
-export function workingCapitalHistory(d, ctx, months = 12) {
-  const today = ctx?.today || todayOf(d);
-  return monthsIn(addMonths(today.slice(0, 7), -(months - 1)), today.slice(0, 7)).map(m => {
-    const date = endOfMonth(m) < today ? endOfMonth(m) : today;
+/** Capitale circolante a fine mese degli n mesi fino a `to` (di base oggi; l'ultimo mese alla data): [{month, date, ar, mp, fg, ap, nwc}]. */
+export function workingCapitalHistory(d, ctx, months = 12, to = null) {
+  const today = ctx?.today || todayOf(d), end = to && to < today ? to : today;
+  return monthsIn(addMonths(end.slice(0, 7), -(months - 1)), end.slice(0, 7)).map(m => {
+    const date = endOfMonth(m) < end ? endOfMonth(m) : end;
     const L = ledger(d, date);
     const mpV = valuationAt(d, date, 'fifo', { today });
     const fg = finishedAt(d, ctx, date).valueFull;

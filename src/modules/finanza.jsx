@@ -12,8 +12,7 @@ import { ctxOf, idx, appToday } from '../core/derived.js';
 import { nf, sum, dateIt, daysBetween, addDays, endOfMonth, monthLabel, pct } from '../core/util.js';
 import { creditSummary, ledger, invoicesOf, registerPaymentOps, allocatePaymentOps, dunningOps, AGING_BUCKETS, pdOf, lgdOf, PD_DEFAULT, LGD_DEFAULT, customerTerms } from '../engine/credit.js';
 import { workingCapital, workingCapitalHistory, payables, finOf, vatOf, purchaseVatOf, rateOf } from '../engine/cash.js';
-import { inventorySummary, valuationAt, finishedAt, stockHistory, abcXyz, slowMovers, carryRate } from '../engine/inventory.js';
-import { inventoryValuation } from '../engine/actuals.js';
+import { inventorySummary, valuationAt, finishedAt, stockHistory, abcXyz, slowMovers, carryRate, costBase12 } from '../engine/inventory.js';
 import { PageHead, Panel, Btn, Table, Chip, Kpi, Field, Select, NumInput, Empty, SearchBox, filterRows, Seg, Kv, Bullet } from '../ui/ui.jsx';
 import { LineChart, StackBar, Legend, SERIES } from '../ui/charts.jsx';
 import { usePeriod } from '../ui/period.jsx';
@@ -80,7 +79,10 @@ function Crediti({ d, sel }) {
   const ctx = ctxOf(d), today = ctx.today, I = idx(d);
   const { P, C, cov } = usePeriod(d);
   const role = usePrefs(p => p.role), agentId = usePrefs(p => p.agentId);
-  const cs = creditSummary(d, today);
+  // saldi alla fine del periodo scelto (a oggi se il periodo è in corso); incassi e solleciti si registrano sempre a oggi
+  const asOf = P.to < today ? P.to : today, past = asOf < today;
+  const cs = creditSummary(d, asOf);
+  const csNow = past ? creditSummary(d, today) : cs;
   const cTo = C && !C.budget ? (C.to < today ? C.to : today) : null;
   const csC = cTo ? creditSummary(d, cTo) : null;
   const [q, setQ] = useState('');
@@ -115,22 +117,23 @@ function Crediti({ d, sel }) {
       {est && <div className="note maize">{cs.source === 'stimato'
         ? <>Fatture <b>stimate dalle consegne</b>: una per cliente e mese, a fine mese, con i termini del cliente; le scadenze passate si considerano incassate. Importa fatture e incassi da Dati › Importa per scaduto, ritardi e rischio reali.</>
         : <>Una parte dei crediti ({eur(cs.estimatedOpen)}) viene da fatture stimate dalle consegne non ancora coperte da fatture registrate.</>}</div>}
+      {past && <div className="note">Saldi al <b>{dateIt(asOf)}</b>, fine del periodo scelto{cTo ? `, confrontati con il ${dateIt(cTo)}` : ''}. Incassi e solleciti si registrano comunque a oggi ({dateIt(today)}).</div>}
       <div className="kpis">
         <Kpi label={<>Crediti aperti {est && <Est />}</>} value={mila(cs.open)} unit="mila €" raw={cs.open}
           cmp={csC ? { cur: cs.open, value: csC.open, kind: 'flow', good: 'down', label: 'al ' + dateIt(cTo, 'dm'), cov } : undefined}
-          foot={`${cs.nOpen} partite`} title="Residuo delle fatture emesse e non incassate alla data (IVA compresa)" />
+          foot={`${cs.nOpen} partite al ${dateIt(asOf, 'dm')}`} title="Residuo delle fatture emesse e non incassate alla data (IVA compresa)" />
         <Kpi label={<>Scaduto {est && <Est />}</>} value={mila(cs.overdue)} unit="mila €" status={od30pct > 0.15 ? 'bad' : od30pct > 0.08 ? 'warn' : 'ok'}
           foot={`oltre 30 gg ${mila(cs.overdue30)} mila · ${pct(od30pct, 1)}`} title="Partite oltre la scadenza; il pallino guarda la quota scaduta da oltre 30 giorni (8% attenzione, 15% critico)" onClick={() => setFlt('scaduti')} />
         <Kpi label={<>DSO a ritroso {est && <Est />}</>} value={gg(cs.dso)} unit="giorni" status={cs.dso != null && cs.dsoContract != null ? (cs.dso - cs.dsoContract > 20 ? 'bad' : cs.dso - cs.dsoContract > 10 ? 'warn' : 'ok') : null}
           cmp={csC?.dso != null ? { cur: cs.dso, value: csC.dso, kind: 'ratio', good: 'down', unit: 'gg', decimals: 0, label: 'al ' + dateIt(cTo, 'dm'), cov } : undefined}
-          foot={`contrattuale ${gg(cs.dsoContract)} gg`} title="Giorni di vendite lorde più recenti che servono a coprire i crediti aperti, mese per mese a ritroso da oggi. Il contrattuale è la media dei giorni di pagamento concordati, pesata sui ricavi dei 12 mesi." />
-        <Kpi label="Fatture da emettere" value={mila(cs.uninvoiced.gross)} unit="mila €" foot={`${cs.uninvoiced.customers} clienti · si emettono il ${dateIt(endOfMonth(today), 'dm')}`} title="Consegne del mese in corso non ancora fatturate (IVA compresa)" />
+          foot={`contrattuale ${gg(cs.dsoContract)} gg`} title="Giorni di vendite lorde più recenti che servono a coprire i crediti aperti, mese per mese a ritroso dalla data. Il contrattuale è la media dei giorni di pagamento concordati, pesata sui ricavi dei 12 mesi." />
+        <Kpi label="Fatture da emettere" value={mila(cs.uninvoiced.gross)} unit="mila €" foot={`${cs.uninvoiced.customers} clienti · si emettono il ${dateIt(endOfMonth(asOf), 'dm')}`} title="Consegne del mese non ancora fatturate alla data (IVA compresa)" />
         <Kpi label={<>Perdita attesa <Est title="Esposizione × probabilità di insolvenza della classe × perdita in caso di insolvenza (Parametri)." /></>} value={mila(cs.expectedLoss, 1)} unit="mila €" foot={`svalutazione suggerita ${mila(cs.writeDown, 1)} mila`} title="Svalutazione suggerita: scaduto 1–30 gg × 1%, 31–60 × 5%, 61–90 × 20%, oltre 90 × 50%" />
         <Kpi label="Clienti oltre il fido" value={cs.overLimit} status={cs.overLimit ? 'bad' : cs.nearLimit ? 'warn' : 'ok'} foot={`${cs.nearLimit} sopra il 90%`} onClick={() => setFlt('fido')} title="Esposizione = crediti aperti + consegne da fatturare + offerte accettate da consegnare, tutto IVA compresa" />
       </div>
 
       <div className="split">
-        <Panel title="Anzianità dei crediti" sub={`${eur(ag.total)} al ${dateIt(today)} · a scadere e scaduto per fascia di giorni`} id="fin-aging">
+        <Panel title="Anzianità dei crediti" sub={`${eur(ag.total)} al ${dateIt(asOf)} · a scadere e scaduto per fascia di giorni`} id="fin-aging">
           <StackBar showLabels={false} height={26} ariaLabel="Composizione dei crediti per anzianità"
             parts={AGING_BUCKETS.slice(0, 3).reverse().concat(AGING_BUCKETS.slice(3)).map(b => ({ key: b.group + b.id, label: (b.group === 'scaduto' ? 'Scaduto ' : 'A scadere ') + b.short + ' gg', value: ag[b.group][b.id], color: agingColor(b), abs: eur(ag[b.group][b.id]) }))} />
           <div className="fin-aging">
@@ -164,7 +167,7 @@ function Crediti({ d, sel }) {
         </Panel>
       </div>
 
-      <Panel title="Clienti" sub="Esposizione, fido, ritardo e classe di rischio · clic per la scheda con l’estratto conto" flush id="fin-clienti"
+      <Panel title="Clienti" sub={`Esposizione, fido, ritardo e classe di rischio al ${dateIt(asOf)} · clic per la scheda con l’estratto conto di oggi`} flush id="fin-clienti"
         actions={<>
           <SearchBox value={q} onChange={setQ} placeholder="Cerca cliente o agente" id="fin-search" />
           <Seg label="Filtro clienti" value={flt} onChange={setFlt} options={[{ id: 'tutti', label: 'Tutti' }, { id: 'scaduti', label: `Scaduti ${counts.scaduti}` }, { id: 'fido', label: `Fido ≥ 90% ${counts.fido}` }, { id: 'rischio', label: `Classe C–D ${counts.rischio}` }]} />
@@ -182,8 +185,8 @@ function Crediti({ d, sel }) {
             { key: 'overdue', label: 'Scaduto', align: 'r', render: r => r.overdue > 0.5 ? <>{eur(r.overdue)}<span className="sub">{r.overdue60 > 0.5 ? `oltre 60 gg ${mila(r.overdue60)} mila` : `da ${daysBetween(r.oldestDue, today)} gg`}</span></> : <span className="muted">—</span> },
             { key: 'act', label: <span className="sr">Azioni</span>, nosort: true, csv: false, render: r => (
               <span className="row gap-s fin-act" onClick={e => e.stopPropagation()} onKeyDown={e => e.stopPropagation()}>
-                <Btn small icon={LuCoins} title={`Registra un incasso di ${r.name}`} disabled={!(r.open > 0.5)} onClick={() => setPay({ custId: r.id })} />
-                <Btn small icon={LuMail} title={r.overdue > 0.5 ? `Sollecito di pagamento a ${r.name}` : 'Nessuno scaduto da sollecitare'} disabled={!(r.overdue > 0.5)} onClick={() => sollecito(r)} />
+                <Btn small icon={LuCoins} title={`Registra un incasso di ${r.name}`} disabled={!(csNow.byCustomer[r.id]?.open > 0.5)} onClick={() => setPay({ custId: r.id })} />
+                <Btn small icon={LuMail} title={csNow.byCustomer[r.id]?.overdue > 0.5 ? `Sollecito di pagamento a ${r.name}` : 'Nessuno scaduto da sollecitare oggi'} disabled={!(csNow.byCustomer[r.id]?.overdue > 0.5)} onClick={() => sollecito(r)} />
               </span>) },
           ]} />
       </Panel>
@@ -405,10 +408,12 @@ export function CustomerCredit({ d, id }) {
 function Circolante({ d }) {
   const ctx = ctxOf(d), today = ctx.today;
   const { P, C, cov } = usePeriod(d);
-  const w = useMemo(() => workingCapital(d, ctx, today), [d, ctx, today]);
+  // saldi alla fine del periodo scelto (a oggi se il periodo è in corso)
+  const asOf = P.to < today ? P.to : today;
+  const w = useMemo(() => workingCapital(d, ctx, asOf), [d, ctx, asOf]);
   const cTo = C && !C.budget ? (C.to < today ? C.to : today) : null;
   const wc = useMemo(() => (cTo ? workingCapital(d, ctx, cTo) : null), [d, ctx, cTo]);
-  const hist = useMemo(() => workingCapitalHistory(d, ctx, 12), [d, ctx]);
+  const hist = useMemo(() => workingCapitalHistory(d, ctx, 12, asOf), [d, ctx, asOf]);
   if (!hasSales(d) && !(d.ingLots || []).length) return <NoData title="Nessun dato per il capitale circolante" />;
   const cmp = (cur, val, good = 'down', kind = 'flow', unit) => (wc && val != null ? { cur, value: val, kind, good, unit, decimals: 0, label: 'al ' + dateIt(cTo, 'dm'), cov } : undefined);
   const parts = [
@@ -418,8 +423,8 @@ function Circolante({ d }) {
     { key: 'fg', label: 'Prodotto finito', value: w.fg, color: SERIES[6], abs: eur(w.fg) },
   ];
   const maxD = Math.max(1, (w.dio || 0) + (w.dso || 0), w.dpo || 0);
-  const from12 = addDays(today, -364);
-  const t12 = sum(ctx.facts.filter(f => f.date >= from12 && f.date <= today), f => f.tonnes);
+  const from12 = addDays(asOf, -364);
+  const t12 = sum(ctx.facts.filter(f => f.date >= from12 && f.date <= asOf), f => f.tonnes);
   const firstMonth = hist.findIndex(h => h.ar > 0);
   const levers = [
     ['DSO', w.dso, w.perDay.dso, 'incasso dai clienti', 'un giorno di vendite lorde (IVA compresa)', 'incassando 5 giorni prima'],
@@ -428,7 +433,7 @@ function Circolante({ d }) {
   ];
   return (
     <>
-      <div className="note">Valori gestionali alla data: crediti dal partitario, rimanenze al FIFO (prodotto finito al costo pieno), debiti verso fornitori <b>stimati</b> dai lotti ricevuti e dai termini di pagamento.</div>
+      <div className="note">Valori gestionali al <b>{dateIt(asOf)}</b>{asOf < today ? ', fine del periodo scelto' : ''}: crediti dal partitario, rimanenze al FIFO (prodotto finito al costo pieno), debiti verso fornitori <b>stimati</b> dai lotti ricevuti e dai termini di pagamento.</div>
       <div className="kpis">
         <Kpi label="Crediti commerciali" value={mila(w.ar)} unit="mila €" raw={w.ar} cmp={cmp(w.ar, wc?.ar)} foot={`fatturati ${mila(w.arInvoiced)} · da fatturare ${mila(w.arUninvoiced)}`} title="Partite aperte più consegne non ancora fatturate, IVA compresa" />
         <Kpi label="Rimanenze MP + PF" value={mila(w.mp + w.fg)} unit="mila €" raw={w.mp + w.fg} cmp={cmp(w.mp + w.fg, wc ? wc.mp + wc.fg : null)} foot={`MP ${mila(w.mp)} · PF ${mila(w.fg)}`} title="Materie prime al FIFO (anche in quarantena) e prodotto finito al costo pieno industriale" />
@@ -470,7 +475,7 @@ function Circolante({ d }) {
           </table></div>
         </Panel>
       </div>
-      <Panel title="Andamento a fine mese" sub={`Ultimi 12 mesi, mila € · il mese in corso è al ${dateIt(today, 'dm')}${firstMonth > 0 || hist[0]?.ar < hist[hist.length - 1]?.ar * 0.5 ? ' · i primi mesi crescono perché lo storico dei dati è più breve dei termini di pagamento' : ''}`}>
+      <Panel title="Andamento a fine mese" sub={`12 mesi fino al ${dateIt(asOf, 'dm')}, mila €${asOf === today ? ` · il mese in corso è al ${dateIt(today, 'dm')}` : ''}${firstMonth > 0 || hist[0]?.ar < hist[hist.length - 1]?.ar * 0.5 ? ' · i primi mesi crescono perché lo storico dei dati è più breve dei termini di pagamento' : ''}`}>
         <LineChart labels={hist.map(h => monthLabel(h.month))} unit="mila €" decimals={0} area={false} ariaLabel="Capitale circolante, crediti, rimanenze e debiti a fine mese"
           series={[
             { key: 'nwc', label: 'Capitale circolante', color: SERIES[0], values: hist.map(h => h.nwc / 1000) },
@@ -482,8 +487,9 @@ function Circolante({ d }) {
       </Panel>
       <Definitions items={[
         ['DSO (giorni di incasso)', 'Metodo a ritroso sui crediti fatturati: giorni di vendite lorde recenti che li coprono.'],
-        ['DIO (giorni di magazzino)', `(MP + PF) ÷ (costo del venduto industriale dei 12 mesi ÷ 365) = ${eur(w.mp + w.fg)} ÷ ${eur(w.perDay.dio)} al giorno. Costo del venduto = materie prime + calo + energia + trasformazione variabile + imballo dei fatti di vendita.`],
-        ['DPO (giorni di pagamento)', `Debiti verso fornitori ÷ acquisti di materie prime lordi dei 12 mesi × 365 = ${eur(w.ap)} ÷ ${eur(w.purchases12)} × 365.`],
+        ['DIO (giorni di magazzino)', `(MP + PF) ÷ (costo del venduto industriale dei 12 mesi ÷ ${w.days.dio} giorni con dati) = ${eur(w.mp + w.fg)} ÷ ${eur(w.perDay.dio)} al giorno. Costo del venduto = materie prime + calo + energia + trasformazione variabile + imballo dei fatti di vendita.`],
+        ['DPO (giorni di pagamento)', `Debiti verso fornitori ÷ acquisti di materie prime lordi dei 12 mesi × giorni con dati = ${eur(w.ap)} ÷ ${eur(w.purchases12)} × ${w.days.dpo}.`],
+        ['Giorni con dati', 'Le medie giornaliere usano i 365 giorni dei 12 mesi alla data; se l’archivio comincia dopo, solo i giorni da quando ci sono consegne o arrivi, così un archivio giovane non gonfia DIO e DPO.'],
         ['Ciclo di cassa', 'DSO + DIO − DPO: i giorni che il capitale resta impegnato tra pagamento ai fornitori e incasso dai clienti.'],
         ['Costo annuo', `Capitale circolante × ${nf(w.rate, 1)}% (costo del denaro nei Parametri).`],
       ]} />
@@ -506,25 +512,33 @@ function Rimanenze({ d, sel }) {
   const [fgM, setFgM] = useState('pieno');
   const [cell, setCell] = useState(null);
   const [sheet, setSheet] = useState(false);
-  const [asOf, setAsOf] = useState(today);
-  const iv = useMemo(() => inventoryValuation(d, { ix: ctx.ix, costsToday: ctx.costs }), [d, ctx]);
+  // valori alla fine del periodo scelto (a oggi se il periodo è in corso); lenti ed eccedenze guardano il piano di oggi
+  const at = P.to < today ? P.to : today, past = at < today;
+  const [asOf, setAsOf] = useState(at);
   const sumy = useMemo(() => inventorySummary(d, ctx, P), [d, ctx, P]);
-  const mp = valuationAt(d, today, mpM, { today });
+  const mp = valuationAt(d, at, mpM, { today });
+  const mpFifo = mpM === 'fifo' ? mp : valuationAt(d, at, 'fifo', { today });
+  const mpRepl = valuationAt(d, at, 'sostituzione', { today });
   const cTo = C && !C.budget ? (C.to < today ? C.to : today) : null;
   const mpC = cTo ? valuationAt(d, cTo, mpM, { today }) : null;
-  const fgVal = fgM === 'pieno' ? iv.fg.valueFull : iv.fg.valueVar;
-  const hist = useMemo(() => stockHistory(d, 12, ctx), [d, ctx]);
+  const fg = useMemo(() => finishedAt(d, ctx, at), [d, ctx, at]);
+  const fgVal = fgM === 'pieno' ? fg.valueFull : fg.valueVar;
+  const base = costBase12(d, ctx, at);
+  const hist = useMemo(() => stockHistory(d, 12, ctx, at), [d, ctx, at]);
   const abc = useMemo(() => abcXyz(d, ctx, P), [d, ctx, P]);
   const slow = useMemo(() => slowMovers(d, ctx), [d, ctx]);
   const rate = carryRate(d);
   if (!(d.ingLots || []).length && !(d.lots || []).length) return <Panel><Empty icon={LuInbox} title="Nessuna rimanenza">Le rimanenze nascono dai lotti di materie prime ricevuti e dai lotti di prodotto non ancora spediti.</Empty></Panel>;
-  const stockBy = Object.fromEntries(iv.mp.byIng.map(r => [r.ingId, r]));
-  const rows = Object.entries(abc).map(([id, v]) => ({ id, ...v, name: I.ing[id]?.name || id, stockT: stockBy[id]?.t || 0, stockV: stockBy[id]?.fifo || 0 }));
+  const stockBy = Object.fromEntries(mpFifo.byIng.map(r => [r.ingId, r]));
+  const rows = Object.entries(abc).map(([id, v]) => ({ id, ...v, name: I.ing[id]?.name || id, stockT: stockBy[id]?.t || 0, stockV: stockBy[id]?.value || 0 }));
   const grid = {};
   for (const r of rows) if (r.xyz) { const k = r.abc + r.xyz; (grid[k] ||= { n: 0, v: 0, s: 0 }); grid[k].n++; grid[k].v += r.value; grid[k].s += r.stockV; }
   const totV = sum(rows, r => r.value) || 1;
   const view = cell ? rows.filter(r => r.abc + r.xyz === cell) : rows;
-  const mpDays = sumy.cogs12 > 0 ? iv.mp.fifo / (sumy.cogs12 / 365) : null, fgDays = sumy.cogs12 > 0 ? iv.fg.valueFull / (sumy.cogs12 / 365) : null;
+  // giorni di magazzino alla data: come inventorySummary (che è a oggi), sui 12 mesi che finiscono alla data
+  const perDay = base.cogs / base.days, rawDay = base.raw / base.days, stockAt = mpFifo.value + fg.valueFull;
+  const dio = rawDay > 0 ? mpFifo.value / rawDay : null, dioTotal = perDay > 0 ? stockAt / perDay : null;
+  const mpDays = perDay > 0 ? mpFifo.value / perDay : null, fgDays = perDay > 0 ? fg.valueFull / perDay : null;
   return (
     <>
       <div className="row between fin-tools">
@@ -532,15 +546,16 @@ function Rimanenze({ d, sel }) {
           <span className="small muted">Prodotto finito:</span><Seg label="Costo del prodotto finito" value={fgM} onChange={setFgM} options={FG_METHODS} /></span>
         <Chip kind="outline" title="Valori per il controllo di gestione: non sostituiscono l’inventario fiscale di fine esercizio">valorizzazione gestionale, non fiscale</Chip>
       </div>
+      {past && <div className="note">Rimanenze al <b>{dateIt(at)}</b>, fine del periodo scelto. Lenti ed eccedenze guardano il piano e le giacenze di oggi.</div>}
       <div className="kpis">
         <Kpi label={`Materie prime · ${MP_METHODS.find(m => m.id === mpM).label}`} value={mila(mp.value, 1)} unit="mila €" raw={mp.value}
           cmp={mpC ? { cur: mp.value, value: mpC.value, kind: 'flow', good: 'down', label: 'al ' + dateIt(cTo, 'dm'), cov } : undefined}
-          foot={mpM === 'fifo' ? `${nf(mp.t)} t · sostituzione ${mila(iv.mp.replacement, 1)} mila` : `FIFO ${mila(iv.mp.fifo, 1)} mila · Δ ${mila(mp.value - iv.mp.fifo, 1)}`} title={MP_METHODS.find(m => m.id === mpM).title} />
-        <Kpi label={`Prodotto finito · costo ${fgM}`} value={mila(fgVal, 1)} unit="mila €" foot={`${nf(iv.fg.t)} t in ${sum(iv.fg.byProduct, r => r.lots)} lotti`} title="Lotti prodotti e non ancora spediti (esclusi i bloccati), al costo effettivo del lotto" />
-        <Kpi label="Giorni di magazzino MP" value={gg(sumy.dio)} unit="giorni" foot={`rotazione ${nf(sumy.turnover, 1)} volte l’anno · MP + PF ${gg(sumy.dioTotal)} gg`}
-          title={`DIO delle materie prime = MP al FIFO ÷ (materie prime e calo consumati nei 12 mesi ÷ 365) = ${eur(iv.mp.fifo)} ÷ ${eur(sumy.raw12 / 365)} al giorno. Rotazione = 365 ÷ DIO.\nCon il prodotto finito: (MP + PF al costo pieno) ÷ (costo del venduto industriale dei 12 mesi ÷ 365) = ${gg(mpDays)} gg di MP + ${gg(fgDays)} gg di PF = ${gg(sumy.dioTotal)} giorni, il DIO del capitale circolante.`} />
-        <Kpi label="Capitale in eccesso" value={mila(sumy.excessValue, 1)} unit="mila €" status={sumy.excessValue > 50000 ? 'warn' : 'ok'} foot={`mantenerlo costa ${eur(sumy.excessCarryingCost)}/anno`} title="Giacenza oltre fabbisogno a 8 settimane + scorta di sicurezza delle materie prime lente o in eccesso, ai prezzi dei lotti più recenti" />
-        <Kpi label="Costo di mantenimento" value={mila(sumy.carryingCost, 1)} unit="mila €/anno" foot={`${nf(rate, 1)}% annuo su ${mila(iv.mp.fifo + iv.fg.valueFull)} mila`} title="Oneri finanziari, magazzino, assicurazione e cali sul valore delle rimanenze (tasso nei Parametri)" />
+          foot={mpM === 'fifo' ? `${nf(mp.t)} t · sostituzione ${mila(mpRepl.value, 1)} mila` : `FIFO ${mila(mpFifo.value, 1)} mila · Δ ${mila(mp.value - mpFifo.value, 1)}`} title={`${MP_METHODS.find(m => m.id === mpM).title}, al ${dateIt(at)}`} />
+        <Kpi label={`Prodotto finito · costo ${fgM}`} value={mila(fgVal, 1)} unit="mila €" foot={`${nf(fg.t)} t in ${sum(fg.byProduct, r => r.lots)} lotti`} title={`Lotti prodotti e non ancora spediti al ${dateIt(at)} (esclusi i bloccati), al costo effettivo del lotto`} />
+        <Kpi label="Giorni di magazzino MP" value={gg(dio)} unit="giorni" foot={`rotazione ${dio ? nf(365 / dio, 1) : '—'} volte l’anno · MP + PF ${gg(dioTotal)} gg`}
+          title={`DIO delle materie prime = MP al FIFO ÷ (materie prime e calo consumati nei 12 mesi ÷ ${base.days} giorni con dati) = ${eur(mpFifo.value)} ÷ ${eur(rawDay)} al giorno. Rotazione = 365 ÷ DIO.\nCon il prodotto finito: (MP + PF al costo pieno) ÷ (costo del venduto industriale dei 12 mesi ÷ giorni) = ${gg(mpDays)} gg di MP + ${gg(fgDays)} gg di PF = ${gg(dioTotal)} giorni, il DIO del capitale circolante.`} />
+        <Kpi label="Capitale in eccesso" value={mila(sumy.excessValue, 1)} unit="mila €" status={sumy.excessValue > 50000 ? 'warn' : 'ok'} foot={`${past ? 'oggi · ' : ''}mantenerlo costa ${eur(sumy.excessCarryingCost)}/anno`} title="Giacenza di oggi oltre fabbisogno a 8 settimane + scorta di sicurezza delle materie prime lente o in eccesso, ai prezzi dei lotti più recenti" />
+        <Kpi label="Costo di mantenimento" value={mila(stockAt * rate / 100, 1)} unit="mila €/anno" foot={`${nf(rate, 1)}% annuo su ${mila(stockAt)} mila`} title="Oneri finanziari, magazzino, assicurazione e cali sul valore delle rimanenze (MP al FIFO + PF al costo pieno; tasso nei Parametri)" />
       </div>
       <Panel title="Valore a fine mese" sub={`Materie prime al FIFO e prodotto finito al costo ${fgM}, mila €`}>
         <LineChart labels={hist.map(h => monthLabel(h.month))} unit="mila €" decimals={0} area={false} ariaLabel="Valore mensile delle rimanenze"

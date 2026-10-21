@@ -138,12 +138,12 @@ export function finishedAt(d, ctx, date) {
   return { t, valueVar, valueFull, byProduct: Object.values(byProduct).sort((a, b) => b.valueFull - a.valueFull) };
 }
 
-/** Valore mensile delle rimanenze (fine mese; il mese in corso a oggi): [{month, date, mp, fg, fgVar}]. */
-export function stockHistory(d, months = 12, ctx = null) {
-  const today = ctx?.today || todayOf(d);
-  const ms = monthsIn(addMonths(today.slice(0, 7), -(months - 1)), today.slice(0, 7));
+/** Valore mensile delle rimanenze a fine mese degli n mesi fino a `to` (di base oggi; l'ultimo mese alla data): [{month, date, mp, fg, fgVar}]. */
+export function stockHistory(d, months = 12, ctx = null, to = null) {
+  const today = ctx?.today || todayOf(d), end = to && to < today ? to : today;
+  const ms = monthsIn(addMonths(end.slice(0, 7), -(months - 1)), end.slice(0, 7));
   return ms.map(m => {
-    const date = endOfMonth(m) < today ? endOfMonth(m) : today;
+    const date = endOfMonth(m) < end ? endOfMonth(m) : end;
     const f = finishedAt(d, ctx, date);
     return { month: m, date, mp: valuationAt(d, date, 'fifo', { today }).value, fg: f.valueFull, fgVar: f.valueVar };
   });
@@ -272,16 +272,26 @@ export function slowMovers(d, ctx, opts = {}) {
 }
 
 /** Basi annue dei 365 giorni alla data: costo del venduto industriale (materie prime + calo + energia + trasformazione variabile
- *  + imballo dei fatti di vendita) e materie prime consumate (materie prime + calo). → {cogs, raw} */
+ *  + imballo dei fatti di vendita) e materie prime consumate (materie prime + calo). days = giorni con dati nella finestra
+ *  (365 con un anno di storico; meno se l'archivio è più giovane), il divisore delle medie giornaliere. → {cogs, raw, days} */
 export function costBase12(d, ctx, at) {
   const today = at || ctx?.today || todayOf(d);
   const facts = ctx?.facts || shipmentFacts(d, { ix: ctx?.ix || makeIndex(d) });
   return cached('cogs|' + today, [facts], () => {
     const from = addDays(today, -364);
-    let cogs = 0, raw = 0;
-    for (const f of facts) if (f.date >= from && f.date <= today) { cogs += f.raw + f.shrink + f.energy + f.varConv + f.pack; raw += f.raw + f.shrink; }
-    return { cogs, raw };
+    let cogs = 0, raw = 0, first = null;
+    for (const f of facts) {
+      if (!f.date || f.date > today) continue;
+      if (!first || f.date < first) first = f.date;
+      if (f.date >= from) { cogs += f.raw + f.shrink + f.energy + f.varConv + f.pack; raw += f.raw + f.shrink; }
+    }
+    return { cogs, raw, days: coveredDays(first, from, today) };
   });
+}
+/** Giorni con dati tra from e to (estremi compresi): dal primo dato se è dopo from; 365 senza dati. */
+export function coveredDays(first, from, to) {
+  if (!first || first > to) return daysBetween(from, to) + 1;
+  return Math.max(1, daysBetween(first > from ? first : from, to) + 1);
 }
 /** Costo del venduto industriale dei 12 mesi: Σ fatti materie prime + calo + energia + trasformazione variabile + imballo. */
 export function cogs12(d, ctx, at) { return costBase12(d, ctx, at).cogs; }
@@ -290,9 +300,10 @@ export function cogs12(d, ctx, at) { return costBase12(d, ctx, at).cogs; }
  * Sintesi delle rimanenze (contratto): MP al FIFO e prodotto finito al costo pieno effettivo (actuals), giorni di magazzino,
  * capitale in eccesso (lenti ed eccedenze) e costo annuo di mantenimento di tutte le rimanenze (carryingCost) e del solo
  * eccesso (excessCarryingCost), al tasso settings.ops.carryRatePct.
- * dio = giorni di magazzino delle materie prime: MP al FIFO ÷ (materie prime + calo consumati nei 12 mesi ÷ 365), il numero
+ * dio = giorni di magazzino delle materie prime: MP al FIFO ÷ (materie prime + calo consumati nei 12 mesi ÷ giorni con dati), il numero
  * del pannello indicatori (obiettivo di settore 25 giorni) · rotazione = 365 ÷ dio.
- * dioTotal = (MP + PF) ÷ (costo del venduto industriale dei 12 mesi ÷ 365), lo stesso DIO del capitale circolante;
+ * dioTotal = (MP + PF) ÷ (costo del venduto industriale dei 12 mesi ÷ giorni con dati), lo stesso DIO del capitale circolante;
+ * giorni con dati = 365 con un anno di storico (days12), meno in un archivio più giovane;
  * dioMpShare e dioFgShare = le due quote che sommano dioTotal.
  */
 export function inventorySummary(d, ctx, P) {
@@ -300,17 +311,17 @@ export function inventorySummary(d, ctx, P) {
   for (const s of d.shipments || EMPTY) shipped[s.lotId] = (shipped[s.lotId] || 0) + (+s.tonnes || 0);
   const ix = ctx?.ix || makeIndex(d);
   const v = inventoryValuation(d, { ix, costsToday: ctx?.costs || costsOf(d, ix), shipped });
-  const { cogs: c12, raw: raw12 } = costBase12(d, ctx);
+  const { cogs: c12, raw: raw12, days } = costBase12(d, ctx);
   const stock = v.mp.fifo + v.fg.valueFull;
-  const dio = raw12 > 0 ? v.mp.fifo / (raw12 / 365) : null;
-  const dioTotal = c12 > 0 ? stock / (c12 / 365) : null;
+  const dio = raw12 > 0 ? v.mp.fifo / (raw12 / days) : null;
+  const dioTotal = c12 > 0 ? stock / (c12 / days) : null;
   const slow = slowMovers(d, ctx);
   const excessValue = sum(slow, r => r.excessValue);
   const rate = carryRate(d) / 100;
   return {
     mpFifo: v.mp.fifo, fgValue: v.fg.valueFull, dio, excessValue, carryingCost: stock * rate,
     fgValueVar: v.fg.valueVar, fgT: v.fg.t, mpReplacement: v.mp.replacement, mpQuarantine: v.mp.quarantine,
-    excessCarryingCost: excessValue * rate, turnover: dio ? 365 / dio : null, cogs12: c12, raw12, slowCount: slow.length,
-    dioTotal, dioMpShare: c12 > 0 ? v.mp.fifo / (c12 / 365) : null, dioFgShare: c12 > 0 ? v.fg.valueFull / (c12 / 365) : null,
+    excessCarryingCost: excessValue * rate, turnover: dio ? 365 / dio : null, cogs12: c12, raw12, days12: days, slowCount: slow.length,
+    dioTotal, dioMpShare: c12 > 0 ? v.mp.fifo / (c12 / days) : null, dioFgShare: c12 > 0 ? v.fg.valueFull / (c12 / days) : null,
   };
 }

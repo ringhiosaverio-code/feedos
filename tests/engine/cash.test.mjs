@@ -126,7 +126,11 @@ test('capitale circolante: identità e componenti', () => {
   const iv = inventoryValuation(D, {});
   close(w.mp, iv.mp.fifo + iv.mp.quarantine, 1, 'MP al FIFO'); close(w.fg, iv.fg.valueFull, 1, 'PF al costo pieno');
   close(w.ap, sum(payables(D, today).filter(x => x.kind === 'lotto' && !x.paid), x => x.amount), 1e-6, 'debiti non scaduti');
-  close(w.dio, (w.mp + w.fg) / (w.cogs12 / 365), 1e-9, 'DIO'); close(w.dpo, w.ap / w.purchases12 * 365, 1e-9, 'DPO');
+  close(w.dio, (w.mp + w.fg) / (w.cogs12 / w.days.dio), 1e-9, 'DIO'); close(w.dpo, w.ap / w.purchases12 * w.days.dpo, 1e-9, 'DPO');
+  assert.ok(w.days.dio > 355 && w.days.dio <= 365 && w.days.dpo === 365, 'quasi un anno di consegne, più di un anno di arrivi');
+  // a una data con pochi mesi di storico le medie usano solo i giorni con dati (niente DIO gonfiati)
+  const young = workingCapital(D, ctx, '2025-12-31');
+  assert.ok(young.days.dio < 80 && young.dio < 60, `DIO a fine 2025: ${young.dio} su ${young.days.dio} giorni`);
   const h = workingCapitalHistory(D, ctx, 12);
   assert.equal(h.length, 12); assert.equal(h[11].date, today);
   close(h[11].nwc, w.nwc, 1, 'ultimo mese = oggi');

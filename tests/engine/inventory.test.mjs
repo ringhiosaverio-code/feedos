@@ -95,12 +95,14 @@ test('andamento mensile e sintesi: ultimo mese = valori di oggi; DIO e costo di 
   assert.ok(f.t > 1500 && f.t < 1570, 'PF ≈ 1.536 t'); assert.ok(f.valueFull > 480000 && f.valueFull < 510000, 'PF ≈ 495 mila €');
   const s = inventorySummary(D, ctx, P);
   close(s.mpFifo, IV.mp.fifo, 1e-6, 'contratto mpFifo'); close(s.fgValue, IV.fg.valueFull, 1e-6, 'contratto fgValue');
-  close(s.dioTotal, (s.mpFifo + s.fgValue) / (cogs12(D, ctx) / 365), 1e-9, 'DIO di MP + PF sul costo del venduto');
+  close(s.dioTotal, (s.mpFifo + s.fgValue) / (cogs12(D, ctx) / s.days12), 1e-9, 'DIO di MP + PF sul costo del venduto');
+  const firstFact = ctx.facts.reduce((m, f) => (!m || f.date < m ? f.date : m), null);
+  assert.equal(s.days12, Math.min(365, Math.round((Date.parse(today) - Date.parse(firstFact)) / 864e5) + 1), 'giorni con dati');
   close(s.carryingCost, (s.mpFifo + s.fgValue) * 0.08, 1e-6, 'mantenimento al tasso di settings.ops');
   close(s.excessValue, sum(slowMovers(D, ctx), r => r.excessValue), 1e-6, 'eccesso');
   // DIO del contratto = giorni di consumo coperti dalle MP (≈ 27 giorni del collaudo): MP al FIFO ÷ (materie prime + calo dei 12 mesi ÷ 365)
   const raw = sum(ctx.facts.filter(f => f.date >= P.from && f.date <= today), f => f.raw + f.shrink);
-  close(s.dio, s.mpFifo / (raw / 365), 1e-9, 'DIO materie prime');
+  close(s.dio, s.mpFifo / (raw / s.days12), 1e-9, 'DIO materie prime');
   assert.ok(s.dio > 25 && s.dio < 30, 'DIO MP ≈ 27–28 giorni');
   close(s.turnover, 365 / s.dio, 1e-9, 'rotazione');
   close(s.dioMpShare + s.dioFgShare, s.dioTotal, 1e-9, 'quote MP + PF = DIO totale');
