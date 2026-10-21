@@ -62,11 +62,15 @@ export function snapshotMonth(d, ctx, month, { by = null, at = null, comments = 
 }
 
 /** Prezzo più recente di una materia prima: data dell'ultimo lotto ricevuto con prezzo (o del campo priceDate). */
-function lastPriceDate(d, ingId) {
+function lastPriceDate(d, ingId, until) {
   let best = null;
+  const ok = x => x && (!until || x <= until) && (!best || x > best);
   const ing = (d.ingredients || EMPTY).find(i => i.id === ingId);
-  for (const k of ['priceDate', 'priceAt', 'updatedAt']) if (ing?.[k] && (!best || ing[k] > best)) best = String(ing[k]).slice(0, 10);
-  for (const l of d.ingLots || EMPTY) if (l.ingId === ingId && l.price != null && l.date && (!best || l.date > best)) best = l.date;
+  for (const k of ['priceDate', 'priceAt', 'updatedAt']) { const x = ing?.[k] ? String(ing[k]).slice(0, 10) : null; if (ok(x)) best = x; }
+  // prezzi noti alla fine del mese: lotti ricevuti fino a quel giorno
+  for (const l of d.ingLots || EMPTY) if (l.ingId === ingId && l.price != null && ok(l.date)) best = l.date;
+  // o una quotazione di mercato registrata per la materia prima
+  for (const q of d.market || EMPTY) if (q.commodity === ingId && q.price != null && ok(q.date)) best = q.date;
   return best;
 }
 
@@ -107,9 +111,10 @@ export function checklist(d, ctx, month) {
     link: { area: 'qualita', tab: 'lotti' } });
   // prezzi delle materie prime aggiornati
   const used = new Set();
-  for (const f of d.formulas || EMPTY) for (const l of f.lines || EMPTY) if (n0(l.kg) > 0) used.add(l.ing || l.ingId || l.id);
+  const fs = (d.formulas || EMPTY).filter(f => f.status === 'approvata');
+  for (const f of fs.length ? fs : d.formulas || EMPTY) for (const l of f.lines || EMPTY) if (n0(l.kg) > 0) used.add(l.ing || l.ingId || l.id);
   const limit = addDays(end, -35);
-  const stale = (d.ingredients || EMPTY).filter(i => i.active !== false && used.has(i.id)).filter(i => { const p = lastPriceDate(d, i.id); return !p || p < limit; });
+  const stale = (d.ingredients || EMPTY).filter(i => i.active !== false && used.has(i.id)).filter(i => { const p = lastPriceDate(d, i.id, end); return !p || p < limit; });
   out.push({ id: 'prezzi', label: 'Prezzi delle materie prime aggiornati (entro 35 giorni)', ok: !stale.length, blocking: false,
     detail: stale.length ? `Da aggiornare: ${stale.slice(0, 5).map(i => i.name).join(', ')}${stale.length > 5 ? ` e altre ${stale.length - 5}` : ''}` : 'Ogni materia prima in formula ha un prezzo recente',
     link: { area: 'formulazione', tab: 'materie' } });

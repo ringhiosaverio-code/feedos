@@ -8,6 +8,8 @@ import { applyOpsTo } from '../../src/core/ops.js';
 import { isClosedMonth } from '../../src/core/schema.js';
 import { closeMonthOps, reopenMonthOps, reopenLabel, checklist, frozenFor, snapshotMonth, frozenVsLive, closingRecord, nextToClose } from '../../src/engine/closing.js';
 import { pnlFor, PNL_LINES } from '../../src/engine/pnl.js';
+import { buildReport, reportMarkdown, reportCsv, commentOps, reportComments, REPORT_TEMPLATES } from '../../src/engine/report.js';
+import { makePeriod, comparePeriod } from '../../src/core/period.js';
 
 const today = '2026-10-16';
 const d = demoData(today);
@@ -106,4 +108,32 @@ test('fotografia del mese: forma completa e coerente con il conto economico', ()
   close(s.byProduct.reduce((a, r) => a + r.mdc2, 0), p.by.mdc2, 1e-6);
   close(Object.values(s.fixed.byCenter).reduce((a, v) => a + v, 0), s.fixed.total, 1e-6);
   assert.equal(s.lines.find(l => l.id === 'ebit').value, p.by.ebit);
+});
+
+test('report CdA: sezioni nell’ordine del modello, intestazione, ponte che quadra, commenti dalla chiusura, Markdown e CSV', () => {
+  const P = makePeriod('2026-09-01', '2026-09-30', { preset: 'custom', today }), C = comparePeriod(P, 'prec', today);
+  // un commento salvato nella chiusura del mese compare nella sezione
+  const d1 = applyOpsTo(d, commentOps(d, '2026-09', 'conto', 'Prezzi delle materie prime in salita')).data;
+  assert.equal(reportComments(d1, '2026-09').conto, 'Prezzi delle materie prime in salita');
+  assert.equal(closingRecord(d1, '2026-09').status, 'chiuso', 'il commento non riapre il mese');
+  const r = buildReport(d1, ctx, P, C, 'cda', { comments: reportComments(d1, '2026-09') });
+  const ids = r.sections.map(s => s.id);
+  assert.deepEqual(ids.slice(0, 4), ['sintesi', 'conto', 'ponte', 'budget']);
+  assert.deepEqual(ids, REPORT_TEMPLATES.cda.filter(id => ids.includes(id)), 'ordine del modello; le sezioni nulle si saltano');
+  assert.equal(r.header.company, d.settings.company.name); assert.equal(r.header.closed, true);
+  assert.equal(r.header.periodLabel, P.label); assert.equal(r.header.issuedAt, today);
+  const ponte = r.sections.find(s => s.id === 'ponte');
+  assert.ok(Math.abs(ponte.check) < 1e-6 * Math.max(1, Math.abs(ponte.end)));
+  close(ponte.end, pnlFor(d, ctx, P).by.mdc2, 1e-4);
+  const conto = r.sections.find(s => s.id === 'conto');
+  assert.equal(conto.table.rows.length, PNL_LINES.length); assert.equal(conto.comment, 'Prezzi delle materie prime in salita');
+  assert.ok(r.sections.every(s => Array.isArray(s.kpis) && Array.isArray(s.narrative) && s.title));
+  // modello commerciale: solo le sue sezioni
+  assert.ok(buildReport(d, ctx, P, C, 'commerciale').sections.every(s => REPORT_TEMPLATES.commerciale.includes(s.id)));
+  const md = reportMarkdown(r);
+  assert.match(md, /^# Report consiglio di amministrazione · /); assert.match(md, /## Conto economico/); assert.match(md, /> Prezzi delle materie prime in salita/);
+  const csv = reportCsv(r);
+  assert.ok(csv.startsWith('﻿')); assert.match(csv, /Ricavi netti/);
+  // senza confronto: niente ponte
+  assert.ok(!buildReport(d, ctx, P, null, 'cda').sections.some(s => s.id === 'ponte'));
 });

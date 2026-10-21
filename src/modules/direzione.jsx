@@ -15,10 +15,11 @@ import { AREA_META } from '../core/roles.js';
 import { NAV } from '../app/nav.js';
 import { monthlySeries, lastMonths, firstFactDate, effectiveCoverage } from '../engine/pnl.js';
 import { basis, pvm, narrative, basisLabel, LEVELS } from '../engine/pvm.js';
-import { budgetBasis, landing, activeVersion, hasBudget, isLocked, budgetVersions } from '../engine/budget.js';
+import { budgetBasis, budgetTotals, landing, activeVersion, hasBudget, isLocked, budgetVersions } from '../engine/budget.js';
 import { checklist, closeMonthOps, reopenMonthOps, reopenLabel, closeLabel, closingRecord, closedThrough, nextToClose, frozenVsLive } from '../engine/closing.js';
 import { PageHead, Panel, Kpi, Btn, Chip, Seg, Select, Table, Empty, Field, NumInput, Kv, confirm } from '../ui/ui.jsx';
 import { SignalList } from './shared.jsx';
+import { COST_CENTERS } from '../data/demo/costs.js';
 import { Conto, useDir, kc, money, eurTxt, kEur, perT, Def, HWaterfall, MonthBars, Delta } from './direzione-conto.jsx';
 import { Budget } from './direzione-budget.jsx';
 import { ReportCda } from './direzione-report.jsx';
@@ -162,13 +163,21 @@ function Ponte() {
   const PB = b === 'bar' ? P : wholeP(b, today);
   const PA = a === 'bar' ? (C || comparePeriod(PB, 'prec', today)) : a === 'prec' || a === 'ap' ? comparePeriod(PB, a, today) : a === 'budget' ? { ...PB, budget: true, compare: 'budget' } : wholeP(a, today);
   const br = useMemo(() => bridgeOf(d, ctx, PA, PB, dim, level), [d, ctx, PA?.key, PA?.budget, PB.key, dim, level]);
-  const covA = PA.budget ? 1 : effectiveCoverage(d, ctx, PA);
+  const covA = PA.budget ? (budgetTotals(d, PB, activeVersion(d, +PB.to.slice(0, 4)))?.coverage ?? 0) : effectiveCoverage(d, ctx, PA);
   const drillBr = useMemo(() => {
     if (!drill || !br || PA.budget || br.by !== 'productId') return null;
     const f = x => x.productId === drill;
     return pvm(basis(d, ctx, PA, 'customerId', { filter: f }), basis(d, ctx, PB, 'customerId', { filter: f }), { level: level === 'ebit' ? 'mc2' : level });
   }, [drill, br, d, ctx, PA?.key, PB.key, level]);
   const shortcut = mode => { setB(lastFull); setA(mode); setDrill(null); };
+  if (!first && !(d.salesHistory || []).length) return (
+    <Panel title="Scostamenti del margine">
+      <Empty title="Nessun dato da confrontare">
+        <p>Il ponte spiega la differenza di margine tra due periodi (volume, mix, listino, sconti, materie prime, energia e altri costi) e quadra al centesimo. Servono le consegne con i lotti, o lo storico mensile dei ricavi e dei costi.</p>
+        <div className="row" style={{ justifyContent: 'center', marginTop: 10 }}><Btn kind="primary" onClick={() => go('dati', 'importa')}>Importa consegne</Btn></div>
+      </Empty>
+    </Panel>
+  );
   if (!br) return null;
   const { res } = br;
   const hasA = res.TA > 0 || Math.abs(res.start) > 0;
@@ -233,7 +242,7 @@ function Ponte() {
         </Panel>
         <Panel title="Lettura" sub={`Soglia di materialità ${kEur(Math.max(mat.abs ?? 5000, (mat.pct ?? 2) / 100 * Math.abs(res.start)), 1)} (${nf(mat.pct ?? 2)}% del margine di A, minimo ${kEur(mat.abs ?? 5000, 0)})`}>
           <div className="dz-read">
-            {covA < 0.9 && <div className="note warn">Il periodo A ha dati solo per il {pct(covA, 0)} dei giorni (per esempio il primo mese, parziale): il confronto non è omogeneo.</div>}
+            {covA < 0.9 && <div className="note warn">{PA.budget ? `Il budget copre solo il ${pct(covA, 0)} del periodo (un budget per anno): il confronto non è omogeneo.` : `Il periodo A ha dati solo per il ${pct(covA, 0)} dei giorni (per esempio il primo mese, parziale): il confronto non è omogeneo.`}</div>}
             {narrative(res, mat, { vs: vsText(PA, PB) }).map((t, i) => <p key={i}>{t}</p>)}
             <Kv items={[
               ['Volume', `${sf(res.TB - res.TA, 0)} t (${res.TA ? sf((res.TB - res.TA) / res.TA * 100, 1) + '%' : '—'})`],
@@ -281,6 +290,13 @@ function CostiFissi() {
     for (const f of d.fixedCosts || []) if ((f.kind || 'consuntivo') === kind && String(f.month).startsWith(year + '-') && (kind !== 'budget' || (f.version || 'B') === version)) (m[`${String(f.month).slice(0, 7)}|${f.centerId}`] ||= []).push(f);
     return m;
   }, [d.fixedCosts, year, kind, version]);
+  // nei mesi senza consuntivo il budget di riferimento compare come suggerimento (è la stima usata nei conti)
+  const budHint = useMemo(() => {
+    if (kind !== 'consuntivo') return {};
+    const v = activeVersion(d, year), m = {};
+    for (const f of d.fixedCosts || []) if (f.kind === 'budget' && String(f.month).startsWith(year + '-') && (f.version || 'B') === v) { const k = `${String(f.month).slice(0, 7)}|${f.centerId}`; m[k] = (m[k] || 0) + (+f.amount || 0); }
+    return m;
+  }, [d.fixedCosts, d.settings, year, kind]);
   const months = Array.from({ length: 12 }, (_, i) => `${year}-${String(i + 1).padStart(2, '0')}`);
   const val = (m, c) => { const r = cell[`${m}|${c}`]; return r ? r.reduce((s, x) => s + (+x.amount || 0), 0) : null; };
   const setVal = (m, c, v) => {
@@ -310,8 +326,11 @@ function CostiFissi() {
         <span className="sp" />
         <span className="small muted">Totale {kind} {year}: <b>{eurTxt(total)}</b></span>
       </div>
-      {!centers.length ? <Panel title="Costi fissi per centro"><Empty title="Nessun centro di costo">Aggiungi i centri di costo qui sotto (personale, manutenzione, amministrazione…): i costi fissi mensili si registrano per centro e alimentano EBITDA ed EBIT.</Empty></Panel> : (
-        <Panel title={`Costi fissi ${kind === 'budget' ? 'di budget' : 'a consuntivo'} ${year}`} sub={kind === 'consuntivo' ? 'Importi mensili in euro per centro di costo; i mesi chiusi sono bloccati (si riaprono da Chiusura del mese). Un mese senza consuntivo usa il budget o la media degli ultimi 12 mesi, segnato «stimato».' : verLocked ? `Versione ${version} approvata: bloccata. Per cambiare i costi fissi di budget crea una revisione da Direzione › Budget.` : `Budget della versione ${version} (bozza): si può correggere anche nei mesi chiusi.`} flush className="dz-grid">
+      {!centers.length ? <Panel title="Costi fissi per centro"><Empty title="Nessun centro di costo">
+        <p>I costi fissi mensili si registrano per centro di costo e alimentano EBITDA ed EBIT. Si può partire dagli otto centri tipici di un mangimificio e poi rinominarli, o aggiungerli uno per uno qui sotto.</p>
+        <div className="row" style={{ justifyContent: 'center', marginTop: 10 }}><Btn kind="primary" icon={LuPlus} onClick={() => { if (store.batch([{ kind: 'addMany', coll: 'costCenters', objs: COST_CENTERS.map(c => ({ ...c })) }], 'Centri di costo tipici di un mangimificio') !== false) toast('8 centri di costo aggiunti', 'ok', { label: 'Annulla', fn: () => store.undo() }); }}>Usa gli 8 centri tipici</Btn></div>
+      </Empty></Panel> : (
+        <Panel title={`Costi fissi ${kind === 'budget' ? 'di budget' : 'a consuntivo'} ${year}`} sub={kind === 'consuntivo' ? 'Importi mensili in euro per centro di costo; i mesi chiusi sono bloccati (si riaprono da Chiusura del mese). Un mese senza consuntivo usa il budget (in grigio nelle caselle vuote) o la media degli ultimi 12 mesi, segnato «stimato».' : verLocked ? `Versione ${version} approvata: bloccata. Per cambiare i costi fissi di budget crea una revisione da Direzione › Budget.` : `Budget della versione ${version} (bozza): si può correggere anche nei mesi chiusi.`} flush className="dz-grid">
           <div className="tw">
             <table className="t">
               <thead><tr><th>Centro</th>{MESI.map(m => <th key={m} className="r">{m}</th>)}<th className="r">Totale</th></tr></thead>
@@ -324,7 +343,7 @@ function CostiFissi() {
                         <td><b>{c.name}</b><span className="sub">{c.code || c.id}</span></td>
                         {months.map(m => closed(m)
                           ? <td key={m} className="r lock" title={verLocked ? `Versione ${version} approvata` : 'Mese chiuso'}>{val(m, c.id) == null ? '—' : nf(val(m, c.id))}<LuLock aria-hidden="true" /></td>
-                          : <td key={m} className="r"><NumInput slim decimals={0} min={0} value={val(m, c.id)} onChange={v => { if ((v ?? null) !== val(m, c.id)) setVal(m, c, v); }} ariaLabel={`${c.name} ${monthLabel(m, false)}`} /></td>)}
+                          : <td key={m} className="r"><NumInput slim decimals={0} min={0} value={val(m, c.id)} placeholder={budHint[`${m}|${c.id}`] != null ? nf(budHint[`${m}|${c.id}`]) : undefined} onChange={v => { if ((v ?? null) !== val(m, c.id)) setVal(m, c, v); }} ariaLabel={`${c.name} ${monthLabel(m, false)}`} /></td>)}
                         <td className="r"><b>{nf(rowTot(c))}</b></td>
                       </tr>
                     ))}

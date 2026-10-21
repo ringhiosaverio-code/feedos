@@ -59,10 +59,11 @@ export function useDir(d) {
   const cur = useMemo(() => pnlFor(d, ctx, per.P), [d, ctx, per.P]);
   const cmp = useMemo(() => {
     if (!per.C) return null;
-    if (per.C.budget) return budgetTotals(d, per.P, activeVersion(d, year))?.pnl || null;
+    if (per.C.budget) { const bt = budgetTotals(d, per.P, activeVersion(d, year)); return bt ? { ...bt.pnl, coverage: bt.coverage } : null; }
     return pnlFor(d, ctx, per.C);
   }, [d, ctx, per.P, per.C, year]);
-  const cov = !per.C ? null : per.C.budget ? (cmp ? 1 : 0) : effectiveCoverage(d, ctx, per.C);
+  // budget: quota del periodo coperta da un budget (un periodo a cavallo di due anni può averne solo una parte)
+  const cov = !per.C ? null : per.C.budget ? (cmp ? cmp.coverage : 0) : effectiveCoverage(d, ctx, per.C);
   const cmpLabel = !per.C ? null : per.C.budget ? 'budget' : per.C.short;
   const hasData = !!cur && (cur.tonnes > 0 || Math.abs(cur.revenueNet) > 0);
   return { ...per, ctx, year, cur, cmp, cov, cmpLabel, hasData };
