@@ -10,7 +10,7 @@ import { nf, sf, sum, dateIt, addDays, daysBetween, relDays, round } from '../co
 import { NUT } from '../engine/nutrients.js';
 import { offerCheck } from '../engine/costing.js';
 import { backward } from '../engine/trace.js';
-import { acceptIngLotOps } from '../engine/operations.js';
+import { acceptIngLotOps, reverseReceiptOps, REJECT_REASONS } from '../engine/operations.js';
 import { checkAnalysis } from '../engine/quality.js';
 import { Drawer, Btn, Chip, Kv, Table, Field, NumInput, Select, confirm } from '../ui/ui.jsx';
 import { StackBar, Legend, SERIES } from '../ui/charts.jsx';
@@ -218,19 +218,36 @@ function LotD({ d, id }) {
 function IngLotD({ d, id }) {
   const I = idx(d); const l = I.ingLot[id];
   const [a, setA] = useState({ UM: l?.analyses?.UM ?? null, PG: l?.analyses?.PG ?? null, AFB1: l?.analyses?.AFB1 ?? null });
+  const [reason, setReason] = useState('');
   if (!l) return <Missing />;
   const ing = I.ing[l.ingId];
   const used = traceIndex(d).usedIn.get(id) || [];
+  const today = appToday(d);
+  const po = l.poId ? (d.purchases || []).find(p => p.id === l.poId) : null;
+  // causa proposta dalle analisi: aflatossina oltre il limite, umidità oltre la sostanza secca di tabella + 1,5 punti, proteina 5% sotto
+  const guess = a.AFB1 != null && a.AFB1 > 20 ? 'AFB1' : a.UM != null && ing?.dm && a.UM > 100 - ing.dm + 1.5 ? 'umidità' : a.PG != null && ing?.nutr?.PG && a.PG < ing.nutr.PG * 0.95 ? 'proteina' : '';
+  const why = reason || guess;
   const decide = accept => {
     if (accept && a.AFB1 != null && a.AFB1 > 20) { toast('Con aflatossina B1 oltre 20 µg/kg il lotto non è accettabile come materia prima', 'err'); return; }
-    store.batch(acceptIngLotOps(d, l, { analyses: a, accept }), `Lotto ${l.code} di ${ing?.name.toLowerCase()}: ${accept ? 'accettato' : 'respinto'}`);
+    if (!accept && !why) { toast('Indica la causa del respingimento', 'err'); return; }
+    store.batch(acceptIngLotOps(d, l, { analyses: a, accept, reason: why }), `Lotto ${l.code} di ${ing?.name.toLowerCase()}: ${accept ? 'accettato' : 'respinto (' + why + ')'}`);
     toast(accept ? 'Lotto accettato: ora è scorta utilizzabile' : 'Lotto respinto', 'ok', { label: 'Annulla', fn: () => store.undo() });
   };
+  const reverse = () => {
+    const r = reverseReceiptOps(d, l.id);
+    if (r.error) { toast(r.error, 'err'); return; }
+    confirm(`Stornare l’arrivo ${l.code}?`, `Il lotto sparisce${l.status === 'accettato' ? ' con la sua scorta' : ''} e l’ordine ${po?.code || ''} torna aperto. L’operazione si può annullare.`, () => {
+      store.batch(r.ops, `Arrivo stornato: lotto ${l.code}`); closeDrawer(); toast('Arrivo stornato: l’ordine è di nuovo aperto', 'ok', { label: 'Annulla', fn: () => store.undo() });
+    }, { ok: 'Storna', danger: true });
+  };
+  const canReverse = !used.length && Math.abs((+l.remaining || 0) - (+l.tonnes || 0)) < 0.001 && l.date >= addDays(today, -30);
   return (
     <Drawer title={`Lotto ${l.code}`} sub={`${ing?.name} · arrivo ${dateIt(l.date)}`} icon={<span className="dicon"><LuWheat /></span>} wide
-      actions={<><Btn icon={LuShieldAlert} onClick={() => nav('qualita', 'richiamo', id)}>Dove è finito?</Btn>{l.status === 'in attesa' && <><Btn kind="danger" icon={LuX} onClick={() => decide(false)}>Respingi</Btn><Btn kind="primary" icon={LuCheck} onClick={() => decide(true)}>Accetta</Btn></>}</>}>
-      <div className="row gap-s"><Chip kind={l.status === 'accettato' ? 'good' : l.status === 'bloccato' ? 'crit' : 'warn'}>{l.status === 'bloccato' ? 'respinto' : l.status}</Chip>{l.analyses?.AFB1 != null && <Chip kind={l.analyses.AFB1 > 20 ? 'crit' : l.analyses.AFB1 >= 10 ? 'warn' : 'good'}>AFB1 {nf(l.analyses.AFB1, 1)} µg/kg</Chip>}</div>
-      <Kv items={[['Fornitore', l.supplier], ['Documento di trasporto', l.ddt || '—'], ['Quantità', `${nf(l.tonnes, 2)} t · residuo ${nf(l.remaining, 2)} t`], ['Prezzo', `${nf(l.price, 1)} €/t`], l.note ? ['Nota', l.note] : null]} />
+      actions={<><Btn icon={LuShieldAlert} onClick={() => nav('qualita', 'richiamo', id)}>Dove è finito?</Btn>{canReverse && <Btn kind="ghost" onClick={reverse}>Storna arrivo</Btn>}{l.status === 'in attesa' && <><Btn kind="danger" icon={LuX} onClick={() => decide(false)}>Respingi</Btn><Btn kind="primary" icon={LuCheck} onClick={() => decide(true)}>Accetta</Btn></>}</>}>
+      <div className="row gap-s"><Chip kind={l.status === 'accettato' ? 'good' : l.status === 'bloccato' ? 'crit' : 'warn'}>{l.status === 'bloccato' ? 'respinto' : l.status}</Chip>{l.analyses?.AFB1 != null && <Chip kind={l.analyses.AFB1 > 20 ? 'crit' : l.analyses.AFB1 >= 10 ? 'warn' : 'good'}>AFB1 {nf(l.analyses.AFB1, 1)} µg/kg</Chip>}{l.expiry && <Chip kind={l.expiry < today ? 'crit' : l.expiry <= addDays(today, 30) ? 'warn' : ''}>scade {dateIt(l.expiry, 'dm')}</Chip>}</div>
+      <Kv items={[['Fornitore', l.supplierId ? <button className="linklike" onClick={() => openDrawer('supplier', l.supplierId)}>{l.supplier}</button> : l.supplier], ['Ordine', po ? `${po.code} · ${nf(po.tonnes, 1)} t ordinate${po.status === 'parziale' ? ' (parziale)' : ''}` : '—'], ['Documento di trasporto', l.ddt || '—'], ['Quantità', `${nf(l.tonnes, 2)} t · residuo ${nf(l.remaining, 2)} t`], ['Prezzo', `${nf(l.price, 1)} €/t`],
+        l.status === 'bloccato' ? ['Causa del respingimento', REJECT_REASONS.find(x => x.id === l.rejectReason)?.label || l.rejectReason || 'non indicata'] : null, l.note ? ['Nota', l.note] : null]} />
+      {l.status === 'in attesa' && <div className="dsec"><div className="eyebrow">Se lo respingi</div><Field label="Causa del respingimento" hint={guess && !reason ? 'proposta dalle analisi' : ''}><Select value={why} onChange={setReason} options={[{ id: '', label: '— scegli —' }, ...REJECT_REASONS.map(x => ({ id: x.id, label: x.label }))]} /></Field></div>}
       <div className="dsec"><div className="eyebrow">Analisi di accettazione</div>
         <div className="form">
           <Field label="Umidità %"><NumInput value={a.UM} decimals={1} onChange={v => setA(x => ({ ...x, UM: v }))} slim /></Field>

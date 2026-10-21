@@ -5,12 +5,13 @@ import { LuShieldCheck, LuShieldAlert, LuPlus, LuDownload, LuListChecks, LuLock,
 import { useData, store, toast, openDrawer } from '../core/store.js';
 import { go } from '../core/router.js';
 import { idx, appToday, signals, traceIndex, shippedByLot } from '../core/derived.js';
-import { nf, sf, sum, dateIt, addDays, daysBetween, mean, round, norm } from '../core/util.js';
+import { nf, sf, sum, dateIt, addDays, daysBetween, mean, round, norm, uid } from '../core/util.js';
+import { nextCode } from '../core/codes.js';
 import { download, toCSV, stamp } from '../core/io.js';
 import { checkAnalysis, toleranceRange, controlStats, TOLERANCE_NOTE } from '../engine/quality.js';
 import { recall } from '../engine/trace.js';
 import { profile, AFB1_LIMITS } from '../engine/nutrients.js';
-import { acceptIngLotOps } from '../engine/operations.js';
+import { acceptIngLotOps, REJECT_REASONS } from '../engine/operations.js';
 import { PageHead, Panel, Btn, Table, Chip, Kpi, Field, Select, NumInput, Empty, SearchBox, filterRows, confirm, Seg, Kv } from '../ui/ui.jsx';
 import { LineChart, Bars, Dots, Legend } from '../ui/charts.jsx';
 import { SignalList } from './shared.jsx';
@@ -108,20 +109,28 @@ function LottiMP({ d, sel }) {
   useEffect(() => { if (sel && I.ingLot[sel]) openDrawer('ingLot', sel); }, [sel]);
   const rows = d.ingLots.map(l => ({ ...l, iname: I.ing[l.ingId]?.name, afb1: l.analyses?.AFB1 }));
   const view = filterRows(rows.filter(r => !st || (st === 'giacenza' ? r.status === 'accettato' && r.remaining > 0.005 : st === 'afb1' ? (r.afb1 ?? 0) >= 10 : r.status === st)), q, ['code', 'iname', 'supplier', 'ddt']);
-  const cereals = ['mais', 'sorgo', 'ddgs', 'glutine'];
-  const pts = d.ingLots.filter(l => l.ingId === ing && l.analyses?.AFB1 != null && l.date > addDays(today, -365))
+  // materie prime da sorvegliare per le micotossine: cereali e quelle con analisi di aflatossina, le più analizzate per prime
+  const cereals = useMemo(() => {
+    const n = {};
+    for (const l of d.ingLots) if (l.analyses?.AFB1 != null) n[l.ingId] = (n[l.ingId] || 0) + 1;
+    for (const i of d.ingredients) if (i.category === 'cereale' && !(i.id in n) && (+i.stock || 0) > 0) n[i.id] = 0;
+    return Object.keys(n).sort((a, b) => n[b] - n[a]).slice(0, 5);
+  }, [d.ingLots, d.ingredients]);
+  const ingShown = cereals.includes(ing) ? ing : cereals[0];
+  const pts = d.ingLots.filter(l => l.ingId === ingShown && l.analyses?.AFB1 != null && l.date > addDays(today, -365))
     .map(l => ({ key: l.id, t: l.date, y: l.analyses.AFB1, label: `${l.code} · ${nf(l.tonnes)} t`, color: l.analyses.AFB1 > 20 ? 'var(--crit)' : l.analyses.AFB1 >= 10 ? 'var(--warn)' : 'var(--s1)' }));
   const hot = rows.filter(r => r.status === 'accettato' && r.remaining > 0.005 && (r.afb1 ?? 0) >= 10);
+  const rejected = rows.filter(r => r.status === 'bloccato' && r.date > addDays(today, -365));
   return (
     <>
       <div className="kpis">
         <Kpi label="In attesa di accettazione" value={rows.filter(r => r.status === 'in attesa').length} foot="non utilizzabili in produzione" onClick={() => setSt('in attesa')} />
-        <Kpi label="Respinti in 12 mesi" value={rows.filter(r => r.status === 'bloccato' && r.date > addDays(today, -365)).length} foot="AFB1 oltre 20 µg/kg" onClick={() => setSt('bloccato')} />
+        <Kpi label="Respinti in 12 mesi" value={rejected.length} foot={rejected.length ? Object.entries(rejected.reduce((m, r) => ((m[r.rejectReason || (r.afb1 > 20 ? 'AFB1' : 'altro')] = (m[r.rejectReason || (r.afb1 > 20 ? 'AFB1' : 'altro')] || 0) + 1), m), {})).sort((a, b) => b[1] - a[1]).map(([k, n]) => `${REJECT_REASONS.find(x => x.id === k)?.label.split(' ')[0] || k} ${n}`).join(' · ') : 'nessuno'} onClick={() => setSt('bloccato')} />
         <Kpi label="In giacenza con AFB1 ≥ 10 µg/kg" value={hot.length} foot={hot.length ? `${nf(sum(hot, r => r.remaining))} t: preferire formule per adulti` : 'nessuno'} onClick={() => setSt('afb1')} />
         <Kpi label="AFB1 media del mais (12 mesi)" value={nf(mean(d.ingLots.filter(l => l.ingId === 'mais' && l.analyses?.AFB1 != null && l.date > addDays(today, -365)).map(l => l.analyses.AFB1)) ?? 0, 1)} unit="µg/kg" foot="limite materie prime 20" />
       </div>
       <Panel title="Aflatossina B1 per lotto" sub="Limite per le materie prime 20 µg/kg (Dir. 2002/32/CE, al 12% di umidità) · da 10 µg/kg destinare a formule per animali adulti" id="q-afb1"
-        actions={<Seg options={cereals.map(c => ({ id: c, label: I.ing[c]?.short || I.ing[c]?.name }))} value={ing} onChange={setIng} label="Materia prima" />}>
+        actions={<Seg options={cereals.map(c => ({ id: c, label: I.ing[c]?.short || I.ing[c]?.name }))} value={ingShown} onChange={setIng} label="Materia prima" />}>
         <Dots points={pts} unit="µg/kg" decimals={1} height={230} refs={[{ y: AFB1_LIMITS.materia_prima, label: 'limite 20', kind: 'crit' }, { y: 10, label: 'attenzione', kind: 'warn' }, { y: AFB1_LIMITS.giovani_lattifere, label: 'lattifere 5', kind: 'muted' }]} ariaLabel="Aflatossina B1 dei lotti" onPick={p => openDrawer('ingLot', p.key)} />
       </Panel>
       <Panel title="Lotti di materie prime" sub="Accettazione all’arrivo: umidità, proteina e aflatossina B1 · clic per la scheda, l’esito e la tracciabilità a valle" flush
@@ -249,9 +258,10 @@ function NuovoReclamo({ d }) {
   const [cat, setCat] = useState('Qualità del pellet'), [desc, setDesc] = useState(''), [sev, setSev] = useState(2);
   const save = () => {
     if (!desc.trim()) { toast('Descrivi il problema segnalato', 'err'); return; }
-    const n = d.complaints.length + 1;
+    const c = nextCode(d, 'RC', today);
     const kind = /consegna/i.test(cat) ? 'servizio' : /etichett/i.test(cat) ? 'etichetta' : /prestazion/i.test(cat) ? 'prestazioni' : 'prodotto';
-    const id = store.add('complaints', { code: `RC-${today.slice(2, 4)}-${String(n).padStart(3, '0')}`, date: today, customerId: cust, productId: p, lotId: l, category: cat, description: desc.trim(), kind, severity: sev, source: 'cliente', status: 'aperto', owner: 'Qualità', rootCause: '', action: '', closedAt: null, cost: null }, `Nuovo reclamo di ${I.cust[cust]?.name}`);
+    const id = uid('co');
+    store.batch([c.op, { kind: 'add', coll: 'complaints', obj: { id, code: c.code, date: today, customerId: cust, productId: p, lotId: l, category: cat, description: desc.trim(), kind, severity: sev, source: 'cliente', status: 'aperto', owner: 'Qualità', rootCause: '', action: '', closedAt: null, cost: null } }], `Nuovo reclamo di ${I.cust[cust]?.name}`);
     toast('Reclamo registrato: il lotto è collegato per la tracciabilità');
     go('qualita', 'reclami', id);
   };

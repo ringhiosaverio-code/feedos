@@ -1,5 +1,6 @@
-/* FeedOS 16 · Operazioni che toccano più archivi insieme (un solo passo annullabile):
- * arrivo di un ordine d'acquisto → lotto di materia prima e scorta;
+/* FeedOS 17 · Operazioni che toccano più archivi insieme (un solo passo annullabile):
+ * arrivo di un ordine d'acquisto (anche parziale) → lotto di materia prima in attesa; esito dell'accettazione con la causa del respingimento;
+ * storno di un arrivo non ancora usato;
  * registrazione di produzione → prelievo FIFO dai lotti, nuovo lotto di prodotto, scorte aggiornate. */
 import { round, dayOfYear, uid } from '../core/util.js';
 
@@ -7,32 +8,62 @@ import { round, dayOfYear, uid } from '../core/util.js';
 export function ingLotCode(ing, date, n) { return `${ing.code.replace('MP', 'M')}-${date.slice(2, 4)}${String(dayOfYear(date)).padStart(3, '0')}-${String(n % 100).padStart(2, '0')}`; }
 export function lotCode(line, date, n) { return `L${date.slice(2, 4)}${String(dayOfYear(date)).padStart(3, '0')}-${line.code}-${String(n % 100).padStart(2, '0')}`; }
 
-/** Arrivo di un ordine: il lotto nasce «in attesa» finché l'analisi di accettazione non lo libera. */
+/** Arrivo di un ordine: il lotto nasce «in attesa» finché l'analisi di accettazione non lo libera.
+ *  Un arrivo sotto il 98% della quantità ancora aperta lascia l'ordine «parziale» con il residuo da ricevere. */
 export function receivePurchaseOps(d, po, { date, tonnes, ddt, analyses } = {}) {
   const ing = d.ingredients.find(i => i.id === po.ingId);
   if (!ing) return null;
-  const t = round(+tonnes || +po.tonnes, 2);
+  const prev = po.status === 'parziale' ? +po.receivedT || 0 : 0;
+  const t = round(+tonnes || Math.max(0, (+po.tonnes || 0) - prev), 2);
+  const total = round(prev + t, 2);
+  const status = total >= 0.98 * (+po.tonnes || 0) ? 'ricevuto' : 'parziale';
   const n = d.ingLots.filter(l => l.ingId === ing.id).length + 1;
+  const sup = (d.suppliers || []).find(s => s.id === po.supplierId) || (d.suppliers || []).find(s => s.name === (po.supplier || ing.supplier));
   const lot = {
-    id: uid('il'), code: ingLotCode(ing, date, n), ingId: ing.id, supplier: po.supplier || ing.supplier, date, tonnes: t, remaining: t,
+    id: uid('il'), code: ingLotCode(ing, date, n), ingId: ing.id, supplier: po.supplier || ing.supplier, supplierId: sup?.id || po.supplierId || null, date, tonnes: t, remaining: t,
     price: +po.price || +ing.price || 0, ddt: ddt || '', poId: po.id,
     analyses: { PG: analyses?.PG ?? null, UM: analyses?.UM ?? null, AFB1: analyses?.AFB1 ?? null },
     status: 'in attesa', note: 'Arrivo registrato in FeedOS: in attesa dell’analisi di accettazione',
   };
   return [
-    { kind: 'update', coll: 'purchases', id: po.id, patch: { status: 'ricevuto', receivedAt: date, receivedT: t } },
+    { kind: 'update', coll: 'purchases', id: po.id, patch: { status, receivedAt: date, receivedT: total, ...(sup && !po.supplierId ? { supplierId: sup.id } : {}) } },
     { kind: 'add', coll: 'ingLots', obj: lot },
   ];
 }
 
-/** Esito dell'accettazione di un lotto di materia prima: aggiorna stato e scorta disponibile. */
-export function acceptIngLotOps(d, lot, { analyses, accept }) {
+/** Cause di respingimento di un lotto di materia prima. */
+export const REJECT_REASONS = [
+  { id: 'AFB1', label: 'Aflatossina B1 oltre il limite' }, { id: 'umidità', label: 'Umidità eccessiva' }, { id: 'proteina', label: 'Proteina sotto il contratto' },
+  { id: 'corpi estranei', label: 'Corpi estranei o infestanti' }, { id: 'documenti', label: 'Documenti mancanti o non conformi' }, { id: 'altro', label: 'Altro' },
+];
+
+/** Esito dell'accettazione di un lotto di materia prima: aggiorna stato e scorta disponibile; un respingimento porta la causa. */
+export function acceptIngLotOps(d, lot, { analyses, accept, reason }) {
   const ing = d.ingredients.find(i => i.id === lot.ingId);
   const status = accept ? 'accettato' : 'bloccato';
-  const ops = [{ kind: 'update', coll: 'ingLots', id: lot.id, patch: { analyses: { ...lot.analyses, ...analyses }, status } }];
+  const ops = [{ kind: 'update', coll: 'ingLots', id: lot.id, patch: { analyses: { ...lot.analyses, ...analyses }, status, ...(accept ? {} : { rejectReason: reason || 'altro' }) } }];
   if (ing && accept && lot.status !== 'accettato') ops.push({ kind: 'update', coll: 'ingredients', id: ing.id, patch: x => ({ ...x, stock: round((+x.stock || 0) + (+lot.remaining || 0), 1) }) });
   if (ing && !accept && lot.status === 'accettato') ops.push({ kind: 'update', coll: 'ingredients', id: ing.id, patch: x => ({ ...x, stock: round(Math.max(0, (+x.stock || 0) - (+lot.remaining || 0)), 1) }) });
   return ops;
+}
+
+/**
+ * Storno di un arrivo registrato per errore: solo se il lotto non è stato usato (residuo = quantità, nessun prelievo).
+ * Toglie il lotto (e la sua scorta se era accettato) e riapre l'ordine. → {ops} oppure {error}
+ */
+export function reverseReceiptOps(d, ingLotId) {
+  const lot = (d.ingLots || []).find(l => l.id === ingLotId);
+  if (!lot) return { error: 'Lotto non trovato.' };
+  const used = (d.lots || []).some(p => (p.comp || []).some(c => c.l === ingLotId)) || Math.abs((+lot.remaining || 0) - (+lot.tonnes || 0)) > 0.001;
+  if (used) return { error: 'Il lotto è già stato usato in produzione: non si può stornare (registra una rettifica d’inventario).' };
+  const ops = [{ kind: 'remove', coll: 'ingLots', id: lot.id }];
+  if (lot.status === 'accettato') ops.push({ kind: 'update', coll: 'ingredients', id: lot.ingId, patch: x => ({ ...x, stock: round(Math.max(0, (+x.stock || 0) - (+lot.remaining || 0)), 1) }) });
+  const po = lot.poId && (d.purchases || []).find(p => p.id === lot.poId);
+  if (po) {
+    const left = round(Math.max(0, (+po.receivedT || 0) - (+lot.tonnes || 0)), 2);
+    ops.push({ kind: 'update', coll: 'purchases', id: po.id, patch: left > 0.001 ? { status: 'parziale', receivedT: left } : { status: 'confermato', receivedAt: null, receivedT: null } });
+  }
+  return { ops };
 }
 
 /** Prelievo FIFO: i lotti accettati più vecchi, arrivati entro la data di produzione. */
