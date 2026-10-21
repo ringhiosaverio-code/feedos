@@ -15,7 +15,10 @@ const today = '2026-10-16';
 const d = demoData(today);
 const ctx = makeCtx(d, today);
 const close = (a, b, tol = 1e-6, msg = '') => assert.ok(Math.abs(a - b) <= tol, `${msg} ${a} ≠ ${b}`);
-const ship = (date, id = 's-test') => ({ kind: 'add', coll: 'shipments', obj: { id, date, customerId: 'c-1', productId: 'p-lt18', lotId: 'lt-1', tonnes: 10, price: 360, agentId: 'ag-4' } });
+// consegne di prova da un lotto di prova da 40 t: nel demo i lotti sono già tutti spediti e la regola critica di tracciabilità
+// (lotto consegnato oltre il prodotto) bloccherebbe giustamente la chiusura del mese
+const testLot = { kind: 'add', coll: 'lots', obj: { id: 'lt-test', code: 'L-TEST', productId: 'p-lt18', date: '2026-09-14', tonnes: 40, comp: [], status: 'rilasciato', analyses: [] } };
+const ship = (date, id = 's-test') => ({ kind: 'add', coll: 'shipments', obj: { id, date, customerId: 'c-1', productId: 'p-lt18', lotId: 'lt-test', tonnes: 10, price: 360, agentId: 'ag-4' } });
 
 test('demo: 12 chiusure dallo storico, 12 di FeedOS, il primo mese parziale annotato, chiuso fino a settembre 2026', () => {
   const st = d.closings.filter(c => c.source === 'storico'), fe = d.closings.filter(c => c.source === 'feedos');
@@ -39,7 +42,7 @@ test('chiudere un mese blocca i movimenti di quel mese (salvo force); riaprirlo 
   assert.match(reopenLabel('2026-09', 'Nota di credito tardiva'), /settembre 2026.*Nota di credito tardiva/);
   assert.equal(frozenFor(d1, ['2026-09']), null, 'riaperto: niente numeri congelati');
   // mese riaperto: si può registrare una consegna
-  const r1 = applyOpsTo(d1, [ship('2026-09-15', 's-x1')]);
+  const r1 = applyOpsTo(d1, [testLot, ship('2026-09-15', 's-x1')]);
   assert.equal(r1.refused, null);
   // si richiude: la lista di controllo è superata
   const d2 = r1.data, ctx2 = makeCtx(d2, today);

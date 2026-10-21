@@ -102,7 +102,7 @@ function Piano({ d }) {
   const props = useMemo(() => rebalance(d, weeks, load), [d.plan, weeks, load]);
   const w0 = weeks[0];
   const thisW = sum(Object.values(load).filter(c => c.week === w0), c => c.t);
-  const capW = sum(d.lines, l => capWeek(l, w0, d.settings));
+  const capW = sum(d.lines, l => (w0 ? capWeek(l, w0, d.settings) : capOf(l, d.settings))); // senza piano: capacità di una settimana tipo
   const overs = Object.values(load).filter(c => c.t - c.cap > 1);
   const done = sum(d.runs.filter(r => r.date >= w0 && r.date <= today), r => r.tonnes);
   const shownW = cell ? cell.week : (wk || w0);

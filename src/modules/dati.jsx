@@ -1,5 +1,5 @@
-/* FeedOS 16 · Dati: archivio (backup, ripristino, istantanee, demo), importazioni CSV e da FeedOS 15,
- * registro delle modifiche, impostazioni dell'impresa, dell'energia e dell'aspetto. */
+/* FeedOS 17 · Dati: archivio (backup, ripristino, istantanee, demo), importazione guidata da CSV e da FeedOS 15, anagrafiche,
+ * qualità dei dati, registro delle modifiche, impostazioni dell'impresa, degli obiettivi dei KPI, dell'energia e dell'aspetto. */
 import React, { useEffect, useRef, useState } from 'react';
 import { LuDownload, LuUpload, LuRefreshCw, LuDatabase, LuCamera, LuTrash2, LuRotateCcw, LuFileSpreadsheet, LuShieldCheck, LuTriangleAlert, LuCheck, LuInfo } from 'react-icons/lu';
 import { useData, useStore, store, toast, getState } from '../core/store.js';
@@ -16,7 +16,11 @@ import { GRID_FACTORS } from '../engine/energy.js';
 import { PageHead, Panel, Btn, Table, Chip, Kpi, Field, Select, NumInput, Empty, SearchBox, filterRows, confirm, Seg, Kv } from '../ui/ui.jsx';
 import { NAV } from '../app/nav.js';
 import { VERSION } from '../app/version.js';
-import { SectionPlaceholder } from './shared.jsx';
+import { Anagrafiche } from './anagrafiche.jsx';
+import { QualitaDati } from './qualitaDati.jsx';
+import { ImportWizard } from './importa.jsx';
+import { KPIS, shown } from '../engine/kpis.js';
+import { Def } from './direzione-conto.jsx';
 
 const FULL = __FULL__; // versione completa (con i riferimenti alla tesi) o pubblica
 
@@ -25,12 +29,12 @@ export function Dati({ route }) {
   const tab = route.tab || 'archivio';
   return (
     <>
-      <PageHead title="Dati" lead="I dati restano in questo browser: nessun invio a server. Da qui si salvano e si ripristinano, si importano listini, giacenze, quotazioni e i dati di FeedOS 15, si consulta il registro delle modifiche e si impostano impresa ed energia."
+      <PageHead title="Dati" lead="I dati restano in questo browser: nessun invio a server. Da qui si salvano e si ripristinano, si importano dal gestionale con l’importazione guidata, si curano anagrafiche e qualità dei dati, si consulta il registro delle modifiche e si impostano impresa, obiettivi ed energia."
         tabs={NAV.dati.tabs} tab={tab} onTab={t => go('dati', t)} />
       {tab === 'archivio' && <Archivio d={d} hi={route.id} />}
       {tab === 'importa' && <Importa d={d} />}
-      {tab === 'anagrafiche' && <SectionPlaceholder title="Anagrafiche">Clienti, agenti, prodotti, linee, materie prime, fornitori e centri di costo: inserimento, modifica e controllo dei riferimenti.</SectionPlaceholder>}
-      {tab === 'qualita' && <SectionPlaceholder title="Qualità dei dati">Punteggio della qualità dei dati, regole di controllo con i record da correggere e il loro andamento.</SectionPlaceholder>}
+      {tab === 'anagrafiche' && <Anagrafiche d={d} />}
+      {tab === 'qualita' && <QualitaDati d={d} />}
       {tab === 'registro' && <Registro d={d} />}
       {tab === 'impostazioni' && <Impostazioni d={d} />}
     </>
@@ -158,8 +162,10 @@ function Importa({ d }) {
     } catch (err) { toast(err.message, 'err'); }
   };
   return (
+    <>
+    <ImportWizard d={d} />
     <div className="split">
-      <Panel title="Importa da un foglio di calcolo" sub="File CSV con separatore «;» (Excel in italiano) o «,»: prima si vede l’anteprima, poi si applica" id="dati-csv">
+      <Panel title="Prezzi, giacenze e quotazioni" sub="File CSV con separatore «;» (Excel in italiano) o «,»: prima si vede l’anteprima, poi si applica" id="dati-csv">
         <div className="stack" style={{ gap: 12 }}>
           <Seg options={Object.entries(KINDS).map(([k, v]) => ({ id: k, label: v.label }))} value={kind} onChange={k => { setKind(k); setRows(null); }} label="Tipo di dati" />
           <p className="small muted">Colonne: {K.hint}.</p>
@@ -196,6 +202,7 @@ function Importa({ d }) {
         </div>
       </Panel>
     </div>
+    </>
   );
 }
 
@@ -224,6 +231,7 @@ function Impostazioni({ d }) {
   const setE = patch => store.settings(st => ({ ...st, energy: { ...st.energy, ...patch } }), 'Impostazioni dell’energia');
   const Txt = ({ label, k, hint }) => <Field label={label} hint={hint}><input className="input" defaultValue={c[k] || ''} onBlur={e => e.target.value !== (c[k] || '') && setC({ [k]: e.target.value })} /></Field>;
   return (
+    <>
     <div className="split">
       <div className="stack">
         <Panel title="Impresa" sub="Compare su cartellini, passaporti di prodotto e report">
@@ -231,6 +239,10 @@ function Impostazioni({ d }) {
             <Txt label="Ragione sociale" k="name" /><Txt label="Nome breve" k="short" /><Txt label="Stabilimento" k="site" /><Txt label="Numero di riconoscimento" k="approval" hint="Reg. (CE) 183/2005" />
           </div>
           <div style={{ marginTop: 12 }}><Txt label="Indirizzo" k="address" /></div>
+          <div className="form" style={{ marginTop: 12 }}>
+            <Field label="Latitudine dello stabilimento" hint="per le distanze dai clienti"><NumInput value={c.lat} decimals={5} onChange={v => setC({ lat: v })} /></Field>
+            <Field label="Longitudine dello stabilimento"><NumInput value={c.lon} decimals={5} onChange={v => setC({ lon: v })} /></Field>
+          </div>
         </Panel>
         <Panel title="Energia ed emissioni" sub="Usati per il costo pieno, la CO₂ e gli indicatori ESG">
           <div className="form">
@@ -261,5 +273,56 @@ function Impostazioni({ d }) {
         </Panel>
       </div>
     </div>
+    <Obiettivi d={d} />
+    </>
   );
 }
+
+/* ---------------- obiettivi dei KPI ---------------- */
+/** Obiettivi e soglie dei KPI (settings.targets): valore annuo per i flussi, valore del rapporto per gli altri, mese per mese se serve. */
+function Obiettivi({ d }) {
+  const T = d.settings?.targets || {};
+  const [open, setOpen] = useState(null);
+  const set = (id, patch, label) => store.settings(st => {
+    const cur = { ...(st.targets?.[id] || {}), ...patch };
+    for (const k of Object.keys(cur)) if (cur[k] == null) delete cur[k];
+    const targets = { ...(st.targets || {}) };
+    if (Object.keys(cur).length) targets[id] = cur; else delete targets[id];
+    return { ...st, targets };
+  }, label);
+  const sc = k => k.scale || 1;
+  const MES = ['gen', 'feb', 'mar', 'apr', 'mag', 'giu', 'lug', 'ago', 'set', 'ott', 'nov', 'dic'];
+  return (
+    <Panel title="Obiettivi degli indicatori" sub="Semafori del cruscotto, dei KPI della Direzione e dei segnali: verde all’obiettivo, giallo fino alla soglia, rosso oltre · i flussi hanno un obiettivo annuo" flush id="set-targets">
+      <div className="tw"><table className="t">
+        <thead><tr><th>Indicatore</th><th>Meglio</th><th className="r">Obiettivo</th><th className="r">Soglia</th><th>Per mese</th></tr></thead>
+        <tbody>{KPIS.map(k => {
+          const t = T[k.id] || {};
+          const u = k.unit === '%' ? '%' : k.unit;
+          return (
+            <React.Fragment key={k.id}>
+              <tr>
+                <td><Def text={k.def}>{k.label}</Def><span className="sub">{u}{k.kind === 'flow' ? ' · annuo' : ''}</span></td>
+                <td className="small">{k.dir === 'up' ? 'più alto' : k.dir === 'down' ? 'più basso' : 'nell’intervallo'}</td>
+                <td className="r">{k.dir === 'range'
+                  ? <span className="row gap-s"><NumInput slim value={t.min != null ? t.min * sc(k) : null} decimals={2} ariaLabel={`Minimo di ${k.label}`} onChange={v => set(k.id, { min: v == null ? null : v / sc(k) }, `Obiettivo ${k.label}`)} /><NumInput slim value={t.max != null ? t.max * sc(k) : null} decimals={2} ariaLabel={`Massimo di ${k.label}`} onChange={v => set(k.id, { max: v == null ? null : v / sc(k) }, `Obiettivo ${k.label}`)} /></span>
+                  : <NumInput slim value={t.target != null ? t.target * sc(k) : null} decimals={k.unit === '€' ? 0 : 2} ariaLabel={`Obiettivo di ${k.label}`} onChange={v => set(k.id, { target: v == null ? null : v / sc(k) }, `Obiettivo ${k.label}`)} />}</td>
+                <td className="r"><NumInput slim value={t.warn != null ? t.warn * sc(k) : null} decimals={k.unit === '€' ? 0 : 2} ariaLabel={`Soglia di ${k.label}`} onChange={v => set(k.id, { warn: v == null ? null : v / sc(k) }, `Soglia ${k.label}`)} /></td>
+                <td>{k.dir !== 'range' && <label className="row small" style={{ gap: 6, whiteSpace: 'nowrap', flexWrap: 'nowrap' }}><input type="checkbox" checked={!!t.monthly || open === k.id} onChange={e => { if (e.target.checked) setOpen(k.id); else { setOpen(null); set(k.id, { monthly: null }, `Obiettivo ${k.label}: un solo valore`); } }} /> mese per mese</label>}</td>
+              </tr>
+              {(open === k.id || t.monthly) && k.dir !== 'range' && (
+                <tr className="sub-row"><td colSpan={5}>
+                  <div className="row gap-s" style={{ flexWrap: 'wrap' }}>
+                    {MES.map((m, i) => { const key = String(i + 1).padStart(2, '0'); return <label key={m} className="stack xs" style={{ gap: 2, width: 76 }}><span className="muted">{m}</span><NumInput slim value={t.monthly?.[key] != null ? t.monthly[key] * sc(k) : null} decimals={2} ariaLabel={`${k.label} di ${m}`} onChange={v => set(k.id, { monthly: { ...(t.monthly || {}), [key]: v == null ? undefined : v / sc(k) } }, `Obiettivo ${k.label} di ${m}`)} /></label>; })}
+                  </div>
+                  <p className="xs muted" style={{ marginTop: 6 }}>{k.kind === 'flow' ? 'Per i flussi il valore del mese sostituisce un dodicesimo dell’obiettivo annuo.' : 'Per i rapporti l’obiettivo del periodo è la media dei mesi pesata sulle tonnellate.'}</p>
+                </td></tr>
+              )}
+            </React.Fragment>
+          );
+        })}</tbody>
+      </table></div>
+    </Panel>
+  );
+}
+

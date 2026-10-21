@@ -1,14 +1,16 @@
-/* FeedOS 16 · Oggi: decisioni spiegate, numeri della settimana, gemello in miniatura, attività. */
+/* FeedOS 17 · Oggi: decisioni spiegate, cruscotto degli indicatori con obiettivi, numeri della settimana, gemello in miniatura, attività. */
 import React, { useMemo, useState } from 'react';
 import { LuPlus, LuSparkles, LuPresentation, LuFactory, LuTruck } from 'react-icons/lu';
 import { useData, store, toast, uiStore } from '../core/store.js';
 import { go } from '../core/router.js';
 import { ROLE } from '../core/roles.js';
 import { usePrefs } from '../core/prefs.js';
-import { signals, appToday, costs, kpis, weekly, idx, mrp } from '../core/derived.js';
+import { signals, appToday, costs, kpis, weekly, idx, mrp, ctxOf } from '../core/derived.js';
+import { capWeek } from '../engine/lines.js';
+import { Cruscotto } from './cruscotto.jsx';
 import { addDays, dateIt, nf, sum, mondayOf, daysBetween, relDays } from '../core/util.js';
 import { PageHead, Panel, Kpi, Btn, Table, Field, Select, Chip, Empty, Tabs, Sev } from '../ui/ui.jsx';
-import { SignalList, SectionPlaceholder } from './shared.jsx';
+import { SignalList } from './shared.jsx';
 import { TwinMini } from './gemello.jsx';
 import { checkAnalysis } from '../engine/quality.js';
 import { profile } from '../engine/nutrients.js';
@@ -22,7 +24,9 @@ export function Oggi({ route }) {
   const today = appToday(d);
   const role = ROLE[usePrefs(p => p.role)] || ROLE.direzione;
   const all = signals(d);
-  const mine = role.id === 'direzione' ? all : all.filter(s => s.roles?.includes(role.id));
+  const agentId = usePrefs(p => p.agentId);
+  // la vista agente vede i segnali del suo ruolo e, se ha scelto l'agente, solo quelli suoi o senza agente
+  const mine = role.id === 'direzione' ? all : all.filter(s => s.roles?.includes(role.id) && (role.id !== 'agente' || !agentId || !s.agentId || s.agentId === agentId));
   const crit = mine.filter(s => s.severity === 'critico').length;
   const openTasks = d.tasks.filter(t => t.status !== 'fatto' && t.status !== 'scartato');
   return (
@@ -31,7 +35,7 @@ export function Oggi({ route }) {
         actions={<><Btn icon={LuSparkles} onClick={() => go('economia', 'scenari')}>E se…</Btn><Btn kind="primary" icon={LuPresentation} onClick={() => uiStore.set({ tour: 0 })}>Presentazione guidata</Btn></>}
         tabs={[{ id: 'decisioni', label: 'Decisioni', n: mine.length }, { id: 'cruscotto', label: 'Cruscotto' }, { id: 'attivita', label: 'Attività', n: openTasks.length }, { id: 'registro', label: 'Ultime modifiche' }]} tab={tab} onTab={t => go('oggi', t)} />
       {tab === 'decisioni' && <Decisioni d={d} today={today} mine={mine} role={role} />}
-      {tab === 'cruscotto' && <SectionPlaceholder title="Cruscotto">Indicatori chiave del periodo con obiettivo, semaforo, confronto e andamento di 13 mesi, e le prime perdite in euro.</SectionPlaceholder>}
+      {tab === 'cruscotto' && <Cruscotto d={d} />}
       {tab === 'attivita' && <Attivita d={d} today={today} />}
       {tab === 'registro' && <Registro d={d} />}
     </>
@@ -46,7 +50,7 @@ function Decisioni({ d, today, mine, role }) {
     <>
       <div className="kpis" id="oggi-kpi">
         <Kpi label="Produzione ultimi 7 giorni" value={nf(K.prod7)} unit="t" spark={K.prodSpark} delta={K.prodDelta} foot="vs media 4 settimane" onClick={() => go('produzione', 'registro')} />
-        <Kpi label="Margine sulle consegne (30 giorni)" value={nf(K.margin, 1)} unit="€/t" spark={K.marginSpark} sparkColor="var(--s3)" foot={`${nf(K.ship30)} t consegnate`} onClick={() => go('economia', 'margini')} title="Prezzo di vendita meno costo pieno ai prezzi di oggi" />
+        <Kpi label="Margine sul costo effettivo (30 giorni)" value={nf(K.margin, 1)} unit="€/t" spark={K.marginSpark} sparkColor="var(--s3)" foot={`${nf(K.ship30)} t consegnate`} onClick={() => go('economia', 'margini')} title="Prezzo di vendita meno costo pieno ai prezzi di oggi" />
         <Kpi label="Elettricità per tonnellata (4 sett.)" value={nf(K.kwhT, 1)} unit="kWh/t" spark={K.kwhSpark} sparkColor="var(--s4)" delta={K.kwhDelta} deltaGood={K.kwhDelta != null ? K.kwhDelta <= 0 : null} foot="vs 12 settimane" onClick={() => go('produzione', 'energia')} />
         <Kpi label="CO₂ dei vettori energetici (12 mesi)" value={nf(K.co2T, 2)} unit="kg/t" foot={`FV ${nf(K.fv * 100, 1)}% dell’elettricità`} onClick={() => go('esg', 'energia')} />
         <Kpi label="Lotti conformi all’etichetta (90 giorni)" value={K.conf == null ? '—' : nf(K.conf * 100, 1)} unit="%" foot={`${K.analyzed} lotti analizzati`} onClick={() => go('qualita', 'lotti')} />
@@ -83,11 +87,13 @@ function useKpis(d, today) {
     const kwhPrev = sum(rPrev, r => r.kwh) / Math.max(1, sum(rPrev, r => r.tonnes));
     const kwhSpark = [];
     for (let k = 12; k >= 1; k--) { const a = addDays(today, -7 * k), b = addDays(today, -7 * (k - 1)); const rs = d.runs.filter(r => r.date > a && r.date <= b); kwhSpark.push(sum(rs, r => r.kwh) / Math.max(1, sum(rs, r => r.tonnes))); }
-    const s30 = d.shipments.filter(s => s.date > addDays(today, -30) && s.date <= today);
-    const ship30 = sum(s30, s => s.tonnes);
-    const margin = ship30 ? sum(s30, s => s.tonnes * (s.price - (C[s.productId]?.total || 0))) / ship30 : null;
+    // margine sul costo pieno effettivo dei lotti consegnati (lo stesso della Direzione), non sul costo di oggi
+    const F = ctxOf(d).facts || [];
+    const f30 = F.filter(f => f.date > addDays(today, -30) && f.date <= today);
+    const ship30 = sum(f30, f => f.tonnes);
+    const margin = ship30 ? sum(f30, f => f.marginFull) / ship30 : null;
     const marginSpark = [];
-    for (let k = 12; k >= 1; k--) { const a = addDays(today, -28 * k), b = addDays(today, -28 * (k - 1)); const ss = d.shipments.filter(s => s.date > a && s.date <= b); const t = sum(ss, s => s.tonnes); marginSpark.push(t ? sum(ss, s => s.tonnes * (s.price - (C[s.productId]?.total || 0))) / t : null); }
+    for (let k = 12; k >= 1; k--) { const a = addDays(today, -28 * k), b = addDays(today, -28 * (k - 1)); const ff = F.filter(f => f.date > a && f.date <= b); const t = sum(ff, f => f.tonnes); marginSpark.push(t ? sum(ff, f => f.marginFull) / t : null); }
     const I = idx(d);
     let ok = 0, n = 0;
     for (const l of d.lots) {
@@ -107,10 +113,11 @@ function Settimana({ d, today }) {
   const w0 = mondayOf(today);
   const rows = d.lines.map(l => {
     const t = sum(d.plan.filter(p => p.week === w0 && p.lineId === l.id), p => p.tonnes);
-    const cap = l.capacityTph * l.hoursWeek * 0.9;
+    const cap = capWeek(l, w0, d.settings);
     return { l, t, cap, u: cap ? t / cap : 0 };
   });
-  const incoming = d.purchases.filter(p => p.status !== 'ricevuto' && p.deliveryDate >= today && p.deliveryDate <= addDays(today, 7)).sort((a, b) => a.deliveryDate < b.deliveryDate ? -1 : 1);
+  // arrivi dei prossimi 7 giorni e consegne in ritardo (gli ordini annullati non arrivano)
+  const incoming = d.purchases.filter(p => p.status !== 'ricevuto' && p.status !== 'annullato' && p.deliveryDate <= addDays(today, 7)).sort((a, b) => a.deliveryDate < b.deliveryDate ? -1 : 1);
   return (
     <Panel title="Questa settimana" sub={`Settimana dal ${dateIt(w0, 'dm')}`}>
       <div className="stack" style={{ gap: 12 }}>
@@ -123,7 +130,7 @@ function Settimana({ d, today }) {
         <div className="hr" />
         <div className="eyebrow">Arrivi di materie prime</div>
         {incoming.length ? incoming.slice(0, 6).map(p => (
-          <div key={p.id} className="row between small"><span className="row gap-s"><LuTruck size={15} aria-hidden="true" />{I.ing[p.ingId]?.name}</span><span className="num muted">{nf(p.tonnes)} t · {relDays(p.deliveryDate, today)}</span></div>
+          <div key={p.id} className="row between small"><span className="row gap-s"><LuTruck size={15} aria-hidden="true" />{I.ing[p.ingId]?.name}</span>{p.deliveryDate < today ? <Chip kind="crit">in ritardo di {daysBetween(p.deliveryDate, today)} gg</Chip> : <span className="num muted">{nf(p.tonnes)} t · {relDays(p.deliveryDate, today)}</span>}</div>
         )) : <span className="small muted">Nessun arrivo nei prossimi 7 giorni.</span>}
       </div>
     </Panel>

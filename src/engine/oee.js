@@ -97,7 +97,7 @@ export const oeeTarget = d => { const v = +d?.settings?.ops?.oeeTarget; return v
 
 /** Margine di contribuzione I per tonnellata (90 giorni) e quota di carico pianificato delle prossime 8 settimane per linea. */
 function lossBasis(d, ctx) {
-  const today = ctx?.today || d.settings?.demoAnchor;
+  const today = ctx?.today || d.settings?.demoAnchor || new Date().toISOString().slice(0, 10);
   const f90 = (ctx?.facts || []).filter(f => f.date > addDays(today, -90) && f.date <= today);
   const mc1T = sum(f90, f => f.mc1) / Math.max(1, sum(f90, f => f.tonnes));
   const load = {};
