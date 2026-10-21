@@ -20,7 +20,7 @@ import { checklist, closeMonthOps, reopenMonthOps, reopenLabel, closeLabel, clos
 import { PageHead, Panel, Kpi, Btn, Chip, Seg, Select, Table, Empty, Field, NumInput, Kv, confirm } from '../ui/ui.jsx';
 import { SignalList } from './shared.jsx';
 import { COST_CENTERS } from '../data/demo/costs.js';
-import { Conto, useDir, kc, goal, money, eurTxt, kEur, perT, Def, HWaterfall, MonthBars, Delta } from './direzione-conto.jsx';
+import { Conto, useDir, kc, goal, money, eurTxt, kEur, skEur, perT, Def, HWaterfall, MonthBars, Delta } from './direzione-conto.jsx';
 import { Budget } from './direzione-budget.jsx';
 import { ReportCda } from './direzione-report.jsx';
 
@@ -250,13 +250,13 @@ function Ponte() {
             {narrative(res, mat, { vs: vsText(PA, PB) }).map((t, i) => <p key={i}>{t}</p>)}
             <Kv items={[
               ['Volume', `${sf(res.TB - res.TA, 0)} t (${res.TA ? sf((res.TB - res.TA) / res.TA * 100, 1) + '%' : '—'})`],
-              ['Prezzo netto', kEur((res.steps.find(s => s.key === 'listino')?.value || 0) + (res.steps.find(s => s.key === 'sconti')?.value || 0))],
-              ['Materie prime', kEur((res.steps.find(s => s.key === 'mpPrezzo')?.value || 0) + (res.steps.find(s => s.key === 'mpRicetta')?.value || 0))],
+              ['Prezzo netto', skEur((res.steps.find(s => s.key === 'listino')?.value || 0) + (res.steps.find(s => s.key === 'sconti')?.value || 0))],
+              ['Materie prime', skEur((res.steps.find(s => s.key === 'mpPrezzo')?.value || 0) + (res.steps.find(s => s.key === 'mpRicetta')?.value || 0))],
             ]} />
           </div>
         </Panel>
       </div>
-      <Panel title={`Effetti per ${DIMS.find(x => x.id === br.by).label.toLowerCase()}`} sub={br.by === 'productId' && !PA.budget ? 'Clic su un prodotto per il dettaglio per cliente' : 'Contributo di ogni chiave agli effetti del ponte (€)'} flush>
+      <Panel title={`Effetti per ${DIMS.find(x => x.id === br.by).label.toLowerCase()}`} sub={br.by === 'productId' && !PA.budget ? 'Contributo di ogni prodotto agli effetti del ponte (€) · clic su un prodotto per il dettaglio per cliente' : 'Contributo di ogni chiave agli effetti del ponte (€)'} flush>
         <Table rows={res.rows} rowKey={r => r.key} initialSort={{ key: 'total', dir: 'asc' }} exportName="scostamenti" selected={drill}
           onRow={br.by === 'productId' && !PA.budget ? r => setDrill(x => (x === r.key ? null : r.key)) : undefined} cols={effCols(br.by)} />
       </Panel>
