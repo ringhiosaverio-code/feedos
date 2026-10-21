@@ -116,7 +116,9 @@ test('estensori: ordine e semi, e ogni patch aggiunge soltanto (campi nuovi, id 
   }
   for (const k of Object.keys(g.settings)) if (!['finance', 'logistics', 'ops', 'calendar', 'company', 'targets', 'counters', 'closedThrough', 'visitCost'].includes(k)) assert.deepEqual(full.settings[k], g.settings[k], 'settings.' + k);
   // il demo di oggi porta la struttura dei costi
-  assert.equal(D.costCenters.length, 8); assert.equal(D.fixedCosts.length, 192);
+  assert.equal(D.costCenters.length, 8);
+  assert.equal(D.fixedCosts.filter(r => r.kind !== 'budget').length, 192, 'consuntivo: 8 centri × 24 mesi');
+  assert.equal(D.fixedCosts.filter(r => r.kind === 'budget').length, 96, 'budget dell’anno: 8 centri × 12 mesi');
   assert.ok(D.products.every(p => Number.isFinite(p.varProcessCost)));
 });
 
