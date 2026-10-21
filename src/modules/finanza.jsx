@@ -363,11 +363,16 @@ export function CustomerCredit({ d, id }) {
           b.insoluta ? ['Insoluti', <span className="fin-red">almeno uno negli ultimi 12 mesi</span>] : null,
         ]} />
       </div>
-      <div className="form">
-        <Field label="Fido accordato €"><NumInput value={c.creditLimit ?? null} decimals={0} min={0} step={5000} onChange={v => upd({ creditLimit: v }, `Fido di ${c.name}: ${v == null ? 'non fissato' : eur(v)}`)} ariaLabel="Fido accordato" /></Field>
-        <Field label={`Giorni di pagamento ${t.endOfMonth ? '(d.f.f.m.)' : '(d.f.)'}`}><NumInput value={t.days} decimals={0} min={0} max={365} onChange={v => v != null && upd({ terms: { ...t, days: v } }, `Termini di ${c.name}: ${v} giorni`)} ariaLabel="Giorni di pagamento" /></Field>
-        <Field label="Mezzo"><Select value={t.method} onChange={v => upd({ terms: { ...t, method: v } }, `Mezzo di pagamento di ${c.name}: ${METHOD[v]}`)} options={METHODS} ariaLabel="Mezzo di pagamento" /></Field>
-      </div>
+      {role === 'agente' ? (
+        // fido e termini li decide l'amministrazione: l'agente li vede soltanto
+        <Kv items={[['Fido accordato', lim ? eur(lim) : 'non fissato'], ['Termini', `${t.days} giorni ${t.endOfMonth ? 'data fattura fine mese' : 'data fattura'} · ${METHOD[t.method] || t.method}`]]} />
+      ) : (
+        <div className="form">
+          <Field label="Fido accordato €"><NumInput value={c.creditLimit ?? null} decimals={0} min={0} step={5000} onChange={v => upd({ creditLimit: v }, `Fido di ${c.name}: ${v == null ? 'non fissato' : eur(v)}`)} ariaLabel="Fido accordato" /></Field>
+          <Field label={`Giorni di pagamento ${t.endOfMonth ? '(d.f.f.m.)' : '(d.f.)'}`}><NumInput value={t.days} decimals={0} min={0} max={365} onChange={v => v != null && upd({ terms: { ...t, days: v } }, `Termini di ${c.name}: ${v} giorni`)} ariaLabel="Giorni di pagamento" /></Field>
+          <Field label="Mezzo"><Select value={t.method} onChange={v => upd({ terms: { ...t, method: v } }, `Mezzo di pagamento di ${c.name}: ${METHOD[v]}`)} options={METHODS} ariaLabel="Mezzo di pagamento" /></Field>
+        </div>
+      )}
       {rows.length ? (
         <div className="tw fin-stmt">
           <table className="t">
