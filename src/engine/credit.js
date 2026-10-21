@@ -169,7 +169,8 @@ export function registerPaymentOps(d, invoiceId, { date, amount, method, note } 
   if (!(amt > 0)) return [];
   const day = date || today;
   const real = (d.invoices || EMPTY).find(x => x.id === invoiceId);
-  const inv = real || invoicesOf(d, today).find(x => x.id === invoiceId) || invoicesOf(d, day).find(x => x.id === invoiceId);
+  // dal partitario: una fattura importata senza scadenza o totale li riceve dai termini del cliente
+  const inv = invoicesOf(d, today).find(x => x.id === invoiceId) || invoicesOf(d, day).find(x => x.id === invoiceId) || real;
   if (!inv) return [];
   const ops = [];
   let target = inv, materialized = false;

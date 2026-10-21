@@ -130,6 +130,25 @@ test('mese chiuso: registrare una fattura stimata o un incasso datato nel mese c
   assert.equal(applyOpsTo(real, back, { force: true }).refused, null);
 });
 
+test('fatture importate incomplete e senza consegne: scadenza dai termini, totale da imponibile + IVA, DSO dalle fatture', () => {
+  const customers = [{ id: 'k1', name: 'Cliente uno', paymentDays: 60 }, { id: 'k2', name: 'Cliente due', terms: { days: 30, endOfMonth: false } }];
+  const invoices = [
+    { id: 'i1', number: 'FT-26-001', customerId: 'k1', date: '2026-07-31', taxable: 10000 },
+    { id: 'i2', number: 'FT-26-002', customerId: 'k1', date: '2026-08-31', taxable: 20000, vat: 2000 },
+    { id: 'i3', number: 'FT-26-003', customerId: 'k2', date: '2026-09-10', total: 5500, dueDate: '2026-10-10' },
+  ];
+  const g = { settings: { finance: { vatPct: 10 } }, customers, invoices, payments: [], shipments: [] };
+  assert.deepEqual(openItems(g, today).map(i => [i.id, i.dueDate, i.total]), [['i1', '2026-09-30', 11000], ['i3', '2026-10-10', 5500], ['i2', '2026-10-31', 22000]]);
+  const cs = creditSummary(g, today);
+  close(cs.open, 38500, 1e-9, 'aperti'); close(cs.overdue, 16500, 1e-9, 'scaduto');
+  close(bucketsSum(cs.aging), cs.open, 1e-9, 'fasce = totale');
+  // a ritroso sulle fatture: ottobre 0 € (16 gg), settembre 5.500 (30), agosto 22.000 (31), luglio 11.000 consumato per intero (31)
+  close(cs.dso, 108, 1e-9, 'DSO dalle fatture');
+  close(cs.dsoContract, (10000 * 60 + 20000 * 60 + 5500 * 30) / 35500, 1e-9, 'DSO contrattuale dagli imponibili');
+  const ops = registerPaymentOps(g, 'i1', { date: today, amount: 11000 }, today);
+  assert.equal(ops.find(o => o.kind === 'update').patch.status, 'pagata', 'saldo sul totale calcolato');
+});
+
 test('punteggio di rischio: componenti sommate e classe attesa', () => {
   const r = riskScore({ exposure: 100000, overdue60: 40000, avgDelay: 30, delay3: 40, delay12: 30, util: 1.2, insoluta: true });
   assert.deepEqual(r.parts.map(p => Math.round(p.points * 100) / 100), [14, 12.5, 15, 15, 10]);

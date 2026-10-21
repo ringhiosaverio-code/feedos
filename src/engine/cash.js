@@ -126,10 +126,24 @@ export function invoicesFromShipments(d, { months, today = todayOf(d), covered =
   return out;
 }
 
+/**
+ * Fattura registrata con i campi che il partitario usa: se mancano (fatture importate incomplete) la scadenza si calcola
+ * dai termini del cliente e il totale da imponibile + IVA. Le fatture complete restano lo stesso oggetto.
+ */
+function normInvoice(inv, cust, d, vat) {
+  const noDue = !inv.dueDate && !!inv.date, noTot = !has(inv.total) && has(inv.taxable);
+  if (!noDue && !noTot) return inv;
+  const out = { ...inv };
+  if (noDue) out.dueDate = dueDateFor(inv.date, customerTerms(cust[inv.customerId], d.settings));
+  if (noTot) out.total = r2(+inv.taxable + (has(inv.vat) ? +inv.vat : +inv.taxable * vat / 100));
+  return out;
+}
+
 /** Fatture alla data: quelle registrate (d.invoices) più quelle stimate per le consegne che nessuna fattura copre ancora. */
 export function invoicesOf(d, today = todayOf(d)) {
   return cached('inv|' + today, [d.invoices, d.shipments, d.customers, d.settings?.finance], () => {
-    const real = d.invoices || EMPTY;
+    const cust = byId(d.customers || EMPTY), vat = vatOf(d);
+    const real = (d.invoices || EMPTY).map(inv => normInvoice(inv, cust, d, vat));
     const est = invoicesFromShipments(d, { today, covered: real.length ? covers(d) : null });
     return real.length ? [...real, ...est] : est;
   });
@@ -231,11 +245,16 @@ export function openItems(d, today = todayOf(d)) { return ledger(d, today).open;
 /** Ritardo medio d'incasso del cliente (giorni dopo la scadenza, ponderato per importo) sugli incassi degli ultimi 12 mesi; 0 senza incassi. */
 export function avgDelay(d, custId, today = todayOf(d)) { return ledger(d, today).byCust[custId]?.delay12 ?? 0; }
 
-/** Vendite lorde (consegnato × (1 + IVA)) per mese, dal mese in corso indietro: [{month, gross, days}] (il mese in corso conta i giorni fino a oggi). */
+/**
+ * Vendite lorde (consegnato × (1 + IVA)) per mese, dal mese in corso indietro: [{month, gross, days}] (il mese in corso conta
+ * i giorni fino a oggi). Senza consegne (solo fatture importate) si usano i totali delle fatture per mese di emissione.
+ */
 export function monthlyGross(d, today = todayOf(d), n = 24) {
-  return cached('mg|' + today + '|' + n, [d.shipments, d.settings?.finance], () => {
+  return cached('mg|' + today + '|' + n, [d.shipments, d.invoices, d.settings?.finance], () => {
     const vat = vatOf(d), m0 = today.slice(0, 7), by = {};
-    for (const s of d.shipments || EMPTY) if (s?.date && s.date <= today) { const m = s.date.slice(0, 7); by[m] = (by[m] || 0) + n0(s.tonnes) * n0(s.price) * (1 + vat / 100); }
+    let any = false;
+    for (const s of d.shipments || EMPTY) if (s?.date && s.date <= today) { any = true; const m = s.date.slice(0, 7); by[m] = (by[m] || 0) + n0(s.tonnes) * n0(s.price) * (1 + vat / 100); }
+    if (!any) for (const inv of invoicesOf(d, today)) if (inv.date && inv.date <= today) { const m = inv.date.slice(0, 7); by[m] = (by[m] || 0) + n0(inv.total); }
     return Array.from({ length: n }, (_, i) => { const m = addMonths(m0, -i); return { month: m, gross: by[m] || 0, days: i === 0 ? +today.slice(8, 10) : daysInMonth(m) }; });
   });
 }
@@ -260,7 +279,10 @@ export function dsoCountBack(openTotal, monthlyGross, today) {
   return dso;
 }
 
-/** DSO contrattuale del periodo: Σ ricavi × giorni di pagamento concordati / Σ ricavi (senza il ritardo dell'emissione a fine mese). */
+/**
+ * DSO contrattuale del periodo: Σ ricavi × giorni di pagamento concordati / Σ ricavi (senza il ritardo dell'emissione a fine mese).
+ * Ricavi dalle consegne; senza consegne nel periodo, dagli imponibili delle fatture registrate.
+ */
 export function dsoContract(d, P) {
   const cust = byId(d.customers || EMPTY);
   let w = 0, a = 0;
@@ -268,6 +290,11 @@ export function dsoContract(d, P) {
     if (!s?.date || s.date < P.from || s.date > P.to) continue;
     const v = n0(s.tonnes) * n0(s.price);
     w += v; a += v * customerTerms(cust[s.customerId], d.settings).days;
+  }
+  if (!(w > 0)) for (const inv of d.invoices || EMPTY) {
+    if (!inv?.date || inv.date < P.from || inv.date > P.to) continue;
+    const v = has(inv.taxable) ? +inv.taxable : n0(inv.total);
+    w += v; a += v * customerTerms(cust[inv.customerId], d.settings).days;
   }
   return w > 0 ? a / w : null;
 }
