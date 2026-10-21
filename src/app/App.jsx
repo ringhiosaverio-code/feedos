@@ -33,6 +33,9 @@ const PAGES = { oggi: Oggi, direzione: Direzione, finanza: Finanza, gemello: Gem
 import { VERSION } from './version.js';
 export { VERSION };
 
+/** Tema impostato dalla pagina ospite prima dell'avvio (data-theme sulla radice), da rispettare con il tema «automatico». */
+const HOST_THEME = typeof document !== 'undefined' ? document.documentElement.getAttribute('data-theme') : null;
+
 export function App() {
   const ready = useStore(s => s.ready);
   const d = useData();
@@ -43,7 +46,8 @@ export function App() {
 
   useEffect(() => {
     const el = document.documentElement;
-    if (theme === 'auto') el.removeAttribute('data-theme'); else el.setAttribute('data-theme', theme);
+    // «automatico» rispetta il tema scelto dalla pagina che ospita l'app (un visore che imposta data-theme), altrimenti quello del sistema
+    if (theme === 'auto') { if (HOST_THEME) el.setAttribute('data-theme', HOST_THEME); else el.removeAttribute('data-theme'); } else el.setAttribute('data-theme', theme);
     if (size === 'aula') el.setAttribute('data-size', 'aula'); else el.removeAttribute('data-size');
   }, [theme, size]);
 
