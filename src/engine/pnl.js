@@ -234,7 +234,21 @@ export function pnlFor(d, ctx, P) {
   const a = aggregate(facts, d.salesHistory || EMPTY, P);
   const fixed = fixedFor(fixedRows(d), d.costCenters || EMPTY, P);
   fixed.split = fixedSplit(fixed, d.costCenters || EMPTY);
-  return { ...pnl(a.total, fixed), frozen: false, fixed, estimatedMonths: fixed.estimatedMonths, missingMonths: fixed.missingMonths, historyMonths: a.historyMonths, partialMonths: a.partialMonths, months };
+  return { ...pnl(a.total, fixed), frozen: false, fixed, estimatedMonths: fixed.estimatedMonths, missingMonths: fixed.missingMonths, partialFixedMonths: partialFixedMonths(d, months),
+    historyMonths: a.historyMonths, partialMonths: a.partialMonths, months };
+}
+
+/** Mesi con consuntivo dei costi fissi solo per una parte dei centri (nel conto i centri mancanti valgono zero). */
+export function partialFixedMonths(d, months) {
+  const centers = d.costCenters || EMPTY;
+  if (!centers.length) return [];
+  const want = new Set(months), have = {};
+  for (const r of d.fixedCosts || EMPTY) {
+    const m = String(r.month || '').slice(0, 7);
+    if ((r.kind || 'consuntivo') !== 'consuntivo' || !want.has(m)) continue;
+    (have[m] ||= new Set()).add(r.centerId);
+  }
+  return months.filter(m => have[m] && centers.some(c => !have[m].has(c.id)));
 }
 
 /** Nome leggibile di una chiave di raggruppamento. */

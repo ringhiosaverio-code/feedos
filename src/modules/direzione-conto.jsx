@@ -267,6 +267,7 @@ export function Conto({ d }) {
         actions={<div className="dz-head-chips">
           {cur.frozen ? <Chip kind="accent" icon={LuSnowflake} title={`Numeri congelati alla chiusura del mese${cur.closedAt ? ' (' + cur.closedAt.slice(0, 10).split('-').reverse().join('/') + ')' : ''}`}>congelato</Chip> : P.open ? <Chip kind="outline">in corso</Chip> : <Chip kind="outline">provvisorio</Chip>}
           {cur.estimatedMonths?.length > 0 && <Chip kind="maize" icon={LuTriangleAlert} title={`Costi fissi da budget o media per ${cur.estimatedMonths.map(m => monthLabel(m, false)).join(', ')}`}>fissi stimati</Chip>}
+          {cur.partialFixedMonths?.length > 0 && <Chip kind="warn" icon={LuTriangleAlert} title={`Consuntivo dei costi fissi incompleto per ${cur.partialFixedMonths.map(m => monthLabel(m, false)).join(', ')}: i centri senza importo valgono zero (Direzione › Costi fissi)`}>fissi parziali</Chip>}
           {dir.cov != null && dir.cov < 0.9 && <Chip kind="warn" title={dir.covP != null && dir.covP < 0.9 ? `Il periodo scelto ha dati solo per il ${pct(dir.covP, 0)} dei giorni (inizio dei dati)` : `Dati per il ${pct(dir.covC, 0)} del periodo di confronto`}>non confrontabile</Chip>}
           <Seg label="Dettaglio per" value={dim} onChange={v => setDim(v)} options={DIMS} />
         </div>}>

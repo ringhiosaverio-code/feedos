@@ -105,7 +105,8 @@ function Sintesi() {
           value={perT(t ? by.mdc2 / t : null)} unit="€/t" cmp={kc(dir, t ? by.mdc2 / t : null, cmp && cmp.tonnes ? cb.mdc2 / cmp.tonnes : null, { kind: 'ratio', unit: '€/t' })} foot={eurTxt(by.mdc2)} />
         <Kpi label={<Def text="EBITDA sui ricavi netti: MdC II meno i costi fissi monetari (ammortamenti esclusi).">EBITDA</Def>} value={ebitdaPct == null ? '—' : nf(ebitdaPct * 100, 1)} unit="%"
           cmp={kc(dir, ebitdaPct, ebitdaPctC, { kind: 'ratio', unit: '%', scale: 100 })} foot={eurTxt(by.ebitda)} />
-        <Kpi label="EBIT" {...money(by.ebit)} cmp={kc(dir, by.ebit, cb?.ebit)} foot={cur.estimatedMonths?.length ? <Chip kind="maize" title={`Costi fissi stimati per ${cur.estimatedMonths.map(m => monthLabel(m, false)).join(', ')}`}>fissi stimati</Chip> : cur.frozen ? 'numeri congelati' : `${pct(cur.revenueNet ? by.ebit / cur.revenueNet : null, 1)} dei ricavi`} />
+        <Kpi label="EBIT" {...money(by.ebit)} cmp={kc(dir, by.ebit, cb?.ebit)} foot={cur.partialFixedMonths?.length ? <Chip kind="warn" title={`Consuntivo dei costi fissi incompleto per ${cur.partialFixedMonths.map(m => monthLabel(m, false)).join(', ')}: i centri senza importo valgono zero`}>fissi parziali</Chip>
+            : cur.estimatedMonths?.length ? <Chip kind="maize" title={`Costi fissi stimati per ${cur.estimatedMonths.map(m => monthLabel(m, false)).join(', ')}`}>fissi stimati</Chip> : cur.frozen ? 'numeri congelati' : `${pct(cur.revenueNet ? by.ebit / cur.revenueNet : null, 1)} dei ricavi`} />
         <Kpi label={<Def text="EBIT da inizio anno + MdC II previsto per il resto dell’anno − costi fissi del resto dell’anno. Banda P10–P90 approssimata.">{`Stima di chiusura ${y}`}</Def>}
           {...(L ? money(L.landing) : { value: '—' })} onClick={() => go('direzione', 'budget')}
           status={!L || L.budgetEbit == null ? null : L.landing >= L.budgetEbit ? 'ok' : L.landing >= L.budgetEbit * 0.9 ? 'warn' : 'bad'}
@@ -319,6 +320,8 @@ function CostiFissi() {
   const colTot = m => centers.reduce((s, c) => s + (val(m, c.id) || 0), 0);
   const rowTot = c => months.reduce((s, m) => s + (val(m, c.id) || 0), 0);
   const total = centers.reduce((s, c) => s + rowTot(c), 0);
+  // consuntivo parziale: nel conto del mese i centri senza importo valgono zero (la stima vale solo per i mesi senza consuntivo)
+  const partial = kind !== 'consuntivo' ? [] : months.filter(m => { const n = centers.filter(c => val(m, c.id) != null).length; return n > 0 && n < centers.length; });
   return (
     <>
       <div className="dz-tools">
@@ -335,7 +338,9 @@ function CostiFissi() {
         <Panel title={`Costi fissi ${kind === 'budget' ? 'di budget' : 'a consuntivo'} ${year}`} sub={kind === 'consuntivo' ? 'Importi mensili in euro per centro di costo; i mesi chiusi sono bloccati (si riaprono da Chiusura del mese). Un mese senza consuntivo usa il budget (in grigio nelle caselle vuote) o la media degli ultimi 12 mesi, segnato «stimato».' : verLocked ? `Versione ${version} approvata: bloccata. Per cambiare i costi fissi di budget crea una revisione da Direzione › Budget.` : `Budget della versione ${version} (bozza): si può correggere anche nei mesi chiusi.`} flush className="dz-grid">
           <div className="tw">
             <table className="t">
-              <thead><tr><th>Centro</th>{MESI.map(m => <th key={m} className="r">{m}</th>)}<th className="r">Totale</th></tr></thead>
+              <thead><tr><th>Centro</th>{MESI.map((lab, i) => partial.includes(months[i])
+                ? <th key={lab} className="r dz-partial" title="Consuntivo parziale: mancano alcuni centri">{lab}<LuTriangleAlert aria-label="consuntivo parziale" /></th>
+                : <th key={lab} className="r">{lab}</th>)}<th className="r">Totale</th></tr></thead>
               <tbody>
                 {groups.map(g => (
                   <React.Fragment key={g.id}>
@@ -355,6 +360,9 @@ function CostiFissi() {
               </tbody>
             </table>
           </div>
+          {partial.length > 0 && <div className="note warn" style={{ margin: '10px 14px 14px' }}>
+            Consuntivo parziale in {partial.map(m => monthLabel(m, false)).join(', ')}: nel conto economico di quel mese i centri senza importo valgono zero, perché il budget o la media sostituiscono solo i mesi senza alcun consuntivo. Completa i centri mancanti (o cancella gli importi del mese per tornare alla stima).
+          </div>}
         </Panel>
       )}
       <div className="split">

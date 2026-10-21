@@ -99,6 +99,8 @@ th .dz-tip { font-weight: 500; }
 .dz-grid tr.grp td { background: var(--surface-2); font-weight: 700; font-size: 11.5px; text-transform: uppercase; letter-spacing: .04em; color: var(--ink-2); }
 .dz-grid tr.tot td { font-weight: 700; border-top: 1px solid var(--line-2); }
 .dz-grid td.lock { color: var(--muted); }
+.dz-grid th.dz-partial { color: var(--warn-ink); }
+.dz-grid th.dz-partial svg { width: 11px; height: 11px; vertical-align: -1px; margin-left: 3px; }
 .dz-grid td.lock svg { width: 11px; height: 11px; vertical-align: -1px; margin-left: 3px; opacity: .7; }
 .dz-centers { display: grid; gap: 8px; }
 .dz-center { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr) auto auto; gap: 8px; align-items: center; }

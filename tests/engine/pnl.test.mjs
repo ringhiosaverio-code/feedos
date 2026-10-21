@@ -76,6 +76,14 @@ test('senza costi fissi EBIT = MdC II (e nessun mese stimato)', () => {
   close(q.by.ebit, q.by.mdc2, 1e-9);
 });
 
+test('consuntivo dei costi fissi solo per alcuni centri: il mese è segnalato come parziale', () => {
+  assert.deepEqual(pnlFor(d, ctx, P12).partialFixedMonths, [], 'demo: consuntivi completi');
+  const d1 = { ...d, closings: [], fixedCosts: [...d.fixedCosts, { id: 'fc-x', month: '2026-10', centerId: 'cc-pers', kind: 'consuntivo', amount: 50000 }] };
+  const p = pnlFor(d1, ctx, P12);
+  assert.deepEqual(p.partialFixedMonths, ['2026-10']);
+  assert.ok(!p.estimatedMonths.includes('2026-10'), 'con un consuntivo il mese non è più stimato');
+});
+
 test('serie mensile: 12 mesi interi sommano al conto dello stesso intervallo (congelato e dal vivo)', () => {
   const months = lastMonths('2026-09-15', 12);
   assert.equal(months[0], '2025-10'); assert.equal(months.at(-1), '2026-09');
