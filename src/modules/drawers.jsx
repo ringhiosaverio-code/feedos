@@ -15,7 +15,8 @@ import { checkAnalysis } from '../engine/quality.js';
 import { Drawer, Btn, Chip, Kv, Table, Field, NumInput, Select, confirm } from '../ui/ui.jsx';
 import { StackBar, Legend, SERIES } from '../ui/charts.jsx';
 import { lotChip, declaredFor, lotCheck, PARAMS } from './qualita.jsx';
-import { OCHECK } from './commerciale.jsx';
+import { OCHECK, LossDialog, RenewDialog } from './commerciale.jsx';
+import { offerState, OFFER_STATES, lossLabel } from '../engine/pricing.js';
 import { EXTRA_DRAWERS, CUSTOMER_SECTIONS, PRODUCT_SECTIONS, SlotGuard } from './slots.jsx';
 
 export function DrawerHost() {
@@ -103,7 +104,7 @@ function CustomerD({ d, id }) {
   const iofc = visits.filter(v => v.iofc != null).slice(0, 6);
   return (
     <Drawer title={c.name} sub={`Cliente · ${c.code} · ${c.type}`} icon={<span className="dicon"><LuUser /></span>} wide
-      actions={<><Btn onClick={() => nav('commerciale', 'visite')}>Visite</Btn><Btn kind="primary" icon={LuPlus} onClick={() => nav('commerciale', 'offerte', 'nuova')}>Nuova offerta</Btn></>}>
+      actions={<><Btn onClick={() => nav('commerciale', 'visite')}>Visite</Btn><Btn onClick={() => nav('economia', 'redditivita', id)}>Redditività</Btn><Btn kind="primary" icon={LuPlus} onClick={() => nav('commerciale', 'offerte', 'nuova.' + id)}>Nuova offerta</Btn></>}>
       <div className="kpis two">
         <div className="kpi"><span className="lbl">Consegnato in 12 mesi</span><span className="val">{nf(S.tonnes || 0)}<small>t</small></span><span className="foot">{nf((S.revenue || 0) / 1000)} mila € di ricavi</span></div>
         <div className="kpi"><span className="lbl">Margine (costo effettivo)</span><span className="val">{S.tonnes ? nf(S.margin / S.tonnes, 1) : '—'}<small>€/t</small></span><span className="foot">ultima consegna {S.last ? relDays(S.last, today) : '—'}</span></div>
@@ -124,12 +125,22 @@ function CustomerD({ d, id }) {
 function OfferD({ d, id }) {
   const I = idx(d); const o = d.offers.find(x => x.id === id);
   const [note, setNote] = useState(o?.note || '');
+  const [dlg, setDlg] = useState(null);
   if (!o) return <Missing />;
   const p = I.prod[o.productId]; const cost = costs(d)[o.productId]; const chk = offerCheck(o, cost, p);
+  const st = offerState(o, appToday(d)), S = OFFER_STATES[st] || { label: st, kind: '' };
+  const open = st === 'bozza' || st === 'inviata' || st === 'scaduta';
   return (
     <Drawer title={`Offerta ${o.code}`} sub={`${I.cust[o.customerId]?.name} · ${dateIt(o.date)}`} icon={<span className="dicon"><LuFileText /></span>}
-      actions={<><Btn onClick={() => openDrawer('customer', o.customerId)}>Cliente</Btn><Btn onClick={() => openDrawer('product', o.productId)}>Prodotto</Btn></>}>
-      <Kv items={[['Prodotto', p?.name], ['Quantità', `${nf(o.tonnes)} t`], ['Prezzo', `${nf(o.price)} €/t (listino ${nf(p?.listPrice)})`], ['Valida fino al', dateIt(o.validUntil)], ['Agente', I.agent[o.agentId]?.name]]} />
+      actions={<><Btn onClick={() => openDrawer('customer', o.customerId)}>Cliente</Btn><Btn onClick={() => openDrawer('product', o.productId)}>Prodotto</Btn>
+        {open && <Btn onClick={() => setDlg('rinnova')}>Rinnova</Btn>}{open && <Btn kind="danger" onClick={() => setDlg('persa')}>Chiudi come persa</Btn>}</>}>
+      <div className="row gap-s"><Chip kind={S.kind}>{S.label}</Chip>{st === 'scaduta' && <span className="small muted">validità finita il {dateIt(o.validUntil)}: rinnovala o chiudila, non conta più tra le offerte aperte</span>}</div>
+      <Kv items={[['Prodotto', p?.name], ['Quantità', `${nf(o.tonnes)} t`], ['Prezzo', `${nf(o.price)} €/t (listino ${nf(p?.listPrice)})`], ['Valida fino al', dateIt(o.validUntil)], ['Agente', I.agent[o.agentId]?.name],
+        o.lossReason ? ['Motivo della perdita', `${lossLabel ? lossLabel(o.lossReason) : o.lossReason}${o.competitor ? ` · ${o.competitor}` : ''}${o.competitorPrice ? ` a ${nf(o.competitorPrice)} €/t` : ''}`] : null,
+        o.approval ? ['Prezzo sotto il minimo approvato da', `${o.approval.by}${o.approval.at ? ` il ${dateIt(o.approval.at)}` : ''}${o.approval.note ? ` · ${o.approval.note}` : ''}`] : null,
+        o.decidedAt ? ['Decisa il', dateIt(o.decidedAt)] : null]} />
+      {dlg === 'persa' && <LossDialog d={d} offer={o} onClose={() => setDlg(null)} />}
+      {dlg === 'rinnova' && <RenewDialog d={d} offer={o} onClose={() => setDlg(null)} />}
       <div className={`offer-check ${chk.status}`}>
         <Chip kind={OCHECK[chk.status].kind}>{OCHECK[chk.status].label}</Chip>
         <Kv items={[['Margine ai costi di oggi', `${nf(chk.margin, 1)} €/t · ${nf(chk.marginPct * 100, 1)}%`], ['Margine dell’offerta', `${nf(chk.total)} €`], ['Prezzo minimo · obiettivo', `${nf(cost.minPrice, 1)} · ${nf(cost.targetPrice, 1)} €/t`], o.costAtOffer ? ['Costo pieno all’offerta', `${nf(o.costAtOffer, 1)} €/t (oggi ${nf(cost.total, 1)})`] : null]} />
