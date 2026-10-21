@@ -1,5 +1,6 @@
-/* FeedOS 16 · Produzione: piano delle linee con carico e riequilibrio, registrazioni che aggiornano
- * scorte e tracciabilità (prelievo FIFO dai lotti), energia per tonnellata con deriva per linea. */
+/* FeedOS 17 · Produzione: piano delle linee con carico e riequilibrio, registrazioni che aggiornano scorte e tracciabilità
+ * (prelievo FIFO dai lotti), OEE e fermi, energia per tonnellata con la deriva di ogni linea, manutenzione dei componenti
+ * e bilancio di massa con gli inventari fisici. */
 import React, { useMemo, useState } from 'react';
 import { LuPlus, LuTrash2, LuWrench, LuArrowRightLeft, LuCheck, LuTriangleAlert, LuX, LuDownload } from 'react-icons/lu';
 import { useData, store, toast, openDrawer } from '../core/store.js';
@@ -8,13 +9,23 @@ import { idx, appToday, signals } from '../core/derived.js';
 import { nf, sf, sum, dateIt, addDays, daysBetween, mondayOf, median, round } from '../core/util.js';
 import { download, toCSV, stamp } from '../core/io.js';
 import { registerRunOps } from '../engine/operations.js';
+import { capOf, capWeek, lineDrift } from '../engine/lines.js';
 import { PageHead, Panel, Btn, Table, Chip, Kpi, Field, Select, NumInput, Empty, SearchBox, filterRows, confirm, Seg, Kv } from '../ui/ui.jsx';
 import { LineChart, Columns, Legend, SERIES } from '../ui/charts.jsx';
-import { SignalList, SectionPlaceholder } from './shared.jsx';
+import { SignalList } from './shared.jsx';
+import { OeeFermi } from './oee.jsx';
+import { Manutenzione } from './manutenzione.jsx';
+import { BilancioMassa } from './bilancio.jsx';
 import { NAV } from '../app/nav.js';
 
-const UTIL = 0.9; // quota utile della capacità teorica (cambi prodotto, pulizie, fermi brevi)
-export const capOf = l => l.capacityTph * l.hoursWeek * UTIL;
+const LEAD = {
+  piano: 'Piano delle linee con il carico di ogni settimana (al netto dei festivi) e le proposte di riequilibrio.',
+  registro: 'Registrazioni di produzione che scaricano le materie prime lotto per lotto e creano il lotto di prodotto.',
+  oee: 'Quanto delle ore pianificate diventa tonnellate buone alla velocità ideale, dove si perde il tempo e quanto vale recuperarlo.',
+  energia: 'Elettricità e GPL per tonnellata di ogni linea, con la deriva rispetto al riferimento e il suo costo annuo.',
+  manutenzione: 'Componenti delle linee con contatori, scadenze, guasti, costo per tonnellata e rientro delle sostituzioni.',
+  bilancio: 'Arrivi, prelievi, rettifiche e conte fisiche per materia prima: calo effettivo e differenze da registrare.',
+};
 
 export function Produzione({ route }) {
   const d = useData();
@@ -22,16 +33,16 @@ export function Produzione({ route }) {
   const sigs = signals(d).filter(s => s.area === 'produzione');
   return (
     <>
-      <PageHead title="Produzione" lead="Piano delle linee con il carico di ogni settimana, registrazioni di produzione che scaricano le materie prime lotto per lotto e creano il lotto di prodotto, energia per tonnellata con la deriva di ogni linea."
+      <PageHead title="Produzione" lead={LEAD[tab] || LEAD.piano}
         actions={<Btn kind="primary" icon={LuPlus} onClick={() => go('produzione', 'registro', 'nuova')}>Registra produzione</Btn>}
         tabs={NAV.produzione.tabs} tab={tab} onTab={t => go('produzione', t)} />
       {sigs.length > 0 && tab !== 'energia' && <Panel title="Da decidere in produzione" flush><SignalList items={sigs} limit={2} compact /></Panel>}
       {tab === 'piano' && <Piano d={d} />}
       {tab === 'registro' && <Registro d={d} nuova={route.id === 'nuova'} />}
-      {tab === 'oee' && <SectionPlaceholder title="OEE e fermi">Disponibilità, prestazioni e qualità di ogni linea, albero delle perdite in ore e in euro, fermi per causa, turni e cambi prodotto.</SectionPlaceholder>}
+      {tab === 'oee' && <OeeFermi d={d} sel={route.id} />}
       {tab === 'energia' && <Energia d={d} sel={route.id} sigs={sigs} />}
-      {tab === 'manutenzione' && <SectionPlaceholder title="Manutenzione">Componenti delle linee con contatori di tonnellate e ore, scadenze, guasti, costo per tonnellata e rientro della sostituzione.</SectionPlaceholder>}
-      {tab === 'bilancio' && <SectionPlaceholder title="Bilancio di massa">Arrivi, consumi, rettifiche e inventari fisici per materia prima, calo effettivo e valore non spiegato.</SectionPlaceholder>}
+      {tab === 'manutenzione' && <Manutenzione d={d} />}
+      {tab === 'bilancio' && <BilancioMassa d={d} />}
     </>
   );
 }
@@ -42,11 +53,11 @@ function usePlanLoad(d) {
     const today = appToday(d);
     const weeks = [...new Set(d.plan.map(p => p.week))].filter(w => w >= mondayOf(today)).sort().slice(0, 8);
     const load = {};
-    for (const l of d.lines) for (const w of weeks) load[l.id + w] = { line: l, week: w, t: 0, cap: capOf(l), items: [] };
+    for (const l of d.lines) for (const w of weeks) load[l.id + w] = { line: l, week: w, t: 0, cap: capWeek(l, w, d.settings), items: [] };
     for (const p of d.plan) { const c = load[p.lineId + p.week]; if (c) { c.t += +p.tonnes || 0; c.items.push(p); } }
     for (const c of Object.values(load)) c.u = c.cap ? c.t / c.cap : 0;
     return { weeks, load };
-  }, [d.plan, d.lines, appToday(d)]);
+  }, [d.plan, d.lines, d.settings, appToday(d)]);
 }
 
 /** Proposte di riequilibrio: dalla linea sovraccarica a una linea dello stesso tipo con capacità libera nella stessa settimana,
@@ -91,7 +102,7 @@ function Piano({ d }) {
   const props = useMemo(() => rebalance(d, weeks, load), [d.plan, weeks, load]);
   const w0 = weeks[0];
   const thisW = sum(Object.values(load).filter(c => c.week === w0), c => c.t);
-  const capW = sum(d.lines, capOf);
+  const capW = sum(d.lines, l => capWeek(l, w0, d.settings));
   const overs = Object.values(load).filter(c => c.t - c.cap > 1);
   const done = sum(d.runs.filter(r => r.date >= w0 && r.date <= today), r => r.tonnes);
   const shownW = cell ? cell.week : (wk || w0);
@@ -119,13 +130,13 @@ function Piano({ d }) {
         <Kpi label="Settimane-linea oltre la capacità" value={overs.length} foot={overs.length ? `${nf(sum(overs, c => c.t - c.cap))} t da spostare` : 'nessun sovraccarico'} />
         <Kpi label="Proposte di riequilibrio" value={props.filter(p => p.kind !== 'residuo').length} foot="da confermare una per una" />
       </div>
-      <Panel title="Carico delle linee" sub={`Tonnellate pianificate sulla capacità utile (${nf(UTIL * 100)}% della teorica) · clic su una cella per filtrare il piano`} flush id="prod-load">
+      <Panel title="Carico delle linee" sub={`Tonnellate pianificate sulla capacità utile (${nf((d.settings?.ops?.utilFactor ?? 0.9) * 100)}% della teorica, al netto dei festivi) · clic su una cella per filtrare il piano`} flush id="prod-load">
         <div className="tw">
           <table className="t load">
             <thead><tr><th>Linea</th>{weeks.map(w => <th key={w} className="r">{dateIt(w, 'dm')}</th>)}</tr></thead>
             <tbody>{d.lines.map(l => (
               <tr key={l.id}>
-                <td><b>{l.name}</b><span className="sub">{l.capacityTph} t/h · {l.hoursWeek} h/sett. · {nf(capOf(l))} t utili</span></td>
+                <td><b>{l.name}</b><span className="sub">{l.capacityTph} t/h · {l.hoursWeek} h/sett. · {nf(capOf(l, d.settings))} t utili</span></td>
                 {weeks.map(w => { const c = load[l.id + w]; const on = cell && cell.line === l.id && cell.week === w; return (
                   <td key={w} className={`lc ${c.t - c.cap > 1 ? 'over' : c.u > 0.92 ? 'hi' : ''} ${on ? 'on' : ''}`} onClick={() => setCell(on ? null : { line: l.id, week: w })} title={`${l.name}, settimana del ${dateIt(w)}: ${nf(c.t)} t su ${nf(c.cap)} t`}>
                     <b>{nf(c.u * 100)}%</b><span>{nf(c.t)} t</span><i style={{ width: `calc((100% - 20px) * ${Math.min(1, c.u).toFixed(3)})` }} />
@@ -260,23 +271,25 @@ export function lineStats(d, today, weeksBack = 26) {
     const acc = Object.fromEntries(weeks.map(w => [w, { t: 0, kwh: 0, gpl: 0, h: 0, waste: 0 }]));
     for (const r of d.runs) { if (r.lineId !== l.id) continue; const w = mondayOf(r.date); const a = acc[w]; if (!a) continue; a.t += r.tonnes; a.kwh += r.kwh || 0; a.gpl += r.gplKg || 0; a.h += r.hours || 0; a.waste += r.waste || 0; }
     const kwhT = weeks.map(w => acc[w].t > 5 ? acc[w].kwh / acc[w].t : null);
-    const base = median(kwhT.slice(0, weeksBack - 5).filter(v => v != null));
     const last4 = weeks.slice(-4).reduce((s, w) => ({ t: s.t + acc[w].t, kwh: s.kwh + acc[w].kwh, gpl: s.gpl + acc[w].gpl, h: s.h + acc[w].h, waste: s.waste + acc[w].waste }), { t: 0, kwh: 0, gpl: 0, h: 0, waste: 0 });
-    const cur = last4.t ? last4.kwh / last4.t : null;
+    // riferimento e consumo attuale dal motore delle linee: la stessa regola del segnale su «Oggi»
+    const dr = lineDrift(d, today, l.id);
+    const base = dr ? dr.base : median(kwhT.slice(0, weeksBack - 5).filter(v => v != null));
+    const cur = dr ? dr.cur : last4.t ? last4.kwh / last4.t : null;
     const tYear = sum(d.runs.filter(r => r.lineId === l.id && r.date > addDays(today, -365)), r => r.tonnes);
     out[l.id] = { line: l, weeks, acc, kwhT, gplT: weeks.map(w => acc[w].t > 5 ? acc[w].gpl / acc[w].t : null), tph: weeks.map(w => acc[w].h > 0 ? acc[w].t / acc[w].h : null),
-      base, cur, drift: base && cur ? cur / base - 1 : null, last4, tYear, gplCur: last4.t ? last4.gpl / last4.t : null, tphCur: last4.h ? last4.t / last4.h : null, wasteCur: last4.t ? last4.waste / last4.t : null };
+      base, cur, drift: base && cur ? cur / base - 1 : null, costYear: dr ? dr.costYear : null, last4, tYear, gplCur: last4.t ? last4.gpl / last4.t : null, tphCur: last4.h ? last4.t / last4.h : null, wasteCur: last4.t ? last4.waste / last4.t : null };
   }
   return out;
 }
 
 function Energia({ d, sel, sigs }) {
   const today = appToday(d); const I = idx(d);
-  const S = useMemo(() => lineStats(d, today), [d.runs, d.lines, today]);
+  const S = useMemo(() => lineStats(d, today), [d.runs, d.lines, d.settings?.energy, today]);
   const en = d.settings?.energy || {};
   const cur = S[sel] || Object.values(S).sort((a, b) => (b.drift || 0) - (a.drift || 0))[0];
   const l = cur.line;
-  const annualCost = cur.drift > 0 ? (cur.cur - cur.base) * cur.tYear * (+en.kwhPrice || 0) : 0;
+  const annualCost = cur.costYear ?? (cur.drift > 0 ? (cur.cur - cur.base) * cur.tYear * (+en.kwhPrice || 0) : 0);
   const compl = d.complaints.filter(c => c.date > addDays(today, -45) && I.run[I.lot[c.lotId]?.runId]?.lineId === l.id);
   const task = () => {
     store.add('tasks', { title: `Verifica energetica ${l.name}: trafila, condizionatore e taratura`, detail: `Consumo ultime 4 settimane ${nf(cur.cur, 1)} kWh/t contro ${nf(cur.base, 1)} di riferimento (${sf(cur.drift * 100, 1)}%). Costo stimato ${nf(annualCost)} € l’anno.`, area: 'produzione', owner: 'Manutenzione', due: addDays(today, 7), status: 'aperto', priority: 'alta', source: 'energia', createdAt: today }, `Attività di manutenzione: ${l.name}`);
@@ -296,7 +309,7 @@ function Energia({ d, sel, sigs }) {
         ))}
       </div>
       <div className="split">
-        <Panel title={`${l.name} · elettricità per tonnellata`} sub="Media settimanale delle registrazioni · riferimento = mediana delle 21 settimane precedenti" id="prod-energy">
+        <Panel title={`${l.name} · elettricità per tonnellata`} sub="Media settimanale delle registrazioni · riferimento = mediana delle settimane da −30 a −5, attuale = ultime 4 settimane (la regola del segnale su Oggi)" id="prod-energy">
           <LineChart labels={labels} height={240} unit="kWh/t" decimals={1} xEvery={4}
             series={[{ key: 'k', label: 'kWh/t', color: SERIES[l.color - 1] || 'var(--s1)', values: cur.kwhT }]}
             refs={[{ y: cur.base, label: 'riferimento', kind: 'muted' }, { y: cur.base * 1.07, label: '+7%', kind: 'crit' }]} ariaLabel={`Elettricità per tonnellata della ${l.name}`} />
@@ -307,6 +320,7 @@ function Energia({ d, sel, sigs }) {
             {cur.drift > 0.07 ? <div className="note crit"><b>Consumo in aumento del {nf(cur.drift * 100, 1)}%.</b> Se continua costa circa {nf(annualCost)} € l’anno in elettricità{compl.length ? `; negli ultimi 45 giorni ${compl.length} reclami riguardano lotti di questa linea (${[...new Set(compl.map(c => c.category.toLowerCase()))].join(', ')})` : ''}. Cause tipiche: trafila usurata, vapore del condizionatore, rulli da regolare.</div>
               : <div className="note good">Consumo in linea con il riferimento.</div>}
             {cur.drift > 0.07 && <Btn kind="primary" icon={LuWrench} onClick={task}>Assegna una verifica alla manutenzione</Btn>}
+            {cur.drift > 0.07 && (d.assets || []).some(a => a.lineId === l.id && a.kind === 'trafila') && <Btn small kind="ghost" onClick={() => go('produzione', 'manutenzione')}>Conviene sostituire la trafila? Vedi il rientro</Btn>}
             {compl.length > 0 && <Btn small kind="ghost" onClick={() => go('qualita', 'reclami')}>Vedi i reclami collegati</Btn>}
           </div>
         </Panel>

@@ -1,4 +1,5 @@
-"""Operazioni complete: accettazione lotto, reclamo, offerta, listino, scenario, acqua, rifiuti, questionario ESG, backup e ripristino, importazione CSV, annulla."""
+"""Operazioni complete: accettazione lotto, reclamo, offerta, listino, scenario, acqua, rifiuti, questionario ESG, importazione CSV,
+fermo, ordine di lavoro, inventario fisico, backup e ripristino, annulla."""
 import asyncio, json, os
 from pathlib import Path
 from playwright.async_api import async_playwright
@@ -34,6 +35,8 @@ async def main():
         await go('commerciale.offerte.nuova'); await pg.wait_for_timeout(500)
         await pg.locator('#com-offer .btn', has_text='Prezzo obiettivo').click(); await pg.wait_for_timeout(200)
         esito = await pg.evaluate("() => document.querySelector('.offer-check .chip')?.innerText")
+        # con l'ancora del demo a oggi il cliente proposto può essere oltre il fido: si indica chi autorizza l'eccezione
+        if await pg.locator('#of-credit').count(): await pg.fill('#of-credit', 'Amministrazione')
         await pg.get_by_text('Registra come inviata', exact=True).click(); await pg.wait_for_timeout(500)
         print('3 offerta:', esito, '·', await toast())
         await pg.keyboard.press('Escape')
@@ -87,6 +90,21 @@ async def main():
         note = await pg.evaluate("() => document.querySelector('#dati-csv .note')?.innerText")
         await pg.locator('#dati-csv .btn.primary', has_text='Applica').click(); await pg.wait_for_timeout(500)
         print('7 CSV:', note, '·', await toast())
+        # 7b produzione: fermo registrato, sostituzione della trafila pianificata ed eseguita, conta fisica registrata
+        await go('produzione.oee'); await pg.wait_for_timeout(600)
+        await pg.locator('#oee-log .btn.primary', has_text='Registra il fermo').click(); await pg.wait_for_timeout(400)
+        print('7b fermo:', await toast())
+        await go('produzione.manutenzione'); await pg.wait_for_timeout(600)
+        await pg.get_by_text('Pianifica la sostituzione', exact=True).first.click(); await pg.wait_for_timeout(400)
+        print('7c trafila:', await toast())
+        await pg.locator('table.t tbody tr.click', has_text='Trafila linea pellet 2').first.click(); await pg.wait_for_timeout(500)
+        await pg.locator('.drawer .btn.primary', has_text='Registra l’esecuzione').first.click(); await pg.wait_for_timeout(400)
+        print('   eseguita:', await toast(), '·', await pg.evaluate("() => [...document.querySelectorAll('.drawer .eyebrow')].map(x => x.innerText).find(t => /^contatore/i.test(t))"))
+        await pg.keyboard.press('Escape')
+        await go('produzione.bilancio'); await pg.wait_for_timeout(600)
+        await pg.locator('#mb-table .btn.primary', has_text='Registra').first.click(); await pg.wait_for_timeout(300)
+        await pg.locator('.modal .btn.primary').click(); await pg.wait_for_timeout(500)
+        print('7d inventario:', await toast())
         # 8 backup: esportazione e ripristino
         await go('dati.archivio'); await pg.wait_for_timeout(500)
         async with pg.expect_download() as dl: await pg.get_by_text('Esporta backup completo', exact=True).click()

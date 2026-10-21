@@ -16,11 +16,11 @@ import { niceTicks } from '../ui/charts.jsx';
 /** Importo diviso in valore e unità per gli indicatori: 16,75 M€ · 461 k€ · 820 €. */
 export function money(v) {
   if (v == null || !Number.isFinite(+v)) return { value: '—', unit: '' };
-  const a = Math.abs(v);
-  if (a >= 1e6) return { value: nf(v / 1e6, 2), unit: 'M€' };
-  if (a >= 1e4) return { value: nf(v / 1e3, 0), unit: 'k€' };
-  if (a >= 1e3) return { value: nf(v / 1e3, 1), unit: 'k€' };
-  return { value: nf(v, 0), unit: '€' };
+  const a = Math.abs(v), m = x => x.replace(/^-/, '−'); // il segno meno tipografico, come sf
+  if (a >= 1e6) return { value: m(nf(v / 1e6, 2)), unit: 'M€' };
+  if (a >= 1e4) return { value: m(nf(v / 1e3, 0)), unit: 'k€' };
+  if (a >= 1e3) return { value: m(nf(v / 1e3, 1)), unit: 'k€' };
+  return { value: m(nf(v, 0)), unit: '€' };
 }
 export const eurTxt = v => { const m = money(v); return m.unit ? `${m.value} ${m.unit}` : m.value; };
 export const kEur = (v, d = 1) => (v == null || !Number.isFinite(+v) ? '—' : nf(v / 1000, d) + ' k€');
