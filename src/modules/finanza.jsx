@@ -11,7 +11,7 @@ import { AREA_META } from '../core/roles.js';
 import { ctxOf, idx, appToday } from '../core/derived.js';
 import { nf, sum, dateIt, daysBetween, addDays, endOfMonth, monthLabel, pct } from '../core/util.js';
 import { creditSummary, ledger, invoicesOf, registerPaymentOps, allocatePaymentOps, dunningOps, AGING_BUCKETS, pdOf, lgdOf, PD_DEFAULT, LGD_DEFAULT, customerTerms } from '../engine/credit.js';
-import { workingCapital, workingCapitalHistory, payables, finOf, vatOf, purchaseVatOf, rateOf } from '../engine/cash.js';
+import { workingCapital, workingCapitalHistory, finOf, vatOf } from '../engine/cash.js';
 import { inventorySummary, valuationAt, finishedAt, stockHistory, abcXyz, slowMovers, carryRate } from '../engine/inventory.js';
 import { PageHead, Panel, Btn, Table, Chip, Kpi, Field, Select, NumInput, Empty, SearchBox, filterRows, Seg, Kv, Bullet } from '../ui/ui.jsx';
 import { LineChart, StackBar, Legend, SERIES } from '../ui/charts.jsx';
