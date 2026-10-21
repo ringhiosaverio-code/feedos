@@ -60,7 +60,7 @@ export function App() {
     return () => window.removeEventListener('keydown', onKey);
   }, []);
 
-  useEffect(() => { document.title = `${NAV[route.area]?.label || 'FeedOS'} · FeedOS 16`; }, [route.area]);
+  useEffect(() => { document.title = `${NAV[route.area]?.label || 'FeedOS'} · FeedOS 17`; }, [route.area]);
 
   if (!ready) return <div className="content"><p className="muted">Apertura dell’archivio…</p></div>;
   const blocked = role.id === 'agente' && AGENT_HIDDEN.includes(route.area);

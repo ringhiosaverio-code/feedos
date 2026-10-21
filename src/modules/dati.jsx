@@ -60,7 +60,7 @@ function Archivio({ d, hi }) {
       const j = JSON.parse(raw);
       if (detectF15(j)) { toast('È un file di FeedOS 15: usa «Importa › Da FeedOS 15»', 'err'); go('dati', 'importa'); return; }
       const data = j.format === 'feedos16' ? j.data : j.settings?.schema != null || Array.isArray(j.formulas) ? j : null;
-      if (!data || !Array.isArray(data.formulas)) throw new Error('Formato non riconosciuto: serve un backup di FeedOS 16.');
+      if (!data || !Array.isArray(data.formulas)) throw new Error('Formato non riconosciuto: serve un backup di FeedOS 16 o 17.');
       confirm('Ripristinare il backup?', <p>L’archivio attuale verrà sostituito dal backup del {j.exportedAt ? dateIt(j.exportedAt.slice(0, 10)) : 'file scelto'}. Prima viene salvata un’istantanea dei dati attuali.</p>, async () => { if (await store.load(data, 'Ripristino da backup')) toast('Backup ripristinato'); refresh(); }, { ok: 'Ripristina' });
     } catch (err) { toast('Ripristino non riuscito: ' + err.message, 'err'); }
   };
@@ -262,7 +262,7 @@ function Impostazioni({ d }) {
             <Field label="Vista per ruolo"><Select value={P.role} onChange={v => { setPrefs({ role: v }); toast('Vista: ' + ROLE[v]?.label); }} options={ROLES.map(r => ({ id: r.id, label: r.label }))} /></Field>
           </div>
         </Panel>
-        <Panel title="Come funziona FeedOS 16">
+        <Panel title="Come funziona FeedOS">
           <ul className="steplist">
             <li><span><b>Locale e privato:</b> un solo file HTML, funziona anche senza rete; i dati restano in questo browser (IndexedDB) finché non esporti un backup.</span></li>
             <li><span><b>Le viste non sono permessi:</b> cambiano ordine del menu e priorità di «Oggi»; chiunque usi questo browser vede tutti i dati.</span></li>
