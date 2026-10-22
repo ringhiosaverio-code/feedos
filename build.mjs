@@ -52,7 +52,7 @@ fs.writeFileSync(dist('artifact/feedos-16.html'), `<title>FeedOS 17</title><styl
 const kb = f => (fs.statSync(dist(f)).size / 1024).toFixed(0) + ' KB';
 console.log(`build in ${Date.now() - t0} ms · completa ${kb('FeedOS-16.html')} · pubblica ${kb('FeedOS-16-demo.html')} · artifact ${kb('artifact/feedos-16.html')}`);
 if (process.argv.includes('--meta')) console.log(await esbuild.analyzeMetafile(full.meta, { verbose: false }));
-const leak = ['Galtieri', 'Modugno', '89.450', '58.759.661'].filter(w => pub.js.includes(w));
+const leak = ['Galtieri', 'Modugno', 'AVIGAL', 'Avigal', '89.450', '58.759.661'].filter(w => pub.js.includes(w));
 if (leak.length) { console.error('ATTENZIONE: la versione pubblica contiene', leak); process.exitCode = 1; }
 // il modulo con i dati della tesi non deve entrare nella versione pubblica (controllo sugli ingressi del bundle, non solo sul testo)
 const thesisIn = Object.keys(pub.meta.inputs).filter(f => /(^|[\\/])src[\\/]data[\\/]thesis\.js$/.test(f));
