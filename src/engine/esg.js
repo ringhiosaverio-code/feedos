@@ -5,7 +5,7 @@ import { ESG_REGISTRY } from '../data/esgRegistry.js';
 import { formulaCO2, coProductShare } from './formulation.js';
 import { balance, aggregate, scope1PerKg, DEFAULTS } from './energy.js';
 import { sum } from '../core/util.js';
-import { waterStats, wasteStats, ghgInventory, surveyKpis } from './sustainability.js';
+import { waterStats, wasteStats, ghgInventory, surveyKpis, registerMonths } from './sustainability.js';
 
 /**
  * @param {object} d dati dell'app; @param {{from:string,to:string}} period date ISO incluse
@@ -14,9 +14,12 @@ export function computeKpis(d, period, opt = {}) {
   const inP = x => x >= period.from && x <= period.to;
   const runs = d.runs.filter(r => inP(r.date));
   const tonnes = sum(runs, r => r.tonnes);
-  const en = aggregate(d.energy.filter(e => inP(e.month + '-15')));
+  // energia sui mesi chiusi del periodo, come l'acqua (F5); le intensità del bilancio usano la produzione degli stessi mesi
+  const regM = new Set(registerMonths(period));
+  const en = aggregate(d.energy.filter(e => regM.has(e.month)));
+  const tonnesM = sum(d.runs.filter(r => regM.has(String(r.date).slice(0, 7))), r => r.tonnes);
   const factors = { ...DEFAULTS, feGrid: +d.settings?.energy?.feGrid || DEFAULTS.feGrid, feGpl: +d.settings?.energy?.feGpl || DEFAULTS.feGpl };
-  const b = balance({ ...en, tonnes }, factors);
+  const b = balance({ ...en, tonnes: tonnesM }, factors);
   const ingById = Object.fromEntries(d.ingredients.map(i => [i.id, i]));
   const formById = Object.fromEntries(d.formulas.map(f => [f.id, f]));
   const verLines = r => { const f = formById[r.formulaId]; if (!f) return null; const h = (f.history || []).find(x => x.version === r.formulaVersion); return (h || f).lines; };
@@ -44,10 +47,12 @@ export function computeKpis(d, period, opt = {}) {
   const itVal = sum(ingLotsP.filter(l => ingById[l.ingId]?.origin === 'Italia'), l => l.tonnes * (l.price || 0));
   const m = d.esgManual || {};
   const water = waterStats(d, period), waste = wasteStats(d, period);
+  const ghg = ghgInventory({ energy: b, survey: d.survey, ingCO2Kg: ingCO2, tonnes, revenue, factors });
   const auto = {
     E1: [b.kwhGrid, 'kWh'], E2: [b.kwhSelf, 'kWh'], E3: [b.coverage != null ? b.coverage * 100 : null, '%'], E4: [b.elecPerT, 'kWh/t'],
     E5: [b.gplKg, 'kg'], E6: [b.co2Gpl, 't CO₂'], E7: [b.co2Grid, 't CO₂'],
-    E8: [tonnes ? (ingCO2 + (b.co2Grid + b.scope1) * 1000) / tonnes : null, 'kg CO₂e/t', 'Stima indicativa: fattori di emissione delle materie prime + energia di stabilimento'],
+    // F4: stessa definizione di ghg.perT (Scope 1 con tutti i combustibili + Scope 2 + Scope 3 cat. 1, per tonnellata prodotta)
+    E8: [ghg.perT, 'kg CO₂e/t', 'Stima indicativa: Scope 1 (tutti i combustibili) + Scope 2 location-based + Scope 3 cat. 1 (materie prime), per tonnellata prodotta'],
     E12: [tonnes ? coT / tonnes * 100 : null, '% in peso'], E15: [soyAll ? soyCert / soyAll * 100 : null, '%'],
     S8: [analyses, 'n.'], S9: [nc, 'n.'], S10: [compl.length, 'n.'], S11: [assisted, 'n.'],
     C1: [revenue, '€'], C3: [revenue ? rawCost / revenue * 100 : null, '% sui ricavi', 'Costo materie prime ai prezzi correnti sulle quantità prodotte'],
@@ -68,7 +73,6 @@ export function computeKpis(d, period, opt = {}) {
     if (opt.thesis && opt.thesis[k.code] != null) { value = opt.thesis[k.code]; source = 'tesi'; unit = k.unit; }
     out.push({ ...k, value, unitShown: unit, source, note });
   }
-  const ghg = ghgInventory({ energy: b, survey: d.survey, ingCO2Kg: ingCO2, tonnes, revenue, factors });
   return { kpis: out, energy: b, tonnes, revenue, scope1: b.scope1, scope2: b.scope2, factors, scope1PerKg: scope1PerKg(factors), water, waste, ghg };
 }
 

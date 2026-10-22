@@ -19,8 +19,14 @@ ROUTES = ['oggi', 'oggi.cruscotto', 'oggi.attivita', 'oggi.registro',
   'commerciale', 'commerciale.offerte', 'commerciale.offerte.nuova', 'commerciale.listino', 'commerciale.visite', 'commerciale.rete',
   'economia', 'economia.margini', 'economia.redditivita', 'economia.pareggio', 'economia.scenari', 'economia.previsioni',
   'esg', 'esg.questionario', 'esg.questionario.persone', 'esg.questionario.filiera', 'esg.acqua', 'esg.acqua.nuova', 'esg.rifiuti', 'esg.rifiuti.nuovo', 'esg.indicatori', 'esg.energia', 'esg.passaporto', 'esg.vsme', 'esg.tesi',
+  'esg.cruscotto', 'esg.clima', 'esg.filiera', 'esg.ambiente', 'esg.persone', 'esg.governance', 'esg.piano', 'esg.rischi',
   'dati', 'dati.importa', 'dati.anagrafiche', 'dati.qualita', 'dati.registro', 'dati.impostazioni',
   'direzione.conto~ytd~ap', 'economia.margini~mese-chiuso~prec']
+# percorsi in più dei pacchetti: tests/e2e/routes-*.txt, uno per riga (le righe vuote e quelle che iniziano con # si saltano)
+for _f in sorted((Path(__file__).resolve().parent).glob('routes-*.txt')):
+    for _l in _f.read_text(encoding='utf-8').splitlines():
+        _r = _l.strip()
+        if _r and not _r.startswith('#') and _r not in ROUTES: ROUTES.append(_r)
 PERIOD_AREAS = {'oggi', 'direzione', 'finanza', 'gemello', 'acquisti', 'produzione', 'qualita', 'commerciale', 'economia'}
 # scheda laterale: (tipo, ricerca nella barra comandi, tipo atteso del primo risultato)
 DRAWERS = [('product', 'lt18', 'Prodotto'), ('ingredient', 'mp01', 'Materia prima'), ('customer', 'cliente', 'Cliente'), ('offer', 'of-', 'Offerta'),

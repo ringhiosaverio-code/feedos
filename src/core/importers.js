@@ -4,6 +4,16 @@
  * (un solo upsertMany: un passo annullabile). Funzioni pure, usabili nei test. */
 import { norm, byId } from './util.js';
 import { FIELDS, validateRecord } from './fields.js';
+// fondazione 18: tipi importabili dei pacchetti ESG
+import { IMPORT_TYPES_CLIMA } from '../data/fields-clima.js';
+import { IMPORT_TYPES_PCF } from '../data/fields-pcf.js';
+import { IMPORT_TYPES_FILIERA } from '../data/fields-filiera.js';
+import { IMPORT_TYPES_REPORT } from '../data/fields-report.js';
+import { IMPORT_TYPES_PERSONE } from '../data/fields-persone.js';
+import { IMPORT_TYPES_GOVERNANCE } from '../data/fields-governance.js';
+import { IMPORT_TYPES_PIANO } from '../data/fields-piano.js';
+import { IMPORT_TYPES_RISCHI } from '../data/fields-rischi.js';
+import { IMPORT_TYPES_AMBIENTE } from '../data/fields-ambiente.js';
 
 /** Numero da testo italiano: «1.234,5» → 1234,5 · «1.234» → 1234 · «0.19» → 0,19 · «12,3 %» → 12,3 · «−5» → −5. */
 export function parseNum(s) {
@@ -56,6 +66,7 @@ export const TYPES = {
   fatture: { coll: 'invoices', label: 'Fatture', key: ['number'], synonyms: { number: ['numero', 'n fattura', 'numero fattura', 'documento'], customerId: ['cliente', 'codice cliente', 'ragione sociale'], date: ['data', 'data fattura', 'data documento'], taxable: ['imponibile'], vat: ['iva', 'imposta'], total: ['totale', 'totale documento'], dueDate: ['scadenza', 'data scadenza'], status: ['stato'] }, defaults: { status: 'aperta', source: 'importazione' } },
   incassi: { coll: 'payments', label: 'Incassi', key: ['date', 'customerId', 'amount'], synonyms: { date: ['data', 'data incasso', 'valuta'], customerId: ['cliente', 'codice cliente', 'ragione sociale'], invoiceId: ['fattura', 'n fattura', 'numero fattura', 'documento'], amount: ['importo', 'incassato', 'importo euro'], method: ['modalita', 'mezzo', 'tipo pagamento'] }, defaults: { method: 'bonifico' } },
   energia: { coll: 'energy', label: 'Energia', key: ['month'], synonyms: { month: ['mese', 'periodo'], tonnes: ['tonnellate', 'produzione t'], kwhGrid: ['kwh rete', 'prelievo', 'energia prelevata'], kwhPV: ['kwh fotovoltaico', 'fotovoltaico', 'produzione fv'], kwhExport: ['kwh ceduti', 'immessa', 'ceduta'], gplKg: ['gpl kg', 'gpl'] }, defaults: { source: 'importazione' } },
+  ...IMPORT_TYPES_CLIMA, ...IMPORT_TYPES_PCF, ...IMPORT_TYPES_FILIERA, ...IMPORT_TYPES_REPORT, ...IMPORT_TYPES_PERSONE, ...IMPORT_TYPES_GOVERNANCE, ...IMPORT_TYPES_PIANO, ...IMPORT_TYPES_RISCHI, ...IMPORT_TYPES_AMBIENTE,
 };
 
 /** Abbinamento automatico delle colonne: {campo: {col, confidence}} (1 nome identico, 0,9 sinonimo identico, 0,7 contenuto). */

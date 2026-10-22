@@ -2,6 +2,16 @@
  * inserimento, la validazione dei record e l'importazione da CSV. Tipi: text, number, date (AAAA-MM-GG), month (AAAA-MM),
  * enum (options), ref (id di un'altra raccolta), bool. */
 import { byId } from './util.js';
+// fondazione 18: campi e nomi delle raccolte dei pacchetti ESG (file di dati senza dipendenze)
+import { FIELDS_CLIMA, COLL_LABEL_CLIMA } from '../data/fields-clima.js';
+import { FIELDS_PCF, COLL_LABEL_PCF } from '../data/fields-pcf.js';
+import { FIELDS_FILIERA, COLL_LABEL_FILIERA } from '../data/fields-filiera.js';
+import { FIELDS_REPORT, COLL_LABEL_REPORT } from '../data/fields-report.js';
+import { FIELDS_PERSONE, COLL_LABEL_PERSONE } from '../data/fields-persone.js';
+import { FIELDS_GOVERNANCE, COLL_LABEL_GOVERNANCE } from '../data/fields-governance.js';
+import { FIELDS_PIANO, COLL_LABEL_PIANO } from '../data/fields-piano.js';
+import { FIELDS_RISCHI, COLL_LABEL_RISCHI } from '../data/fields-rischi.js';
+import { FIELDS_AMBIENTE, COLL_LABEL_AMBIENTE } from '../data/fields-ambiente.js';
 
 const FORMS = ['Pellet 3 mm', 'Pellet 4 mm', 'Pellet 6 mm', 'Pellet 8 mm', 'Sbriciolato', 'Farina'];
 export const FIELDS = {
@@ -110,9 +120,11 @@ export const FIELDS = {
     { key: 'kwhExport', label: 'kWh ceduti', type: 'number', min: 0 },
     { key: 'gplKg', label: 'GPL kg', type: 'number', min: 0 },
   ],
+  ...FIELDS_CLIMA, ...FIELDS_PCF, ...FIELDS_FILIERA, ...FIELDS_REPORT, ...FIELDS_PERSONE, ...FIELDS_GOVERNANCE, ...FIELDS_PIANO, ...FIELDS_RISCHI, ...FIELDS_AMBIENTE,
 };
 /** Nome della raccolta per l'interfaccia. */
-export const COLL_LABEL = { customers: 'Clienti', agents: 'Agenti', products: 'Prodotti', lines: 'Linee', ingredients: 'Materie prime', suppliers: 'Fornitori', costCenters: 'Centri di costo', shipments: 'Consegne', invoices: 'Fatture', payments: 'Incassi', fixedCosts: 'Costi fissi', energy: 'Energia', formulas: 'Formule', lots: 'Lotti' };
+export const COLL_LABEL = { customers: 'Clienti', agents: 'Agenti', products: 'Prodotti', lines: 'Linee', ingredients: 'Materie prime', suppliers: 'Fornitori', costCenters: 'Centri di costo', shipments: 'Consegne', invoices: 'Fatture', payments: 'Incassi', fixedCosts: 'Costi fissi', energy: 'Energia', formulas: 'Formule', lots: 'Lotti',
+  ...COLL_LABEL_CLIMA, ...COLL_LABEL_PCF, ...COLL_LABEL_FILIERA, ...COLL_LABEL_REPORT, ...COLL_LABEL_PERSONE, ...COLL_LABEL_GOVERNANCE, ...COLL_LABEL_PIANO, ...COLL_LABEL_RISCHI, ...COLL_LABEL_AMBIENTE };
 /** Etichetta di un record di una raccolta (per i riferimenti). */
 export const recLabel = (coll, r) => (!r ? '' : coll === 'invoices' ? r.number : coll === 'lots' ? r.code : r.name || r.code || r.id);
 

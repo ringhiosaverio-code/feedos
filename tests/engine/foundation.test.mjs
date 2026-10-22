@@ -42,8 +42,8 @@ const close = (a, b, tol = 1e-6, msg = '') => assert.ok(Math.abs(a - b) <= tol *
 
 /* ---------------- generatore e demo completo ---------------- */
 test('generatore: schema 17 con le impostazioni di base, tutte le raccolte, niente campi interni', () => {
-  assert.equal(DEMO_VERSION, 4);
-  assert.equal(g.settings.schema, 17); assert.equal(g.settings.demoVersion, 4);
+  assert.equal(DEMO_VERSION, 5);
+  assert.equal(g.settings.schema, 17); assert.equal(g.settings.demoVersion, 5);
   for (const k of Object.keys(DEFAULT_SETTINGS)) assert.ok(k in g.settings, 'impostazione ' + k);
   assert.deepEqual(g.settings.finance, DEFAULT_SETTINGS.finance);
   assert.equal(g.settings.company.lat, null);
@@ -91,8 +91,9 @@ test('richiamo: il bilancio di massa del lotto considera le rettifiche', () => {
 
 /* ---------------- estensori del demo ---------------- */
 test('estensori: ordine e semi, e ogni patch aggiunge soltanto (campi nuovi, id nuovi)', () => {
-  assert.deepEqual(EXTENDERS.map(e => e[0]), ['costs', 'commerciale', 'acquisti', 'produzione', 'finanza', 'redditivita', 'direzione', 'piattaforma']);
-  assert.deepEqual(EXTENDERS.map(e => e[2]), [101, 501, 601, 701, 301, 401, 201, 801]);
+  assert.deepEqual(EXTENDERS.map(e => e[0]), ['costs', 'commerciale', 'acquisti', 'produzione', 'finanza', 'redditivita', 'direzione', 'piattaforma',
+    'clima', 'pcf', 'filiera', 'ambiente', 'persone', 'governance', 'rischi', 'piano', 'report']);
+  assert.deepEqual(EXTENDERS.map(e => e[2]), [101, 501, 601, 701, 301, 401, 201, 801, 901, 1001, 1101, 1701, 1301, 1401, 1601, 1501, 1201]);
   assert.deepEqual(OVERWRITE_OK, { ingLots: ['supplier'] });
   // ogni estensore sull'archivio cumulativo: nessuna violazione, archivio in ingresso non modificato
   let cur = g;
@@ -149,7 +150,7 @@ test('aggiornamento di un demo salvato dalla versione 2: rettifiche e dati dei p
   const old = { ...g, adjustments: [], settings: { ...g.settings, demoVersion: 2 } };
   old.customers = old.customers.map(c => (c.id === 'c-1' ? { ...c, name: 'Cliente rinominato' } : c));
   const up = upgradeDemo(old);
-  assert.equal(up.settings.demoVersion, 4);
+  assert.equal(up.settings.demoVersion, 5);
   assert.equal(up.adjustments.length, 8);
   close(sum(up.adjustments, a => a.tonnes), sum(g.adjustments, a => a.tonnes), 1e-6);
   assert.equal(up.customers.find(c => c.id === 'c-1').name, 'Cliente rinominato', 'modifica dell’utente conservata');
@@ -158,11 +159,12 @@ test('aggiornamento di un demo salvato dalla versione 2: rettifiche e dati dei p
   assert.equal(upgradeDemo(up), up, 'già aggiornato');
   // ogni estensore una sola volta: nessun id ripetuto tra i passi 3 e 4
   for (const c of COLLECTIONS) if (Array.isArray(up[c])) assert.equal(new Set(up[c].map(x => x.id)).size, up[c].length, 'id unici in ' + c);
-  // un demo salvato con la versione 3 riceve solo i dati dei pacchetti (passo 4), senza ripetere i costi fissi
+  // un demo salvato con la versione 3 riceve solo i dati dei pacchetti (passi 4 e 5), senza ripetere i costi fissi
   const v3 = { ...D, settings: { ...D.settings, demoVersion: 3 } };
   const up3 = upgradeDemo(v3);
-  assert.equal(up3.settings.demoVersion, 4);
+  assert.equal(up3.settings.demoVersion, 5);
   assert.equal(up3.fixedCosts.length, D.fixedCosts.length, 'costi fissi non duplicati');
+  for (const c of COLLECTIONS) if (Array.isArray(up3[c])) assert.equal(new Set(up3[c].map(x => x.id)).size, up3[c].length, 'id unici dopo i passi 4 e 5 in ' + c);
 });
 
 /* ---------------- identità dei margini sul demo completo ---------------- */
@@ -291,8 +293,10 @@ test('contratti: esportazioni e forme dei risultati dei pacchetti', () => {
   isSignalList(dataquality.dqSignals(D, ctx), 'dqSignals');
   isSection(dataquality.dqReportSection(D, ctx, P, C), 'dqReportSection');
   // registri: ordine fisso, ogni sezione è null o ben formata
-  assert.deepEqual(SIGNAL_PROVIDERS.map(f => f.name), ['budgetSignals', 'financeSignals', 'profitSignals', 'commercialSignals', 'purchasingSignals', 'productionSignals', 'kpiSignals', 'dqSignals']);
-  assert.deepEqual(REPORT_SECTIONS.map(r => [r.id, r.order]), [['kpi', 10], ['redditivita', 40], ['commerciale', 45], ['finanza', 50], ['acquisti', 60], ['produzione', 70], ['dati', 90]]);
+  assert.deepEqual(SIGNAL_PROVIDERS.map(f => f.name), ['budgetSignals', 'financeSignals', 'profitSignals', 'commercialSignals', 'purchasingSignals', 'productionSignals', 'kpiSignals', 'dqSignals',
+    'climaSignals', 'pcfSignals', 'filieraSignals', 'reportSignals', 'personeSignals', 'governanceSignals', 'pianoSignals', 'rischiSignals', 'ambienteSignals']);
+  assert.deepEqual(REPORT_SECTIONS.map(r => [r.id, r.order]), [['kpi', 10], ['redditivita', 40], ['commerciale', 45], ['finanza', 50], ['acquisti', 60], ['produzione', 70],
+    ['esg-sintesi', 80], ['esg-clima', 81], ['esg-impronta', 82], ['esg-filiera', 83], ['esg-ambiente', 84], ['esg-persone', 85], ['esg-governance', 86], ['esg-piano', 87], ['esg-rischi', 88], ['dati', 90]]);
   for (const r of REPORT_SECTIONS) isSection(r.build(D, ctx, P, C), r.id);
   // ogni fornitore di segnali, preso da solo, non rompe e restituisce segnali ben formati
   for (const f of SIGNAL_PROVIDERS) isSignalList(f(D, { today, ...ctx }) || [], f.name);

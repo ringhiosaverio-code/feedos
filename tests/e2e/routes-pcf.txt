@@ -1,0 +1,1 @@
+# FeedOS 18 · Impronta mangimi: percorsi in più per tests/e2e/smoke.py, uno per riga (es. esg.passaporto.sezione). Le righe con # sono commenti.

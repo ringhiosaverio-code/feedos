@@ -28,8 +28,16 @@ export function PageHead({ title, lead, actions, tabs, tab, onTab }) {
 }
 
 export function Tabs({ items, value, onChange, label = 'Sezioni' }) {
+  // con molte schede (ESG) la barra scorre: la scheda attiva resta visibile anche su schermi stretti
+  const ref = useRef(null);
+  useEffect(() => {
+    const nav = ref.current, b = nav?.querySelector('[aria-selected="true"]');
+    if (!nav || !b || nav.scrollWidth <= nav.clientWidth) return;
+    const nb = nav.getBoundingClientRect(), bb = b.getBoundingClientRect();
+    if (bb.left < nb.left || bb.right > nb.right) nav.scrollLeft += bb.left - nb.left - 16;
+  }, [value]);
   return (
-    <nav className="tabs" role="tablist" aria-label={label}>
+    <nav className="tabs" role="tablist" aria-label={label} ref={ref}>
       {items.map(t => (
         <button key={t.id} role="tab" aria-selected={value === t.id} onClick={() => onChange(t.id)} id={'tab-' + t.id}>
           {t.label}{t.n != null && t.n !== 0 && <span className="n">{t.n}</span>}
@@ -169,11 +177,13 @@ const cmpVal = (x, y) => (x == null && y == null ? 0 : x == null ? 1 : y == null
 
 /**
  * Tabella con ordinamento, ricerca esterna e paginazione.
- * cols: [{key, label, render(row), sort(row), align:'r', width, className, csv(row)|false, csvLabel}]
- * exportName: mostra il pulsante «CSV» che esporta tutte le righe (nell'ordine corrente) con le colonne visibili.
+ * cols: [{key, label, render(row), sort(row), align:'r', width, className, csv(row)|false, csvLabel, csvOnly}]
+ * exportName: mostra il pulsante «CSV» che esporta tutte le righe (nell'ordine corrente) con le colonne visibili
+ * e con quelle csvOnly (solo nel file, non nella tabella: per esempio l'unità di misura).
  */
-export function Table({ rows, cols, onRow, rowKey = r => r.id, pageSize = 50, initialSort, selected, foot, caption, empty = 'Nessun elemento', exportName }) {
+export function Table({ rows, cols: allCols, onRow, rowKey = r => r.id, pageSize = 50, initialSort, selected, foot, caption, empty = 'Nessun elemento', exportName }) {
   const [sort, setSort] = useState(initialSort || null); // {key, dir}
+  const cols = allCols.filter(c => !c.csvOnly); // colonne disegnate (le csvOnly vanno solo nel CSV)
   const [page, setPage] = useState(0);
   useEffect(() => { setPage(0); }, [rows.length]);
   const col = sort ? cols.find(x => x.key === sort.key) : null;
@@ -187,7 +197,7 @@ export function Table({ rows, cols, onRow, rowKey = r => r.id, pageSize = 50, in
   const view = sorted.slice(page * pageSize, page * pageSize + pageSize);
   const toggle = k => setSort(s => !s || s.key !== k ? { key: k, dir: 'asc' } : s.dir === 'asc' ? { key: k, dir: 'desc' } : null);
   const exportCsv = () => {
-    const ec = cols.filter(c => c.csv !== false && (typeof c.label === 'string' ? c.label : c.csvLabel)).map(c => ({ label: typeof c.label === 'string' ? c.label : c.csvLabel, value: r => csvCell(c, r) }));
+    const ec = allCols.filter(c => c.csv !== false && (typeof c.label === 'string' ? c.label : c.csvLabel)).map(c => ({ label: typeof c.label === 'string' ? c.label : c.csvLabel, value: r => csvCell(c, r) }));
     download(`${exportName}-${stamp()}.csv`, toCSV(sorted, ec), 'text/csv;charset=utf-8');
   };
   return (

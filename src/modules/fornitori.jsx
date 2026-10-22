@@ -1,7 +1,8 @@
 /* FeedOS 17 · Fornitori qualificati (pacchetto WP5): classifica con punteggio (puntualità, qualità, prezzo, documenti),
  * mappa del valore (prezzo rispetto ai colleghi contro qualità), certificati in scadenza e scheda del fornitore con
  * andamento di OTIF e premio, lotti, ordini, reclami collegati e modifica di qualifica, condizioni e certificati.
- * Contratto della fondazione: la scheda laterale SupplierD({d, id}), aperta con openDrawer('supplier', id). */
+ * Contratto della fondazione: la scheda laterale SupplierD({d, id}), aperta con openDrawer('supplier', id); dopo i lotti
+ * mostra le sezioni dei pacchetti di slots.jsx (SUPPLIER_SECTIONS, fondazione 18), ciascuna isolata dagli errori. */
 import React, { useMemo, useRef, useState } from 'react';
 import { LuTruck, LuPlus, LuSave } from 'react-icons/lu';
 import { store, toast, openDrawer } from '../core/store.js';
@@ -12,6 +13,7 @@ import { scorecard, supplierOf, supplierTrend, docsScore, APPROVAL } from '../en
 import { Panel, Kpi, Table, Chip, Btn, Field, Select, NumInput, Empty, Drawer, Kv, SearchBox, filterRows, useWidth } from '../ui/ui.jsx';
 import { LineChart, Legend } from '../ui/charts.jsx';
 import { Def, eurTxt } from './direzione-conto.jsx';
+import { SUPPLIER_SECTIONS, SlotGuard } from './slots.jsx';
 
 const pc = (v, k = 0) => (v == null || !Number.isFinite(v) ? '—' : `${nf(v * 100, k)}%`);
 const spc = (v, k = 1) => (v == null || !Number.isFinite(v) ? '—' : `${sf(v * 100, k)}%`);
@@ -175,6 +177,7 @@ function SupplierBody({ d, s }) {
           <button key={l.id} className="dlink" onClick={() => openDrawer('ingLot', l.id)}><span className="code">{l.code}</span><span className="muted">{dateIt(l.date, 'dm')} · {ing[l.ingId]?.short || ing[l.ingId]?.name} · {nf(l.tonnes, 1)} t · {nf(l.price, 1)} €/t{l.analyses?.AFB1 != null ? ` · AFB1 ${nf(l.analyses.AFB1, 1)}` : ''}</span>{l.status === 'bloccato' && <Chip kind="crit">respinto</Chip>}</button>
         )) : <span className="small muted">Nessun lotto registrato.</span>}
       </div>
+      {SUPPLIER_SECTIONS.map((S, i) => <SlotGuard key={i}><S d={d} id={s.id} /></SlotGuard>)}
       {r && r.complaints > 0.05 && <div className="dsec"><div className="eyebrow">Reclami collegati · 12 mesi</div><p className="small">Quota attribuita ai lotti di questo fornitore: <b>{nf(r.complaints, 1)}</b> reclami ({nf(r.complaintsPer1000, 2)} ogni 1.000 t), in base ai kg delle sue materie prime nei lotti contestati.</p></div>}
       <SupplierEdit d={d} s={s} today={today} />
     </Drawer>

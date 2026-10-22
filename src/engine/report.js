@@ -16,14 +16,17 @@ const n0 = v => (v == null || v === '' || !Number.isFinite(+v) ? 0 : +v);
 
 /** Sezioni dei modelli di report, in ordine. */
 export const REPORT_TEMPLATES = {
-  cda: ['sintesi', 'conto', 'ponte', 'budget', 'kpi', 'redditivita', 'commerciale', 'finanza', 'acquisti', 'produzione', 'dati'],
+  cda: ['sintesi', 'conto', 'ponte', 'budget', 'kpi', 'redditivita', 'commerciale', 'finanza', 'acquisti', 'produzione', 'esg-sintesi', 'dati'],
   commerciale: ['sintesi', 'conto', 'redditivita', 'commerciale'],
   operations: ['sintesi', 'kpi', 'acquisti', 'produzione', 'dati'],
+  esg: ['esg-sintesi', 'esg-clima', 'esg-impronta', 'esg-filiera', 'esg-ambiente', 'esg-persone', 'esg-governance', 'esg-piano', 'esg-rischi'],
 };
-export const TEMPLATE_LABELS = { cda: 'Consiglio di amministrazione', commerciale: 'Commerciale', operations: 'Operations' };
+export const TEMPLATE_LABELS = { cda: 'Consiglio di amministrazione', commerciale: 'Commerciale', operations: 'Operations', esg: 'Rapporto ESG' };
 export const SECTION_TITLES = {
   sintesi: 'Sintesi', conto: 'Conto economico', ponte: 'Scostamenti del margine', budget: 'Budget e stima di chiusura',
   kpi: 'Indicatori', redditivita: 'Redditività', commerciale: 'Commerciale', finanza: 'Finanza', acquisti: 'Acquisti', produzione: 'Produzione', dati: 'Qualità dei dati',
+  'esg-sintesi': 'Sintesi ESG', 'esg-clima': 'Clima e GHG', 'esg-impronta': 'Impronta dei mangimi', 'esg-filiera': 'EUDR e fornitori', 'esg-ambiente': 'Registri ambientali',
+  'esg-persone': 'Persone e sicurezza', 'esg-governance': 'Governance ed evidenze', 'esg-piano': 'Obiettivi e piano', 'esg-rischi': 'Rischi climatici',
 };
 
 /** Copertura dei dati del confronto: il minimo tra periodo e confronto (budget: quota del periodo coperta dal budget). */
@@ -127,7 +130,7 @@ function budgetSec(d, ctx, P) {
 }
 
 /**
- * Report del periodo P con confronto C secondo il modello (cda, commerciale, operations).
+ * Report del periodo P con confronto C secondo il modello (cda, commerciale, operations, esg).
  * opts.comments: commenti per sezione · opts.signals: segnali già calcolati (derived.signals), altrimenti i fornitori dei pacchetti.
  * → {header: {company, periodLabel, compareLabel, issuedAt, closed, dqScore, template}, sections: [Section]}
  */

@@ -4,10 +4,23 @@
 import { SURVEY_SECTIONS, SURVEY_QUESTIONS, QUESTION, visible, answered } from '../data/survey.js';
 import { EER_BY_CODE, isHazardous } from '../data/eer.js';
 import { DEFAULTS } from './energy.js';
-import { sum, addDays, nf, daysInMonth } from '../core/util.js';
+import { esgThresholds } from './esg-piano.js';
+import { sum, addDays, nf, daysInMonth, addMonths, endOfMonth, daysBetween } from '../core/util.js';
 
-// mesi del periodo per i registri mensili: da quello di inizio a quello di fine (il mese in corso non ha ancora la lettura)
-const inMonth = (P, m) => m >= P.from.slice(0, 7) && m <= P.to.slice(0, 7);
+/**
+ * Mesi dei registri mensili (energia, acqua) per il periodo P, allineati sui mesi chiusi (F5): finiscono con l'ultimo mese
+ * concluso entro P.to; cominciano dal mese di P.from se P parte il primo del mese, altrimenti contano tanti mesi quanti
+ * ne copre P (12 per gli ultimi 12 mesi: oggi 16/10/2026 → ottobre 2025 – settembre 2026). → ['AAAA-MM', …] dal più vecchio.
+ */
+export function registerMonths(P) {
+  if (!P?.from || !P?.to || P.from > P.to) return [];
+  const toM = P.to.slice(0, 7), end = P.to.slice(0, 10) === endOfMonth(toM) ? toM : addMonths(toM, -1);
+  const n = Math.max(1, Math.round((daysBetween(P.from, P.to) + 1) / 30.44));
+  const start = P.from.slice(8, 10) === '01' ? P.from.slice(0, 7) : addMonths(end, -(n - 1));
+  const out = [];
+  for (let m = start; m <= end; m = addMonths(m, 1)) out.push(m);
+  return out;
+}
 const inDay = (P, x) => x >= P.from && x <= P.to;
 const YN = v => (v === 'si' ? 'Sì' : v === 'no' ? 'No' : null);
 const numOr = v => (v == null || v === '' || !Number.isFinite(+v) ? null : +v);
@@ -37,7 +50,8 @@ export const MIN_RUN_COVERAGE = 0.9;
  * con lettura e con la produzione registrata per intero: un mese in cui il registro comincia o finisce a metà ha la lettura
  * di tutto il mese ma solo una parte delle tonnellate, e gonfierebbe il rapporto. */
 export function waterStats(d, P) {
-  const rows = (d.water || []).filter(w => inMonth(P, w.month));
+  const regM = new Set(registerMonths(P));
+  const rows = (d.water || []).filter(w => regM.has(w.month));
   const tByM = tonnesByMonth(d.runs || []);   // produzione dell'intero mese, per confrontarla con la lettura del mese
   const cover = runCoverage(d.runs || []);
   const months = [...new Set(rows.map(w => w.month))].sort();
@@ -207,7 +221,8 @@ const CRITERIA = [
   { id: 'water', pillar: 'E', pts: 8, label: 'Prelievi idrici misurati ogni mese', test: c => c.water.nMonths >= 6, tab: 'acqua', action: 'Registrare ogni mese la lettura del contatore dell’acqua (scheda Acqua).' },
   { id: 'disch', pillar: 'E', pts: 4, label: 'Scarichi idrici monitorati', test: c => yes(c.a, 'wa-disch'), q: 'wa-disch', action: 'Programmare analisi periodiche degli scarichi e conservarne i referti.' },
   { id: 'wastereg', pillar: 'E', pts: 8, label: 'Rifiuti registrati per codice EER', test: c => c.waste.n >= 4, tab: 'rifiuti', action: 'Riportare in FeedOS i formulari dei rifiuti (scheda Rifiuti): bastano codice EER, kg e destinazione.' },
-  { id: 'recovery', pillar: 'E', pts: 8, label: 'Almeno metà dei rifiuti avviata a recupero', test: c => (c.waste.recovery == null ? null : c.waste.recovery >= 0.5), tab: 'rifiuti', action: 'Separare carta, plastica e legno degli imballaggi e conferirli a recupero (operazioni R).' },
+  { id: 'recovery', pillar: 'E', pts: 8, label: 'Almeno metà dei rifiuti avviata a recupero', labelOf: c => (thOf(c).recovery === 0.5 ? 'Almeno metà dei rifiuti avviata a recupero' : `Almeno il ${nf(thOf(c).recovery * 100)}% dei rifiuti avviato a recupero`),
+    test: c => (c.waste.recovery == null ? null : c.waste.recovery >= thOf(c).recovery), tab: 'rifiuti', action: 'Separare carta, plastica e legno degli imballaggi e conferirli a recupero (operazioni R).' },
   { id: 'reduce', pillar: 'E', pts: 4, label: 'Programma di riduzione degli sprechi', test: c => yes(c.a, 'wt-reduce'), q: 'wt-reduce', action: 'Avviare un programma sugli scarti di linea: oggi sono misurati nelle registrazioni di produzione.' },
   { id: 'soy', pillar: 'E', pts: 6, label: 'Soia certificata senza deforestazione', test: c => (c.soyShare == null ? null : c.soyShare > 0), q: 'bd-soy', action: 'Chiedere ai fornitori di soia una quota certificata (RTRS, ProTerra, FEFAC SSG): lo scenario «soia senza deforestazione» in Economia ne mostra il costo.' },
   { id: 'trace', pillar: 'E', pts: 6, label: 'Tracciabilità fino all’origine delle commodity a rischio', test: c => (c.a['bd-trace'] == null ? null : c.a['bd-trace'] === 'Completa'), partial: c => (c.a['bd-trace'] === 'Parziale' ? 0.5 : 0), q: 'bd-trace', action: 'Chiedere ai fornitori di soia e mais il paese e la regione di coltivazione per ogni consegna.' },
@@ -215,11 +230,17 @@ const CRITERIA = [
   { id: 'biopolicy', pillar: 'E', pts: 4, label: 'Politica sulla biodiversità', test: c => yes(c.a, 'bd-policy'), q: 'bd-policy', action: 'Scrivere una politica breve su biodiversità e deforestazione (anche una pagina).' },
   // sociale
   { id: 'iso45', pillar: 'S', pts: 8, label: 'Sistema di gestione della sicurezza ISO 45001', test: c => yes(c.a, 'hs-iso'), q: 'hs-iso', action: 'Valutare la certificazione ISO 45001 partendo dal documento di valutazione dei rischi.' },
-  { id: 'injmon', pillar: 'S', pts: 5, label: 'Infortuni e giornate perse monitorati', test: c => (c.a['hs-inj'] == null || c.a['hs-days'] == null ? null : true), q: 'hs-inj', action: 'Registrare infortuni, giornate perse e ore lavorate: servono per gli indici di frequenza e gravità.' },
+  { id: 'injmon', pillar: 'S', pts: 5, label: 'Infortuni e giornate perse monitorati', test: c => injPlausible(c.a), q: 'hs-inj', action: 'Registrare infortuni, giornate perse e ore lavorate: servono per gli indici di frequenza e gravità.',
+    actionOf: c => (injPlausible(c.a) === false ? 'Infortuni, giornate perse o ore lavorate non sono plausibili (per esempio giornate perse senza infortuni o oltre un anno per infortunio): correggerli nel questionario.' : null) },
   { id: 'injzero', pillar: 'S', pts: 5, label: 'Nessun infortunio nell’anno', test: c => (numOr(c.a['hs-inj']) == null ? null : numOr(c.a['hs-inj']) === 0), q: 'hs-inj', action: 'Analizzare le cause degli infortuni e aggiornare la formazione sulla sicurezza.' },
-  { id: 'training', pillar: 'S', pts: 8, label: 'Almeno 20 ore di formazione per addetto', test: c => (numOr(c.a['tr-hours']) == null ? null : numOr(c.a['tr-hours']) >= 20), q: 'tr-hours', action: 'Pianificare la formazione annuale su sicurezza, qualità e sostenibilità (soglia indicativa: 20 h per addetto).' },
-  { id: 'gender', pillar: 'S', pts: 5, label: 'Parità: donne in ruoli di responsabilità misurate', test: c => (numOr(c.a['pe-women-mgmt']) == null ? null : true), q: 'pe-women-mgmt', action: 'Misurare la quota di donne in ruoli di responsabilità e il divario retributivo.' },
-  { id: 'paygap', pillar: 'S', pts: 4, label: 'Divario retributivo di genere calcolato', test: c => (numOr(c.a['pe-gap']) == null ? null : true), q: 'pe-gap', action: 'Calcolare il divario retributivo medio tra uomini e donne dalle buste paga.' },
+  { id: 'training', pillar: 'S', pts: 8, label: 'Almeno 20 ore di formazione per addetto', labelOf: c => `Almeno ${nf(thOf(c).trainingH)} ore di formazione per addetto`,
+    test: c => (numOr(c.a['tr-hours']) == null ? null : numOr(c.a['tr-hours']) >= thOf(c).trainingH), q: 'tr-hours', action: 'Pianificare la formazione annuale su sicurezza, qualità e sostenibilità (soglia indicativa: 20 h per addetto).',
+    actionOf: c => `Pianificare la formazione annuale su sicurezza, qualità e sostenibilità (soglia indicativa: ${nf(thOf(c).trainingH)} h per addetto).` },
+  // valori misurati solo se plausibili (F10): una quota fuori da 0–100% o un divario oltre ±100% non contano come misura
+  { id: 'gender', pillar: 'S', pts: 5, label: 'Parità: donne in ruoli di responsabilità misurate', test: c => { const v = numOr(c.a['pe-women-mgmt']); return v == null ? null : v >= 0 && v <= 100; }, q: 'pe-women-mgmt', action: 'Misurare la quota di donne in ruoli di responsabilità e il divario retributivo.',
+    actionOf: c => { const v = numOr(c.a['pe-women-mgmt']); return v != null && !(v >= 0 && v <= 100) ? `La quota di donne in ruoli di responsabilità (${nf(v)}%) non è plausibile: correggerla nel questionario.` : null; } },
+  { id: 'paygap', pillar: 'S', pts: 4, label: 'Divario retributivo di genere calcolato', test: c => { const v = numOr(c.a['pe-gap']); return v == null ? null : v > -100 && v < 100; }, q: 'pe-gap', action: 'Calcolare il divario retributivo medio tra uomini e donne dalle buste paga.',
+    actionOf: c => { const v = numOr(c.a['pe-gap']); return v != null && !(v > -100 && v < 100) ? `Il divario retributivo indicato (${nf(v, 1)}%) non è plausibile: correggerlo nel questionario.` : null; } },
   { id: 'community', pillar: 'S', pts: 5, label: 'Iniziative sul territorio', test: c => yes(c.a, 'te-init'), q: 'te-init', action: 'Raccontare (o avviare) le iniziative con scuole agrarie, allevatori e comunità locali.' },
   { id: 'hrisk', pillar: 'S', pts: 6, label: 'Verifiche sui diritti umani in filiera', test: c => (c.a['sc-risk'] == null ? null : c.a['sc-risk'].length >= 3), q: 'sc-risk', action: 'Inserire nella qualifica fornitori le verifiche su lavoro minorile, lavoro forzato e discriminazione.' },
   { id: 'scqual', pillar: 'S', pts: 6, label: 'Qualifica dei fornitori con criteri ESG', test: c => yes(c.a, 'sc-qual'), q: 'sc-qual', action: 'Aggiungere al questionario di qualifica fornitori 5 domande ESG (certificazioni, sicurezza, ambiente).' },
@@ -237,6 +258,15 @@ const CRITERIA = [
   { id: 'clauses', pillar: 'G', pts: 5, label: 'Clausole ESG nei contratti', test: c => yes(c.a, 'sc-clauses'), q: 'sc-clauses', action: 'Inserire nei contratti quadro una clausola sul rispetto del codice di condotta.' },
   { id: 'audits', pillar: 'G', pts: 5, label: 'Audit presso i fornitori', test: c => (numOr(c.a['sc-audits']) == null ? null : numOr(c.a['sc-audits']) > 0), q: 'sc-audits', action: 'Programmare audit presso i fornitori strategici (soia, mais, premiscele).' },
 ];
+// soglie dei criteri (F10): da esgThresholds(d) del pacchetto piano nel contesto (ctx.th), altrimenti i valori di sempre
+const TH0 = { pvShare: 0.40, recovery: 0.50, trainingH: 20, waterDrift: 0.12 };
+const thOf = c => ({ ...TH0, ...(c?.th || {}) });
+/** Infortuni plausibili: interi ≥ 0, giornate perse ≥ 0 e non oltre un anno per infortunio, ore lavorate positive se indicate. */
+function injPlausible(a = {}) {
+  const inj = numOr(a['hs-inj']), days = numOr(a['hs-days']), hours = numOr(a['hs-hours']);
+  if (inj == null || days == null) return null;
+  return Number.isInteger(inj) && inj >= 0 && days >= 0 && days <= Math.max(1, inj) * 365 && (hours == null || hours > 0);
+}
 export const PILLAR_LABEL = { E: 'Ambiente', S: 'Sociale', G: 'Governance' };
 export const LEVELS = [[0, 'Avvio'], [25, 'In crescita'], [50, 'Strutturato'], [75, 'Avanzato']];
 export const levelOf = s => LEVELS.filter(([t]) => s >= t).pop()[1];
@@ -245,7 +275,7 @@ export function esgScore(ctx) {
   const items = CRITERIA.map(k => {
     const r = k.test(ctx);
     const got = r === true ? k.pts : r === false && k.partial ? k.pts * k.partial(ctx) : 0;
-    return { ...k, test: undefined, partial: undefined, result: r, got, missing: k.pts - got };
+    return { ...k, label: k.labelOf ? k.labelOf(ctx) : k.label, action: (k.actionOf && k.actionOf(ctx)) || k.action, test: undefined, partial: undefined, labelOf: undefined, actionOf: undefined, result: r, got, missing: k.pts - got };
   });
   const pillars = Object.keys(PILLAR_LABEL).map(p => {
     const it = items.filter(x => x.pillar === p);
@@ -336,7 +366,7 @@ export function overview(d, P, R) {
   const ghg = R.ghg;
   const sup = supplierStats(d, P), raw = rawMaterials(d, P);
   const soy = (R.kpis || []).find(k => k.code === 'E15');
-  const ctx = { a, R, water, waste, ghg, sup, raw, energy: R.energy, soyShare: soy?.source === 'auto' ? soy.value / 100 : null };
+  const ctx = { a, R, water, waste, ghg, sup, raw, energy: R.energy, soyShare: soy?.source === 'auto' ? soy.value / 100 : null, th: esgThresholds(d) };
   const progress = surveyProgress(a);
   const score = esgScore(ctx);
   const steps = score.items.filter(x => x.missing > 0).sort((x, y) => y.missing - x.missing || (x.result == null) - (y.result == null)).map(x => ({

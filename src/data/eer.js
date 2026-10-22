@@ -22,3 +22,38 @@ export const EER = [
 ];
 export const EER_BY_CODE = Object.fromEntries(EER.map(e => [e.code, e]));
 export const isHazardous = code => /\*\s*$/.test(String(code || ''));
+
+/* FeedOS 18 · Operazioni di recupero (R) e smaltimento (D) dichiarate nel formulario: allegati C e B alla parte IV del
+ * D.Lgs. 152/2006 (testi abbreviati). R13 e D15 sono le operazioni preliminari (messa in riserva, deposito preliminare). */
+export const WASTE_OPS = [
+  { code: 'R1', dest: 'recupero', label: 'Utilizzo principale come combustibile o per produrre energia' },
+  { code: 'R2', dest: 'recupero', label: 'Rigenerazione o recupero di solventi' },
+  { code: 'R3', dest: 'recupero', label: 'Riciclo o recupero di sostanze organiche (compreso il compostaggio)' },
+  { code: 'R4', dest: 'recupero', label: 'Riciclo o recupero di metalli e composti metallici' },
+  { code: 'R5', dest: 'recupero', label: 'Riciclo o recupero di altre sostanze inorganiche' },
+  { code: 'R6', dest: 'recupero', label: 'Rigenerazione di acidi o basi' },
+  { code: 'R7', dest: 'recupero', label: 'Recupero di prodotti che servono a ridurre l’inquinamento' },
+  { code: 'R8', dest: 'recupero', label: 'Recupero di prodotti dai catalizzatori' },
+  { code: 'R9', dest: 'recupero', label: 'Rigenerazione o altri reimpieghi degli oli' },
+  { code: 'R10', dest: 'recupero', label: 'Spandimento sul suolo a beneficio dell’agricoltura' },
+  { code: 'R11', dest: 'recupero', label: 'Utilizzo di rifiuti ottenuti dalle operazioni da R1 a R10' },
+  { code: 'R12', dest: 'recupero', label: 'Scambio di rifiuti per le operazioni da R1 a R11' },
+  { code: 'R13', dest: 'recupero', label: 'Messa in riserva prima delle operazioni da R1 a R12' },
+  { code: 'D1', dest: 'smaltimento', label: 'Deposito sul o nel suolo (per esempio discarica)' },
+  { code: 'D2', dest: 'smaltimento', label: 'Trattamento in ambiente terrestre' },
+  { code: 'D3', dest: 'smaltimento', label: 'Iniezioni in profondità' },
+  { code: 'D4', dest: 'smaltimento', label: 'Lagunaggio' },
+  { code: 'D5', dest: 'smaltimento', label: 'Messa in discarica specialmente allestita' },
+  { code: 'D6', dest: 'smaltimento', label: 'Scarico nell’ambiente idrico (eccetto l’immersione)' },
+  { code: 'D7', dest: 'smaltimento', label: 'Immersione, compreso il seppellimento nel sottosuolo marino' },
+  { code: 'D8', dest: 'smaltimento', label: 'Trattamento biologico' },
+  { code: 'D9', dest: 'smaltimento', label: 'Trattamento fisico-chimico' },
+  { code: 'D10', dest: 'smaltimento', label: 'Incenerimento a terra' },
+  { code: 'D11', dest: 'smaltimento', label: 'Incenerimento in mare (vietato)' },
+  { code: 'D12', dest: 'smaltimento', label: 'Deposito permanente' },
+  { code: 'D13', dest: 'smaltimento', label: 'Raggruppamento preliminare prima delle operazioni da D1 a D12' },
+  { code: 'D14', dest: 'smaltimento', label: 'Ricondizionamento preliminare prima delle operazioni da D1 a D13' },
+  { code: 'D15', dest: 'smaltimento', label: 'Deposito preliminare prima delle operazioni da D1 a D14' },
+];
+/** Operazione di base per la destinazione: R13 per il recupero, D15 per lo smaltimento. */
+export const defaultWasteOp = dest => (dest === 'smaltimento' ? 'D15' : 'R13');

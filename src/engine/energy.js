@@ -3,8 +3,8 @@
  * più CH₄ e N₂O da combustione (IPCC 2006, GWP AR6) per lo Scope 1. */
 
 export const DEFAULTS = {
-  feGrid: 0.3769,     // kg CO₂/kWh (Puglia 2023, ISPRA) · fattore della tesi
-  feGpl: 3.0115,      // kg CO₂/kg GPL (valore centrale della tesi)
+  feGrid: 0.1926,     // kg CO₂/kWh · rete Italia 2024, location-based, consolidato (ISPRA, Rapporti 430/2026)
+  feGpl: 2.985,       // kg CO₂/kg GPL · IPCC 2006 vol. 2: 63,1 t CO₂/TJ × 47,3 MJ/kg (valore nazionale MASE/ISPRA dal pacchetto clima)
   lhvKwhKg: 13.14,    // contenuto energetico del GPL (PCI) kWh/kg
   pciTJperGg: 47.3,
   ch4KgTJ: 1.0, n2oKgTJ: 0.1, gwpCh4: 27.9, gwpN2o: 273,

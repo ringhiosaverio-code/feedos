@@ -18,6 +18,16 @@ import { scorecard } from './suppliers.js';
 import { ppv } from './purchaseVariance.js';
 import { shrinkSummary } from './massbalance.js';
 import { computeKpis } from './esg.js';
+// fondazione 18: indicatori dei nove pacchetti ESG (id esg-…, area 'esg', src = raccolta della copertura)
+import { CLIMA_KPIS } from './esg-clima.js';
+import { PCF_KPIS } from './esg-pcf.js';
+import { FILIERA_KPIS } from './esg-filiera.js';
+import { REPORT_KPIS } from './esg-report.js';
+import { PERSONE_KPIS } from './esg-persone.js';
+import { GOVERNANCE_KPIS } from './esg-governance.js';
+import { PIANO_KPIS } from './esg-piano.js';
+import { RISCHI_KPIS } from './esg-rischi.js';
+import { AMBIENTE_KPIS } from './esg-ambiente.js';
 
 const EMPTY = [];
 const inP = (x, P) => x >= P.from && x <= P.to;
@@ -47,8 +57,8 @@ const cust = (d, ctx, P) => cached('cp|' + key(P), [d, ctx?.facts], () => custom
 const oeeOf = (d, ctx, P) => cached('oee|' + key(P), [d, ctx?.facts], () => oeeSummary(d, ctx, P));
 const esg = (d, P) => cached('esg|' + key(P), [d], () => computeKpis(d, P));
 
-/** Catalogo dei KPI. value in unità grezze (frazioni per le percentuali); scale e decimals servono a mostrarli. */
-export const KPIS = [
+/** KPI di base. value in unità grezze (frazioni per le percentuali); scale e decimals servono a mostrarli. */
+const CORE_KPIS = [
   { id: 'ricavi-netti', label: 'Ricavi netti', unit: '€', kind: 'flow', dir: 'up', area: 'direzione', link: { area: 'direzione', tab: 'conto' }, decimals: 0, hist: true,
     def: 'Σ tonnellate consegnate × prezzo netto (listino meno sconti), come nel conto economico.', compute: (d, ctx, P) => pnl(d, ctx, P)?.revenueNet ?? null },
   { id: 'volume-t', label: 'Volumi consegnati', unit: 't', kind: 'flow', dir: 'up', area: 'commerciale', link: { area: 'commerciale', tab: 'clienti' }, decimals: 0, hist: true,
@@ -110,14 +120,28 @@ export const KPIS = [
 const SRC = { 'kwh-t': 'runs', 'utilizzo-linee': 'runs', 'scarto-pct': 'runs', oee: 'runs', 'co2-t': 'runs', 'reclami-1000t': 'runs', 'lotti-bloccati-pct': 'lots',
   'copertura-mp-gg': 'snapshot', dso: 'invoices', 'scaduto-pct': 'invoices', dio: 'ingLots', 'eccedenze-eur': 'ingLots', otif: 'ingLots', 'ppv-pct': 'ingLots', 'calo-effettivo': 'ingLots',
   hhi: 'shipments', 'top10-pct': 'shipments' }; // le offerte sono eventi rari: il tasso di successo vale con quelle che ci sono
-for (const k of KPIS) k.src = SRC[k.id] || 'sales';
+/** Catalogo dei KPI: quelli di base più quelli dei pacchetti ESG (ognuno porta la sua fonte src). */
+export const KPIS = [...CORE_KPIS, ...CLIMA_KPIS, ...PCF_KPIS, ...FILIERA_KPIS, ...REPORT_KPIS, ...PERSONE_KPIS, ...GOVERNANCE_KPIS, ...PIANO_KPIS, ...RISCHI_KPIS, ...AMBIENTE_KPIS];
+for (const k of KPIS) k.src = k.src || SRC[k.id] || 'sales';
 export const KPI = Object.fromEntries(KPIS.map(k => [k.id, k]));
 
-/** Primo giorno con dati della fonte di un KPI (null se la fonte è vuota o è il venduto, che ha anche lo storico mensile). */
+/**
+ * Primo giorno con dati della fonte di un KPI: qualsiasi raccolta con righe che hanno date (o month, dal primo del mese).
+ * Raccolta vuota → '9999-12-31' (nessuna copertura); fonte sconosciuta o righe senza date/month → null (copertura piena).
+ */
 function srcStart(d, src) {
-  const coll = { runs: d.runs, lots: d.lots, invoices: d.invoices, ingLots: d.ingLots, shipments: d.shipments, offers: d.offers }[src];
-  if (!coll) return null;
-  return cached('start|' + src, [coll], () => { let m = null; for (const r of coll) if (r.date && (m == null || r.date < m)) m = r.date; return m || '9999-12-31'; }, 2);
+  const coll = d?.[src];
+  if (!Array.isArray(coll)) return null;
+  return cached('start|' + src, [coll], () => {
+    let m = null, dated = false;
+    for (const r of coll) {
+      const x = typeof r?.date === 'string' && r.date ? r.date.slice(0, 10) : typeof r?.month === 'string' && r.month ? r.month.slice(0, 7) + '-01' : null;
+      if (!x) continue;
+      dated = true;
+      if (m == null || x < m) m = x;
+    }
+    return coll.length && !dated ? null : m || '9999-12-31';
+  }, 2);
 }
 /** Quota del periodo P coperta dalla fonte del KPI (1 per il venduto; per «snapshot» 1 solo se il periodo arriva a oggi). */
 export function kpiCoverage(d, ctx, kpiId, P) {

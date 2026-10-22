@@ -12,8 +12,11 @@ import { appToday, esgOverview, kpis, period12 } from '../core/derived.js';
 import { nf, sum, dateIt, monthLabel } from '../core/util.js';
 import { download, toCSV, stamp } from '../core/io.js';
 import { SURVEY_SECTIONS, QUESTION, visible, answered } from '../data/survey.js';
-import { EER, EER_BY_CODE, isHazardous } from '../data/eer.js';
+import { EER, EER_BY_CODE, isHazardous, WASTE_OPS, defaultWasteOp } from '../data/eer.js';
 import { closedMonths } from '../engine/sustainability.js';
+import { esgThresholds } from '../engine/esg-piano.js';
+import { ESG_DASHBOARD_CARDS } from './esg-slots.jsx';
+import { SlotGuard } from './slots.jsx';
 import { Panel, Btn, Table, Chip, Kpi, Field, Select, Empty, Seg, NumInput, confirm, Spark } from '../ui/ui.jsx';
 import { Columns, LineChart, StackBar, Legend } from '../ui/charts.jsx';
 
@@ -87,8 +90,12 @@ export function Cruscotto({ d }) {
   const [allSteps, setAllSteps] = useState(false);
   const [grp, setGrp] = useState('');
   const reqDone = o.requested.filter(r => r.value != null).length;
+  const th = esgThresholds(d);
   return (
     <>
+      <section className="esh-hub" aria-label="Pacchetti ESG">
+        {ESG_DASHBOARD_CARDS.map((Card, i) => <SlotGuard key={i}><Card d={d} /></SlotGuard>)}
+      </section>
       <section className="esg-hero" id="esg-hero" aria-label="Maturità ESG">
         <div className="hero-score">
           <Ring value={o.score.score} size={148} stroke={13} color="var(--accent)" label={`Maturità ESG ${nf(o.score.score)} su 100`}>
@@ -126,7 +133,7 @@ export function Cruscotto({ d }) {
       <div className="tiles">
         <Tile icon={LuZap} tone="energy" title="Energia" value={fmtN(b.energyPerT, 1)} unit="kWh/t" onClick={() => go('esg', 'energia')}
           sub={<>{nf(b.kwhTotal / 1000)} MWh in 12 mesi · fotovoltaico {pctTxt(b.coverage)} dell’elettricità</>}>
-          <Meter value={b.coverage} target={0.4} color="var(--s4)" label="Copertura fotovoltaica" />
+          <Meter value={b.coverage} target={th.pvShare} color="var(--s4)" label="Copertura fotovoltaica" />
         </Tile>
         <Tile icon={LuCloud} tone="co2" title="Emissioni Scope 1-2-3" value={fmtN(G.total)} unit="t CO₂e" onClick={() => go('esg', 'energia')}
           sub={G.shares ? <>il {nf(G.shares.s3 * 100)}% viene dalle materie prime · {fmtN(G.perT)} kg/t</> : 'servono energia e formule'}>
@@ -137,13 +144,13 @@ export function Cruscotto({ d }) {
           </span>
         </Tile>
         <Tile icon={LuDroplets} tone="water" title="Acqua" value={W.nMonths ? fmtN(W.intensity * 1000, 1) : '—'} unit={W.nMonths ? 'litri/t' : ''} onClick={() => go('esg', 'acqua')}
-          chip={W.drift > 0.12 ? <Chip kind="warn" icon={LuTriangleAlert}>+{nf(W.drift * 100)}%</Chip> : null}
+          chip={W.drift > th.waterDrift ? <Chip kind="warn" icon={LuTriangleAlert}>+{nf(W.drift * 100)}%</Chip> : null}
           sub={W.nMonths ? <>{nf(W.m3)} m³ in {W.nMonths} mesi · {Object.keys(W.bySource).join(' e ').toLowerCase()}</> : 'Registra la prima lettura del contatore'}>
           {W.nMonths > 1 && <Spark values={W.months.map(m => (m.perT != null ? m.perT * 1000 : null))} color="var(--s1)" w={140} h={26} />}
         </Tile>
         <Tile icon={LuRecycle} tone="waste" title="Rifiuti" value={S.n ? pctTxt(S.recovery) : '—'} unit={S.n ? 'a recupero' : ''} onClick={() => go('esg', 'rifiuti')}
           sub={S.n ? <>{nf(S.kg / 1000, 1)} t prodotte · {fmtN(S.perT, 2)} kg/t · pericolosi {nf(S.hazKg)} kg</> : 'Registra il primo formulario'}>
-          {S.n > 0 && <Meter value={S.recovery} target={0.5} color="var(--s3)" label="Quota a recupero" />}
+          {S.n > 0 && <Meter value={S.recovery} target={th.recovery} color="var(--s3)" label="Quota a recupero" />}
         </Tile>
         <Tile icon={LuUsers} tone="people" title="Persone e sicurezza" value={fmtN(K.S1?.value)} unit={K.S1?.value != null ? 'addetti' : ''} onClick={() => go('esg', 'questionario', 'persone')}
           sub={<>indice di frequenza {fmtN(K.S2?.value, 1)} · formazione {fmtN(K.S4?.value)} h/addetto</>}>
@@ -415,6 +422,7 @@ export function Acqua({ d, nuova }) {
   const mByM = Object.fromEntries(W.months.map(m => [m.month, m]));
   const rows = [...d.water].sort((x, y) => (x.month < y.month ? 1 : x.month > y.month ? -1 : x.source < y.source ? -1 : 1));
   const avg = W.intensity != null ? W.intensity * 1000 : null;
+  const drift = esgThresholds(d).waterDrift;
   return (
     <>
       <div className="kpis">
@@ -423,7 +431,7 @@ export function Acqua({ d, nuova }) {
         <Kpi label="Fonte principale" value={top ? top[0] : '—'} foot={top ? `${nf(top[1] / W.m3 * 100)}% del prelievo` : 'nessuna lettura'} />
         <Kpi label="Scarichi monitorati" value={a['wa-disch'] === 'si' ? 'Sì' : a['wa-disch'] === 'no' ? 'No' : '—'} foot="dal questionario" onClick={() => openQuestion('wa-disch')} />
       </div>
-      {W.drift > 0.12 && <div className="note crit"><b>Acqua per tonnellata +{nf(W.drift * 100)}% negli ultimi 3 mesi</b> ({nf(W.recent * 1000, 1)} contro {nf(W.before * 1000, 1)} litri/t). {Object.entries(W.sourceDrift).filter(([, x]) => x > 0.12).map(([k, x]) => `${k}: +${nf(x * 100)}%. `).join('')}A parità di produzione, un aumento così indica di solito una perdita o un reintegro anomalo della caldaia.</div>}
+      {W.drift > drift && <div className="note crit"><b>Acqua per tonnellata +{nf(W.drift * 100)}% negli ultimi 3 mesi</b> ({nf(W.recent * 1000, 1)} contro {nf(W.before * 1000, 1)} litri/t). {Object.entries(W.sourceDrift).filter(([, x]) => x > drift).map(([k, x]) => `${k}: +${nf(x * 100)}%. `).join('')}A parità di produzione, un aumento così indica di solito una perdita o un reintegro anomalo della caldaia.</div>}
       <div className="split r">
         <Panel title="Registra una lettura" sub="Basta il consumo del mese; con la lettura del contatore il consumo si calcola da solo" id="esg-water-form" className={nuova ? 'hilite' : ''}>
           <div className="stack" style={{ gap: 12 }}>
@@ -454,14 +462,14 @@ export function Acqua({ d, nuova }) {
         </Panel>
       </div>
       <Panel title="Registro delle letture" sub="Una riga per mese e fonte · si annulla con Ctrl Z" flush>
-        <Table rows={rows} pageSize={24} cols={[
-          { key: 'month', label: 'Mese', render: w => <b>{monthLabel(w.month, false)}</b> },
+        <Table rows={rows} pageSize={24} exportName="acqua-letture" cols={[
+          { key: 'month', label: 'Mese', csv: w => w.month, render: w => <b>{monthLabel(w.month, false)}</b> },
           { key: 'source', label: 'Fonte', render: w => <span className="row gap-s"><i className="dot" style={{ background: SOURCE_COLOR[w.source] || 'var(--s5)' }} />{w.source}</span> },
           { key: 'reading', label: 'Lettura', align: 'r', render: w => (w.reading != null ? nf(w.reading) : '—') },
           { key: 'm3', label: 'Consumo m³', align: 'r', render: w => <b>{nf(w.m3)}</b> },
-          { key: 'lt', label: 'Litri/t del mese', align: 'r', sort: w => mByM[w.month]?.perT ?? null, render: w => (mByM[w.month]?.perT != null ? nf(mByM[w.month].perT * 1000, 1) : <span className="muted" title={mByM[w.month]?.partial ? 'Produzione registrata solo per una parte del mese' : undefined}>—</span>) },
+          { key: 'lt', label: 'Litri/t del mese', align: 'r', sort: w => mByM[w.month]?.perT ?? null, csv: w => (mByM[w.month]?.perT != null ? mByM[w.month].perT * 1000 : null), render: w => (mByM[w.month]?.perT != null ? nf(mByM[w.month].perT * 1000, 1) : <span className="muted" title={mByM[w.month]?.partial ? 'Produzione registrata solo per una parte del mese' : undefined}>—</span>) },
           { key: 'note', label: 'Nota', render: w => <span className="small muted">{w.note}</span> },
-          { key: 'x', label: '', nosort: true, align: 'r', render: w => <Btn small kind="ghost" icon={LuTrash2} title="Elimina la lettura" onClick={() => remove(w)} /> },
+          { key: 'x', label: '', nosort: true, align: 'r', csv: false, render: w => <Btn small kind="ghost" icon={LuTrash2} title="Elimina la lettura" onClick={() => remove(w)} /> },
         ]} empty="Nessuna lettura registrata" />
       </Panel>
     </>
@@ -473,7 +481,8 @@ export function Rifiuti({ d, nuovo }) {
   const today = appToday(d);
   const R = kpis(d, period12(d));
   const S = R.waste;
-  const [f, setF] = useState({ date: today, eer: '15 01 01', code: '', name: '', kg: null, dest: 'recupero', fir: '', note: '' });
+  const [f, setF] = useState({ date: today, eer: '15 01 01', code: '', name: '', kg: null, dest: 'recupero', op: 'R13', fir: '', note: '' });
+  const ops = WASTE_OPS.filter(o => o.dest === f.dest);
   const set = p => setF(x => ({ ...x, ...p }));
   const custom = f.eer === 'altro';
   const code = custom ? f.code.trim() : f.eer;
@@ -483,7 +492,8 @@ export function Rifiuti({ d, nuovo }) {
     if (f.date > today) return toast('La data non può essere nel futuro', 'err');
     if (!(f.kg > 0)) return toast('Indica i chilogrammi', 'err');
     const name = custom ? (f.name.trim() || 'Rifiuto') : EER_BY_CODE[code]?.name;
-    store.add('waste', { date: f.date || today, eer: code, name, kg: f.kg, hazardous: haz, dest: f.dest, op: f.dest === 'recupero' ? 'R13' : 'D15', fir: f.fir.trim(), note: f.note.trim() }, `Rifiuto ${code}: ${nf(f.kg)} kg a ${f.dest}`);
+    const op = ops.some(o => o.code === f.op) ? f.op : defaultWasteOp(f.dest);
+    store.add('waste', { date: f.date || today, eer: code, name, kg: f.kg, hazardous: haz, dest: f.dest, op, fir: f.fir.trim(), note: f.note.trim() }, `Rifiuto ${code}: ${nf(f.kg)} kg a ${f.dest} (${op})`);
     toast(`Registrati ${nf(f.kg)} kg di ${name.toLowerCase()}`, 'ok', { label: 'Annulla', fn: () => store.undo() });
     set({ kg: null, fir: '', note: '' });
   };
@@ -504,7 +514,7 @@ export function Rifiuti({ d, nuovo }) {
       <div className="split r">
         <Panel title="Registra un rifiuto" sub="Dal formulario: codice EER, chilogrammi e destinazione" id="esg-waste-form" className={nuovo ? 'hilite' : ''}>
           <div className="stack" style={{ gap: 12 }}>
-            <Field label="Codice EER"><Select value={f.eer} onChange={v => set({ eer: v, dest: v === 'altro' || EER_BY_CODE[v]?.recoverable ? 'recupero' : 'smaltimento' })} options={[...EER.map(e => ({ id: e.code, label: `${e.code} · ${e.name}` })), { id: 'altro', label: 'Altro codice…' }]} ariaLabel="Codice EER" /></Field>
+            <Field label="Codice EER"><Select value={f.eer} onChange={v => { const dest = v === 'altro' || EER_BY_CODE[v]?.recoverable ? 'recupero' : 'smaltimento'; set({ eer: v, dest, op: defaultWasteOp(dest) }); }} options={[...EER.map(e => ({ id: e.code, label: `${e.code} · ${e.name}` })), { id: 'altro', label: 'Altro codice…' }]} ariaLabel="Codice EER" /></Field>
             {custom && <div className="form"><Field label="Codice" hint="con * se pericoloso"><input className="input" value={f.code} onChange={e => set({ code: e.target.value })} placeholder="es. 16 01 07*" /></Field><Field label="Descrizione"><input className="input" value={f.name} onChange={e => set({ name: e.target.value })} /></Field></div>}
             <div className="row gap-s">{haz ? <Chip kind="crit" icon={LuTriangleAlert}>Pericoloso</Chip> : <Chip kind="good">Non pericoloso</Chip>}{!custom && EER_BY_CODE[f.eer]?.hint && <span className="small muted">{EER_BY_CODE[f.eer].hint}</span>}</div>
             <div className="form">
@@ -512,7 +522,8 @@ export function Rifiuti({ d, nuovo }) {
               <Field label="Quantità (kg)"><NumInput value={f.kg} decimals={0} min={0} onChange={v => set({ kg: v })} ariaLabel="Quantità in kg" /></Field>
               <Field label="N. formulario"><input className="input" value={f.fir} onChange={e => set({ fir: e.target.value })} placeholder="FIR …" /></Field>
             </div>
-            <Field label="Destinazione"><Seg options={[{ id: 'recupero', label: 'Recupero (R)' }, { id: 'smaltimento', label: 'Smaltimento (D)' }]} value={f.dest} onChange={v => set({ dest: v })} label="Destinazione" /></Field>
+            <Field label="Destinazione"><Seg options={[{ id: 'recupero', label: 'Recupero (R)' }, { id: 'smaltimento', label: 'Smaltimento (D)' }]} value={f.dest} onChange={v => set({ dest: v, op: defaultWasteOp(v) })} label="Destinazione" /></Field>
+            <Field label="Operazione dichiarata nel formulario"><Select value={f.op} onChange={v => set({ op: v })} options={ops.map(o => ({ id: o.code, label: `${o.code} · ${o.label}` }))} ariaLabel="Operazione di recupero o smaltimento" /></Field>
             <div className="row between"><span className="small muted">Resta nel registro delle modifiche e si annulla con Ctrl Z.</span><Btn kind="primary" icon={LuPlus} onClick={submit}>Registra</Btn></div>
           </div>
         </Panel>
@@ -533,14 +544,16 @@ export function Rifiuti({ d, nuovo }) {
         </Panel>
       </div>
       <Panel title="Registro dei rifiuti" sub="Le registrazioni alimentano E10 (rifiuti prodotti) ed E11 (quota a recupero)" flush>
-        <Table rows={rows} pageSize={25} cols={[
-          { key: 'date', label: 'Data', render: w => dateIt(w.date) },
+        <Table rows={rows} pageSize={25} exportName="rifiuti-registro" cols={[
+          { key: 'date', label: 'Data', csv: w => w.date, render: w => dateIt(w.date) },
           { key: 'eer', label: 'EER', render: w => <span className={`code ${w.hazardous ? 'haz' : ''}`}>{w.eer}</span> },
           { key: 'name', label: 'Rifiuto', render: w => <><b>{w.name}</b>{w.note && <span className="sub">{w.note}</span>}</> },
           { key: 'kg', label: 'kg', align: 'r', render: w => <b>{nf(w.kg)}</b> },
+          { key: 'op', label: 'Operazione', csvOnly: true, csv: w => w.op || '' },
+          { key: 'haz', label: 'Pericoloso', csvOnly: true, csv: w => (w.hazardous ?? isHazardous(w.eer)) },
           { key: 'dest', label: 'Destinazione', render: w => <Chip kind={w.dest === 'recupero' ? 'good' : ''} icon={w.dest === 'recupero' ? LuRecycle : LuFactory}>{w.dest}{w.op ? ` · ${w.op}` : ''}</Chip> },
           { key: 'fir', label: 'Formulario', render: w => <span className="small mono">{w.fir}</span> },
-          { key: 'x', label: '', nosort: true, align: 'r', render: w => <Btn small kind="ghost" icon={LuTrash2} title="Elimina la registrazione" onClick={() => remove(w)} /> },
+          { key: 'x', label: '', nosort: true, align: 'r', csv: false, render: w => <Btn small kind="ghost" icon={LuTrash2} title="Elimina la registrazione" onClick={() => remove(w)} /> },
         ]} empty="Nessun rifiuto registrato" />
       </Panel>
     </>

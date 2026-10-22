@@ -6,6 +6,7 @@ import { computeSignals } from '../engine/signals.js';
 import { optimize, formulaCost } from '../engine/formulation.js';
 import { computeKpis } from '../engine/esg.js';
 import { overview } from '../engine/sustainability.js';
+import { reportingPeriods, ESG_DATA_COLLS } from '../engine/esg-years.js';
 import { SPECIES, AFB1_LIMITS } from '../engine/nutrients.js';
 import { buildIndex } from '../engine/trace.js';
 import { makeIndex, costsOf, volumesOf, shipmentFacts, aggregateFacts, fixedFor, inventoryValuation, dataStart } from '../engine/actuals.js';
@@ -54,6 +55,8 @@ export const period12 = d => { const t = appToday(d); return { from: addDays(t, 
 export const kpis = (d, period = period12(d)) => memo('kpis' + period.from + period.to, [d.runs, d.energy, d.shipments, d.lots, d.complaints, d.visits, d.ingLots, d.esgManual, d.settings, d.formulas, d.ingredients, d.water, d.waste, d.survey], () => computeKpis(d, period));
 /** Quadro ESG per il cruscotto: acqua, rifiuti, Scope 1-2-3, questionario, maturità e prossimi passi. */
 export const esgOverview = d => { const P = period12(d); const R = kpis(d, P); return memo('esgOverview', [R, d.ingLots, d.survey], () => overview(d, P, R)); };
+/** Esercizi ESG dell'archivio, dal più recente (engine/esg-years.js): dipendono dalle impostazioni, da oggi, dai registri e dallo storico. */
+export const esgPeriods = d => memo('esgPeriods', [d.settings, appToday(d), d.esgHistory, d.esgClosings, ...ESG_DATA_COLLS.map(c => d[c])], () => reportingPeriods(d));
 
 export const traceIndex = d => memo('trace', [d.lots, d.shipments, d.ingLots, d.adjustments], () => buildIndex(d));
 

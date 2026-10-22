@@ -12,6 +12,16 @@ import { demoFinanza } from './finanza.js';
 import { demoRedditivita } from './redditivita.js';
 import { demoDirezione } from './direzione.js';
 import { demoPiattaforma } from './piattaforma.js';
+// fondazione 18: i nove pacchetti ESG (impostazioni solo in settings.esg18.<pkg>)
+import { demoClima } from './esg-clima.js';
+import { demoPcf } from './esg-pcf.js';
+import { demoFiliera } from './esg-filiera.js';
+import { demoAmbiente } from './esg-ambiente.js';
+import { demoPersone } from './esg-persone.js';
+import { demoGovernance } from './esg-governance.js';
+import { demoRischi } from './esg-rischi.js';
+import { demoPiano } from './esg-piano.js';
+import { demoReport } from './esg-report.js';
 
 /** [nome, estensore, offset del seme], nell'ordine di esecuzione. */
 export const EXTENDERS = [
@@ -23,7 +33,18 @@ export const EXTENDERS = [
   ['redditivita', demoRedditivita, 401],
   ['direzione', demoDirezione, 201],
   ['piattaforma', demoPiattaforma, 801],
+  ['clima', demoClima, 901],
+  ['pcf', demoPcf, 1001],
+  ['filiera', demoFiliera, 1101],
+  ['ambiente', demoAmbiente, 1701],
+  ['persone', demoPersone, 1301],
+  ['governance', demoGovernance, 1401],
+  ['rischi', demoRischi, 1601],
+  ['piano', demoPiano, 1501],
+  ['report', demoReport, 1201],
 ];
+/** Estensori dei pacchetti ESG della fondazione 18 (passo 5 degli aggiornamenti del demo). */
+export const ESG18_EXTENDERS = ['clima', 'pcf', 'filiera', 'ambiente', 'persone', 'governance', 'rischi', 'piano', 'report'];
 /** Campi che un estensore può riscrivere anche se presenti (raccolta → campi). */
 export const OVERWRITE_OK = { ingLots: ['supplier'] };
 

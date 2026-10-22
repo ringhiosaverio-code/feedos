@@ -103,7 +103,7 @@ export function ReportCda({ d }) {
         </div>}>
         <div className="dz-tools">
           <span className="lbl">Modello</span>
-          <Seg label="Modello" value={tpl} onChange={setTpl} options={Object.keys(REPORT_TEMPLATES).map(id => ({ id, label: { cda: 'CdA', commerciale: 'Commerciale', operations: 'Operations' }[id] }))} />
+          <Seg label="Modello" value={tpl} onChange={setTpl} options={Object.keys(REPORT_TEMPLATES).map(id => ({ id, label: { cda: 'CdA', commerciale: 'Commerciale', operations: 'Operations', esg: 'ESG' }[id] || TEMPLATE_LABELS[id] || id }))} />
           <span className="lbl">Mese</span>
           <Select className="slim" ariaLabel="Mese del report" value={m} onChange={setMonth} options={months.map(x => ({ id: x, label: monthLabel(x, false) }))} />
           <span className="lbl">Confronto</span>
@@ -113,6 +113,7 @@ export function ReportCda({ d }) {
         {r.header.failed?.length > 0 && <div className="note warn" style={{ marginTop: 10 }}>Sezioni non disponibili per un errore nei dati: {r.header.failed.map(f => f.title).join(', ')}. Il resto del report è completo.</div>}
       </Panel>
       <div className="dz-report">
+        {!r.sections.length && <Panel title={TEMPLATE_LABELS[tpl]}><Empty icon={LuFileText} title="Nessuna sezione con dati per questo modello">Le sezioni compaiono quando i dati che le alimentano sono registrati{tpl === 'esg' ? ' nelle schede ESG' : ''}.</Empty></Panel>}
         {r.sections.map((s, i) => (
           <PrintPage key={s.id} title={s.title} period={per} dq={r.header.dqScore} issued={today}
             footer={`Report ${TEMPLATE_LABELS[tpl].toLowerCase()} · ${monthLabel(m, false)} · pagina ${i + 1} di ${r.sections.length}${r.header.closed ? ' · numeri congelati alla chiusura' : ' · numeri provvisori'}`}>

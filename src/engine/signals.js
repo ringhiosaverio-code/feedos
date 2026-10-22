@@ -9,6 +9,7 @@ import { checkAnalysis } from './quality.js';
 import { profile, SPECIES, AFB1_LIMITS } from './nutrients.js';
 import { addDays, daysBetween, sum, nf, dateIt, byId, monthLabel } from '../core/util.js';
 import { waterStats, wasteStats } from './sustainability.js';
+import { esgThresholds } from './esg-piano.js';
 
 const SEV = { critico: 3, attenzione: 2, info: 1 };
 
@@ -218,12 +219,12 @@ export function computeSignals(d, today, x = {}) {
     if (!d.water.some(w => w.month === lastMonth)) add({ key: `esg-water:${lastMonth}`, area: 'esg', roles: ['direzione', 'produzione'], severity: 'attenzione',
       title: `Lettura dell’acqua di ${monthLabel(lastMonth, false)} da registrare`, why: 'Serve per il prelievo idrico (E9) e per i litri d’acqua per tonnellata di mangime.',
       action: 'Registrare la lettura del contatore.', impact: 900, link: { area: 'esg', tab: 'acqua' } });
-    const ws = waterStats(d, P12);
-    if (ws.drift != null && ws.drift > 0.12) {
+    const ws = waterStats(d, P12), drift = esgThresholds(d).waterDrift; // soglia configurabile (F10), di base +12%
+    if (ws.drift != null && ws.drift > drift) {
       const top = Object.entries(ws.sourceDrift).sort((a, b) => b[1] - a[1])[0];
       add({ key: `water-drift:${ws.lastMonth}`, area: 'esg', roles: ['direzione', 'produzione'], severity: 'attenzione',
         title: `Acqua per tonnellata +${nf(ws.drift * 100)}% negli ultimi 3 mesi`,
-        why: `${nf(ws.recent * 1000, 1)} litri per tonnellata contro ${nf(ws.before * 1000, 1)} dei mesi precedenti, a parità di produzione.${top && top[1] > 0.12 ? ` L’aumento viene soprattutto da: ${top[0].toLowerCase()} (+${nf(top[1] * 100)}%).` : ''}`,
+        why: `${nf(ws.recent * 1000, 1)} litri per tonnellata contro ${nf(ws.before * 1000, 1)} dei mesi precedenti, a parità di produzione.${top && top[1] > drift ? ` L’aumento viene soprattutto da: ${top[0].toLowerCase()} (+${nf(top[1] * 100)}%).` : ''}`,
         action: 'Cercare perdite sulla rete e sui servizi (servizi igienici, lavaggi, reintegro caldaia) e confrontare le letture dei contatori.', impact: 1.5e5 + ws.drift * 1e5,
         link: { area: 'esg', tab: 'acqua' } });
     }

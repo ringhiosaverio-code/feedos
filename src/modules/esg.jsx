@@ -1,24 +1,27 @@
 /* FeedOS 16 · ESG e tesi: cruscotto di maturità, questionario guidato, registri di acqua e rifiuti (in sostenibilita.jsx),
  * i 49 indicatori del registro alimentati dai dati di ogni giorno (con la provenienza di ogni valore), energia e CO₂ con
- * il modello della tesi, passaporto di prodotto, copertura VSME e bozza di report, collegamento tra la tesi e l'azienda. */
+ * il modello della tesi, collegamento tra la tesi e l'azienda.
+ * Fondamenta 18: le schede dei nove pacchetti ESG (clima, impronta/passaporto, filiera, ambiente, persone, governance, piano,
+ * rischi, report/VSME) arrivano da esg-pages.jsx e si disegnano dentro SlotGuard; passaporto e VSME sono in esg-pcf.jsx ed esg-report.jsx. */
 import React, { useMemo, useState } from 'react';
-import { LuCopy, LuDownload, LuPrinter, LuLeaf, LuDatabase, LuPencil, LuFileText, LuInfo, LuClipboardList } from 'react-icons/lu';
-import { useData, store, toast, openDrawer } from '../core/store.js';
+import { LuDatabase, LuPencil, LuFileText, LuClipboardList } from 'react-icons/lu';
+import { useData, store, toast } from '../core/store.js';
 import { go } from '../core/router.js';
-import { idx, appToday, kpis, period12, volumes, shippedByLot } from '../core/derived.js';
-import { nf, sf, sum, dateIt, addDays, monthLabel, mean, norm } from '../core/util.js';
-import { download, stamp, num } from '../core/io.js';
-import { computeKpis, vsmeCoverage } from '../engine/esg.js';
-import { ESG_REGISTRY, PILLARS, VSME_BASIC } from '../data/esgRegistry.js';
+import { appToday, kpis, period12 } from '../core/derived.js';
+import { nf, sf, sum, dateIt, monthLabel } from '../core/util.js';
+import { num } from '../core/io.js';
+import { computeKpis } from '../engine/esg.js';
+import { registerMonths } from '../engine/sustainability.js';
+import { ESG_REGISTRY, PILLARS } from '../data/esgRegistry.js';
 import { THESIS } from '../data/thesis.js';
 import { balance, aggregate, intensityAt, scope1PerKg, DEFAULTS, GRID_FACTORS } from '../engine/energy.js';
-import { formulaCO2, coProductShare, afb1Check } from '../engine/formulation.js';
-import { PageHead, Panel, Btn, Table, Chip, Kpi, Field, Select, Empty, SearchBox, filterRows, Seg, Kv, Cls, confirm } from '../ui/ui.jsx';
-import { Columns, LineChart, Sankey, Bars, StackBar, Legend, SERIES } from '../ui/charts.jsx';
-import { lotCheck } from './qualita.jsx';
+import { PageHead, Panel, Table, Chip, Kpi, Field, Select, Empty, SearchBox, filterRows, Seg, Kv, Cls } from '../ui/ui.jsx';
+import { Columns, LineChart, Sankey, Legend, SERIES } from '../ui/charts.jsx';
 import { NAV } from '../app/nav.js';
 import { Cruscotto, Questionario, Acqua, Rifiuti, openQuestion } from './sostenibilita.jsx';
 import { SURVEY_QUESTIONS } from '../data/survey.js';
+import { ESG_PAGES } from './esg-pages.jsx';
+import { SlotGuard } from './slots.jsx';
 
 // Solo la versione completa contiene i dati della tesi: nella pubblica TH è null e il modulo dei dati non entra nel file.
 const TH = __FULL__ ? THESIS : null;
@@ -31,18 +34,18 @@ const KPI_Q = Object.fromEntries(SURVEY_QUESTIONS.filter(q => q.kpi && q.type !=
 export function Esg({ route }) {
   const d = useData();
   const tab = NAV.esg.tabs.some(t => t.id === route.tab) ? route.tab : 'cruscotto'; // la scheda «tesi» c'è solo nella versione completa
+  const Page = ESG_PAGES[tab]; // schede dei pacchetti ESG (esg-pages.jsx), ciascuna isolata dagli errori
   return (
     <>
-      <PageHead title={FULL ? 'ESG e tesi' : 'ESG'} lead={`Quanto è sostenibile lo stabilimento, misurato con i dati di ogni giorno: energia, emissioni Scope 1-2-3, acqua, rifiuti, persone e filiera. Il questionario guidato completa ciò che i dati non dicono e alimenta i 49 indicatori ${FULL ? 'della tesi' : 'ESG'}, il passaporto di prodotto e la bozza del VSME.`}
+      <PageHead title={FULL ? 'ESG e tesi' : 'ESG'} lead={`Quanto è sostenibile lo stabilimento, misurato con i dati di ogni giorno: clima ed emissioni, impronta dei mangimi, filiera, acqua e rifiuti, persone, governance, obiettivi e rischi. Il questionario guidato completa ciò che i dati non dicono e alimenta i 49 indicatori ${FULL ? 'della tesi' : 'ESG'}, l’impronta dei mangimi e il report VSME.`}
         tabs={NAV.esg.tabs} tab={tab} onTab={t => go('esg', t)} />
+      {Page && <SlotGuard key={tab}><Page d={d} route={route} /></SlotGuard>}
       {tab === 'cruscotto' && <Cruscotto d={d} />}
       {tab === 'questionario' && <Questionario d={d} sec={route.id} />}
       {tab === 'acqua' && <Acqua d={d} nuova={route.id === 'nuova'} />}
       {tab === 'rifiuti' && <Rifiuti d={d} nuovo={route.id === 'nuovo'} />}
       {tab === 'indicatori' && <Indicatori d={d} />}
       {tab === 'energia' && <Energia d={d} />}
-      {tab === 'passaporto' && <Passaporto d={d} sel={route.id} />}
-      {tab === 'vsme' && <Vsme d={d} />}
       {FULL && tab === 'tesi' && <TesiFull d={d} T={TH} />}
     </>
   );
@@ -73,15 +76,16 @@ function Indicatori({ d }) {
           <SearchBox value={q} onChange={setQ} placeholder="Cerca indicatore" id="kpi-search" />
           {FULL && <label className="check small"><input type="checkbox" checked={thesis} onChange={e => setThesis(e.target.checked)} /> Valori della tesi</label>}
         </>}>
-        <Table rows={rows} rowKey={k => k.code} pageSize={60} cols={[
+        <Table rows={rows} rowKey={k => k.code} pageSize={60} exportName="indicatori-esg" cols={[
           { key: 'code', label: 'Codice', render: k => <span className="code">{k.code}</span> },
           { key: 'name', label: 'Indicatore', render: k => <><b>{k.name}</b><span className="sub">{k.formula}</span></> },
-          { key: 'value', label: 'Valore', align: 'r', sort: k => (typeof k.value === 'number' ? k.value : null), render: k => k.source === 'auto' || k.source === 'tesi' || k.source === 'questionario' ? <><b>{typeof k.value === 'number' ? nf(k.value, Math.abs(k.value) < 100 ? (Math.abs(k.value) < 10 ? 2 : 1) : 0) : k.value}</b><span className="sub">{k.unitShown}</span>{k.source === 'questionario' && KPI_Q[k.code] && <button className="linkish xs" onClick={() => openQuestion(KPI_Q[k.code])}>modifica nel questionario</button>}</>
+          { key: 'value', label: 'Valore', align: 'r', sort: k => (typeof k.value === 'number' ? k.value : null), csv: k => (typeof k.value === 'number' ? k.value : k.value ?? null), render: k => k.source === 'auto' || k.source === 'tesi' || k.source === 'questionario' ? <><b>{typeof k.value === 'number' ? nf(k.value, Math.abs(k.value) < 100 ? (Math.abs(k.value) < 10 ? 2 : 1) : 0) : k.value}</b><span className="sub">{k.unitShown}</span>{k.source === 'questionario' && KPI_Q[k.code] && <button className="linkish xs" onClick={() => openQuestion(KPI_Q[k.code])}>modifica nel questionario</button>}</>
             : <ManualCell k={k} onSave={v => setVal(k, v)} /> },
-          { key: 'source', label: 'Fonte', render: k => k.source ? <Chip kind={SRC[k.source].kind} icon={SRC_ICON[k.source]} title={k.note || k.source}>{SRC[k.source].label}</Chip> : KPI_Q[k.code] ? <button className="linkish small" onClick={() => openQuestion(KPI_Q[k.code])}>rispondi nel questionario</button> : <span className="muted small">da acquisire</span> },
-          { key: 'cls', label: 'Classe', render: k => <Cls c={k.cls} /> },
+          { key: 'unitShown', label: 'Unità', csvOnly: true, csv: k => k.unitShown || k.unit || '' },
+          { key: 'source', label: 'Fonte', csv: k => (k.source ? SRC[k.source].label : ''), render: k => k.source ? <Chip kind={SRC[k.source].kind} icon={SRC_ICON[k.source]} title={k.note || k.source}>{SRC[k.source].label}</Chip> : KPI_Q[k.code] ? <button className="linkish small" onClick={() => openQuestion(KPI_Q[k.code])}>rispondi nel questionario</button> : <span className="muted small">da acquisire</span> },
+          { key: 'cls', label: 'Classe', csv: k => k.cls, render: k => <Cls c={k.cls} /> },
           { key: 'freq', label: 'Frequenza', render: k => <span className="small">{k.freq}</span> },
-          { key: 'vsme', label: 'VSME', render: k => k.vsme ? <span className="code">{k.vsme}</span> : '—' },
+          { key: 'vsme', label: 'VSME', csv: k => k.vsme || '', render: k => k.vsme ? <span className="code">{k.vsme}</span> : '—' },
         ]} />
       </Panel>
     </>
@@ -101,12 +105,15 @@ function Energia({ d }) {
   const today = appToday(d); const P = period12(d);
   const en = d.settings?.energy || {};
   const f = { ...DEFAULTS, feGrid: +en.feGrid || DEFAULTS.feGrid, feGpl: +en.feGpl || DEFAULTS.feGpl };
-  const months = d.energy.filter(e => e.month + '-15' >= P.from && e.month + '-15' <= P.to).sort((a, b) => (a.month < b.month ? -1 : 1));
-  const tonnes = sum(d.runs.filter(r => r.date >= P.from && r.date <= P.to), r => r.tonnes);
+  // mesi chiusi del periodo, come per l'acqua (F5): letture e produzione degli stessi mesi
+  const regM = new Set(registerMonths(P));
+  const months = d.energy.filter(e => regM.has(e.month)).sort((a, b) => (a.month < b.month ? -1 : 1));
+  const inM = r => regM.has(String(r.date).slice(0, 7));
+  const tonnes = sum(d.runs.filter(inM), r => r.tonnes);
   const B = balance({ ...aggregate(months), tonnes }, f);
   if (!months.length || !tonnes) return <Panel title="Energia e CO₂"><Empty title="Servono le letture mensili di energia e le registrazioni di produzione">Le letture dei contatori (rete, fotovoltaico, GPL) si importano o si inseriscono; la produzione arriva dalle registrazioni. Il fattore di rete si imposta in Dati › Impostazioni.</Empty></Panel>;
   const lineKwh = {}, lineGpl = {};
-  for (const r of d.runs) if (r.date >= P.from && r.date <= P.to) { lineKwh[r.lineId] = (lineKwh[r.lineId] || 0) + (r.kwh || 0); lineGpl[r.lineId] = (lineGpl[r.lineId] || 0) + (r.gplKg || 0); }
+  for (const r of d.runs) if (inM(r)) { lineKwh[r.lineId] = (lineKwh[r.lineId] || 0) + (r.kwh || 0); lineGpl[r.lineId] = (lineGpl[r.lineId] || 0) + (r.gplKg || 0); }
   const services = Math.max(0, B.kwhElec - sum(Object.values(lineKwh)));
   const M = x => x / 1000;
   const nodes = [
@@ -135,7 +142,7 @@ function Energia({ d }) {
         <Kpi label="Intensità dei vettori energetici" value={nf(B.co2PerT, 2)} unit="kg CO₂/t" foot={`${nf(tonnes)} t prodotte`} />
       </div>
       <div className="split">
-        <Panel title="Da dove arriva e dove va l’energia" sub="MWh negli ultimi 12 mesi: elettricità dalle letture dei contatori, calore dal potere calorifico del GPL" id="esg-sankey">
+        <Panel title="Da dove arriva e dove va l’energia" sub="MWh negli ultimi 12 mesi chiusi: elettricità dalle letture dei contatori, calore dal potere calorifico del GPL" id="esg-sankey">
           <Sankey nodes={nodes} links={links} height={300} unit="MWh" ariaLabel="Flussi di energia dello stabilimento" />
         </Panel>
         <Panel title="Fattore di emissione della rete" sub="Metodo location-based (GHG Protocol Scope 2)">
@@ -159,149 +166,6 @@ function Energia({ d }) {
         </Panel>
       </div>
     </>
-  );
-}
-
-/* ---------------- passaporto di prodotto ---------------- */
-export function passport(d, p, I, today, f) {
-  const form = I.form[p.formulaId]; if (!form) return null;
-  const lines = form.lines;
-  const tot = sum(lines, l => l.kg) || 1;
-  const origin = {};
-  for (const l of lines) { const o = I.ing[l.ing]?.origin || 'n.d.'; origin[o] = (origin[o] || 0) + l.kg / tot; }
-  const soy = lines.filter(l => /soia/i.test(I.ing[l.ing]?.name || ''));
-  const soyT = sum(soy, l => l.kg), soyCert = sum(soy.filter(l => I.ing[l.ing]?.certified), l => l.kg);
-  const from = addDays(today, -90);
-  const runs = d.runs.filter(r => r.productId === p.id && r.date > from);
-  const t = sum(runs, r => r.tonnes);
-  const kwhT = t ? sum(runs, r => r.kwh || 0) / t : I.line[p.lineId]?.kwhPerT;
-  const gplT = t ? sum(runs, r => r.gplKg || 0) / t : I.line[p.lineId]?.gplKgPerT;
-  const cov = (() => { const m = d.energy.filter(e => e.month + '-15' > addDays(today, -365)); const b = balance(aggregate(m), f); return b.coverage || 0; })();
-  const raw = formulaCO2(lines, I.ing);
-  const plantE = kwhT * (1 - cov) * f.feGrid, plantH = gplT * scope1PerKg(f);
-  const lots = d.lots.filter(l => l.productId === p.id && l.date > from);
-  const an = lots.filter(l => l.analyses?.length);
-  const ok = an.filter(l => lotCheck(d, l, I).status === 'ok').length;
-  return { p, form, origin, co: coProductShare(lines, I.ing), soyShare: soyT ? soyCert / soyT : null, soyT, raw, plantE, plantH, total: raw + plantE + plantH, kwhT, gplT, cov, conf: an.length ? ok / an.length : null, nAn: an.length, lastLot: lots.sort((a, b) => (a.date < b.date ? 1 : -1))[0], afb1: afb1Check(lines, I.ing, form.species) };
-}
-
-function Passaporto({ d, sel }) {
-  const I = idx(d); const today = appToday(d);
-  const en = d.settings?.energy || {};
-  const f = { ...DEFAULTS, feGrid: +en.feGrid || DEFAULTS.feGrid, feGpl: +en.feGpl || DEFAULTS.feGpl };
-  const all = useMemo(() => d.products.map(p => passport(d, p, I, today, f)).filter(Boolean), [d, today]);
-  const P = all.find(x => x.p.id === sel) || all[0];
-  if (!P) return <Empty title="Nessun prodotto" />;
-  const code = `FOS-${P.p.code}-${P.form.version}-${today.replace(/-/g, '').slice(2)}`;
-  return (
-    <>
-      <div className="row between no-print">
-        <Select value={P.p.id} onChange={v => go('esg', 'passaporto', v)} options={d.products.map(p => ({ id: p.id, label: p.name }))} ariaLabel="Prodotto" className="auto" />
-        <Btn icon={LuPrinter} onClick={() => window.print()}>Stampa o salva in PDF</Btn>
-      </div>
-      <div className="passport" id="esg-passport">
-        <div className="pp-head">
-          <div><div className="eyebrow">Passaporto di prodotto · {d.settings?.company?.name}</div><h2>{P.p.name}</h2><div className="small muted">{P.p.form} · {P.p.packaging} · formula {P.form.code} versione {P.form.version} del {dateIt(P.form.approvedAt)}</div></div>
-          <div className="pp-code"><span className="eyebrow">Codice</span><b className="mono">{code}</b><span className="xs muted">generato il {dateIt(today)}</span></div>
-        </div>
-        <div className="pp-grid">
-          <div className="pp-big"><span className="eyebrow">Impronta dalla culla al cancello (stima)</span><b>{nf(P.total)}</b><span>kg CO₂e per tonnellata</span>
-            <StackBar parts={[{ key: 'r', label: 'Materie prime', value: P.raw, color: 'var(--s3)' }, { key: 'e', label: 'Elettricità', value: P.plantE, color: 'var(--s1)' }, { key: 'h', label: 'Calore GPL', value: P.plantH, color: 'var(--s2)' }]} ariaLabel="Composizione dell’impronta" />
-            <Legend items={[{ label: `Materie prime ${nf(P.raw)}`, color: 'var(--s3)' }, { label: `Elettricità ${nf(P.plantE, 1)}`, color: 'var(--s1)' }, { label: `Calore ${nf(P.plantH, 1)}`, color: 'var(--s2)' }]} />
-          </div>
-          <div><span className="eyebrow">Origine delle materie prime (in peso)</span>
-            <StackBar parts={Object.entries(P.origin).sort((a, b) => b[1] - a[1]).map(([k, v], i) => ({ key: k, label: k, value: v * 100, color: SERIES[i] }))} ariaLabel="Origine delle materie prime" />
-            <Kv items={Object.entries(P.origin).sort((a, b) => b[1] - a[1]).map(([k, v]) => [k, `${nf(v * 100, 1)}%`])} />
-          </div>
-          <div><span className="eyebrow">Circolarità e filiera</span>
-            <Kv items={[['Co-prodotti dell’agroindustria', `${nf(P.co * 100, 1)}% in peso`], ['Soia certificata senza deforestazione', P.soyT ? `${nf(P.soyShare * 100)}% della soia` : 'formula senza soia'], ['Energia di stabilimento', `${nf(P.kwhT, 1)} kWh/t · ${nf(P.gplT, 2)} kg GPL/t`], ['Quota fotovoltaica dell’elettricità', `${nf(P.cov * 100, 1)}%`]]} />
-          </div>
-          <div><span className="eyebrow">Qualità e sicurezza</span>
-            <Kv items={[['Lotti conformi all’etichetta (90 gg)', P.conf == null ? 'nessuna analisi' : `${nf(P.conf * 100)}% di ${P.nAn} analizzati`], ['Aflatossina B1 stimata', `${nf(P.afb1.value, 1)} µg/kg (limite ${P.afb1.limit})`], ['Ultimo lotto', P.lastLot ? `${P.lastLot.code} · ${dateIt(P.lastLot.date)}` : '—'], ['Tracciabilità', 'lotti di materia prima e clienti collegati a ogni lotto']]} />
-          </div>
-        </div>
-        <p className="pp-note">Metodo: materie prime con fattori di emissione indicativi dalla coltivazione al cancello del mangimificio; elettricità di rete {nf(f.feGrid * 1000, 1)} g CO₂/kWh sulla quota non coperta dal fotovoltaico; GPL con CH₄ e N₂O di combustione. Non è una LCA certificata (ISO 14067): serve a confrontare prodotti e scelte di formulazione. Trasporto al cliente escluso.</p>
-      </div>
-      <Panel title="Confronto tra prodotti" sub="kg CO₂e per tonnellata · clic per il passaporto" flush>
-        <Table rows={all} rowKey={x => x.p.id} selected={P.p.id} onRow={x => go('esg', 'passaporto', x.p.id)} initialSort={{ key: 'total', dir: 'desc' }} cols={[
-          { key: 'name', label: 'Prodotto', sort: x => x.p.name, render: x => <b>{x.p.name}</b> },
-          { key: 'total', label: 'Totale', align: 'r', render: x => <b>{nf(x.total)}</b> },
-          { key: 'raw', label: 'Materie prime', align: 'r', render: x => nf(x.raw) },
-          { key: 'plant', label: 'Stabilimento', align: 'r', sort: x => x.plantE + x.plantH, render: x => nf(x.plantE + x.plantH, 1) },
-          { key: 'co', label: 'Co-prodotti', align: 'r', render: x => nf(x.co * 100) + '%' },
-          { key: 'it', label: 'Origine Italia', align: 'r', sort: x => x.origin.Italia || 0, render: x => nf((x.origin.Italia || 0) * 100) + '%' },
-        ]} />
-      </Panel>
-    </>
-  );
-}
-
-/* ---------------- VSME e report ---------------- */
-function Vsme({ d }) {
-  const P = period12(d); const R = kpis(d, P);
-  const cov = vsmeCoverage(R.kpis, VSME_BASIC);
-  const K = Object.fromEntries(R.kpis.map(k => [k.code, k]));
-  const c = d.settings?.company || {};
-  const v = (code, dec = 0) => { const k = K[code]; return k?.value == null ? '[da completare]' : typeof k.value === 'number' ? `${nf(k.value, dec)} ${k.unitShown}` : `${k.value}`; };
-  const G = R.ghg, Wt = R.water, Ws = R.waste, A = d.survey || {};
-  const text = `# Rapporto di sostenibilità · VSME modulo Basic (bozza)
-${c.name || ''} · ${c.site || ''} · periodo ${dateIt(P.from)} – ${dateIt(P.to)}
-
-## B1 · Criteri di redazione
-Rapporto redatto secondo lo standard volontario VSME (EFRAG), modulo Basic, su base individuale. Perimetro: ${c.site || 'stabilimento'}. I valori operativi sono calcolati dai dati di FeedOS; gli altri provengono dal questionario ESG o sono stati inseriti dall’impresa.
-
-## B2 · Pratiche e iniziative per la transizione
-- Obiettivi di riduzione delle emissioni: ${A['em-target'] === 'si' ? (A['em-target-desc'] || 'sì') : A['em-target'] === 'no' ? 'non ancora definiti' : '[da completare]'}.
-- Programmi di riduzione degli sprechi: ${A['wt-reduce'] === 'si' ? (A['wt-reduce-desc'] || 'sì') : A['wt-reduce'] === 'no' ? 'nessuno' : '[da completare]'}.
-
-## B3 · Energia ed emissioni di gas serra
-- Elettricità prelevata dalla rete: ${v('E1')}; fotovoltaico autoconsumato: ${v('E2')} (copertura ${v('E3', 1)}).
-- Intensità elettrica: ${v('E4', 1)}. GPL: ${v('E5')}.
-- Scope 1 (GPL${G.gasSmc ? ', gas naturale' : ''}${G.dieselL ? ', gasolio' : ''}): ${nf(G.scope1, 1)} t CO₂e. Scope 2 location-based: ${nf(G.scope2, 1)} t CO₂ (fattore ${nf((R.factors.feGrid) * 1000, 1)} g CO₂/kWh).
-- Scope 3, categoria 1 (materie prime acquistate, stima dai fattori indicativi delle formule): ${nf(G.scope3)} t CO₂e.
-- Intensità sui ricavi (Scope 1+2): ${G.perMEur != null ? nf(G.perMEur, 2) : '[da completare]'} t CO₂e per milione di euro.
-
-## B4 · Inquinamento di aria, acqua e suolo
-- Concentrazione di polveri alle emissioni: ${v('E16', 1)}. Scarichi idrici monitorati: ${A['wa-disch'] === 'si' ? 'sì' : A['wa-disch'] === 'no' ? 'no' : '[da completare]'}.
-
-## B5 · Biodiversità
-- Siti in o vicino ad aree sensibili: ${A['bd-protected'] === 'si' ? `sì (${A['bd-area'] || 'area da indicare'}${A['bd-dist'] != null ? `, ${nf(A['bd-dist'], 1)} km` : ''})` : A['bd-protected'] === 'no' ? 'nessuno' : '[da completare]'}.
-
-## B6 · Acqua
-- Prelievo idrico: ${v('E9')}${Wt.intensity != null ? ` (${nf(Wt.intensity * 1000, 1)} litri per tonnellata prodotta)` : ''}.
-
-## B7 · Uso delle risorse, economia circolare e rifiuti
-- Co-prodotti dell’agroindustria nelle formule: ${v('E12', 1)} del prodotto. Soia certificata senza deforestazione: ${v('E15', 1)}.
-- Rifiuti prodotti: ${v('E10')}${Ws.n ? ` (pericolosi ${nf(Ws.hazKg)} kg)` : ''}; avviati a recupero: ${v('E11', 1)}.
-
-## B8 · Forza lavoro · caratteristiche
-- Addetti: ${v('S1')}. Turnover: ${v('S6', 1)}. Donne in ruoli di responsabilità: ${v('S7', 1)}.
-
-## B9 · Forza lavoro · salute e sicurezza
-- Indice di frequenza degli infortuni: ${v('S2', 2)}. Indice di gravità: ${v('S3', 2)}.
-
-## B10 · Forza lavoro · retribuzione, contrattazione e formazione
-- Divario retributivo di genere: ${v('S5', 1)}. Ore di formazione per addetto: ${v('S4', 1)}.
-
-## B11 · Condanne e sanzioni per corruzione
-- Episodi di corruzione: ${v('G4')}. Modello 231: ${v('G2')}. Procedura anticorruzione: ${v('G3')}. Certificazioni: ${v('G5')}.
-
-Bozza generata automaticamente: verificare ogni valore e completare le parti narrative prima della pubblicazione.`;
-  return (
-    <div className="split">
-      <Panel title="Copertura del modulo Basic del VSME" sub={`Un requisito è coperto se almeno un indicatore collegato è di classe A o B${FULL ? ' (regola della tesi, §2.8)' : ''}`} flush id="esg-vsme">
-        <Table rows={cov} rowKey={r => r.id} pageSize={20} cols={[
-          { key: 'id', label: 'Req.', render: r => <span className="code">{r.id}</span> },
-          { key: 'name', label: 'Requisito', render: r => <><b>{r.name}</b><span className="sub">{r.text}</span></> },
-          { key: 'linked', label: 'Indicatori', align: 'r', sort: r => r.linked.length, render: r => r.linked.length ? `${r.withData} di ${r.linked.length} con valore` : '—' },
-          { key: 'covered', label: 'Copertura', render: r => r.covered == null ? <Chip>narrativo</Chip> : <Chip kind={r.covered === 'coperto' ? 'good' : r.covered === 'parziale' ? 'warn' : 'crit'}>{r.covered}</Chip> },
-        ]} />
-      </Panel>
-      <Panel title="Bozza di report" sub="Testo con i valori di oggi: copialo nel documento dell’impresa e completa le parti narrative"
-        actions={<><Btn small icon={LuCopy} onClick={async () => { try { await navigator.clipboard.writeText(text); toast('Bozza copiata'); } catch { toast('Copia non riuscita', 'err'); } }}>Copia</Btn><Btn small icon={LuDownload} onClick={() => download(`vsme-bozza-${stamp()}.md`, text, 'text/markdown;charset=utf-8')}>Scarica</Btn></>}>
-        <pre className="report">{text}</pre>
-      </Panel>
-    </div>
   );
 }
 

@@ -6,7 +6,19 @@ const BASE = ['ingredients', 'specs', 'formulas', 'products', 'lines', 'customer
 // schema 17: controllo di gestione, finanza e operations
 const ADDED_17 = ['costCenters', 'fixedCosts', 'budget', 'closings', 'salesHistory', 'invoices', 'payments', 'suppliers', 'priceLists',
   'stops', 'assets', 'stockCounts', 'adjustments', 'standards'];
-export const COLLECTIONS = [...BASE, ...ADDED_17];
+// fondazione 18 (ESG): raccolte dei nove pacchetti, in coda (nessun cambio di schema: un archivio vecchio le riceve vuote)
+const ADDED_18 = [
+  'fuelUse', 'vehicles', 'fgasEquipment', 'fgasEvents', 'elecContracts', 'logisticsProfiles', 'customerLogistics', 'scope3Inputs', 'factorOverrides', // clima
+  'efIngredients', 'supplierPcfs', 'ingCircular', 'packagingSpecs', 'pcfSnapshots', 'lowCarbonDesigns', 'methaneDeliveries', // pcf
+  'eudrItems', 'eudrLots', 'eudrPlots', 'dcfLedger', 'soyCredits', 'supplierEsg', 'supplierRequests', // filiera
+  'waterDischarges', 'wasteRentri', 'stacks', 'stackSamples', 'energyAudits', // ambiente
+  'hrSnapshots', 'hoursWorked', 'injuries', 'trainings', 'payData', 'pdr125', 'ot23', 'safetyActions', // persone
+  'policies', 'boardMembers', 'complianceItems', 'companyCerts', 'permits', 'm231Controls', 'odvReports', 'whistleStats', 'legalCases', 'evidence', 'claims', 'esgRoles', // governance
+  'sites', 'siteHazards', 'sourcingRisks', 'insurancePolicies', 'adaptationActions', 'riskRegister', // rischi
+  'esgTargets', 'measures', 'sllLoans', 'taxonomyDossiers', // piano
+  'esgAnswers', 'esgClosings', 'esgHistory', 'questionnaires', 'materiality', // report
+];
+export const COLLECTIONS = [...BASE, ...ADDED_17, ...ADDED_18];
 
 const isObj = x => !!x && typeof x === 'object' && !Array.isArray(x);
 const clone = o => (o == null || typeof o !== 'object' ? o : JSON.parse(JSON.stringify(o)));
@@ -28,7 +40,8 @@ export function emptyData() {
   const d = {
     settings: {
       schema: SCHEMA_VERSION, dataset: 'vuoto', company: { name: 'Il mio mangimificio', short: 'Mangimificio', site: '', approval: '', address: '', lat: null, lon: null },
-      energy: { kwhPrice: 0.19, gplPrice: 0.98, feGrid: 0.3769, feGpl: 3.0115 }, milkPrice: 0.54, signalState: {}, ...clone(DEFAULT_SETTINGS),
+      // fattori di base (F1, F3): rete Italia 2024 consolidato ISPRA 0,1926 kg CO₂/kWh; GPL IPCC 2006 2,985 kg CO₂/kg
+      energy: { kwhPrice: 0.19, gplPrice: 0.98, feGrid: 0.1926, feGpl: 2.985, gridFactor: 'ita24c' }, milkPrice: 0.54, signalState: {}, ...clone(DEFAULT_SETTINGS),
     },
     esgManual: {}, survey: {},
   };

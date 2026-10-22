@@ -2,7 +2,7 @@
  * Le preferenze d'interfaccia (tema, dimensione, vista) non stanno più nei dati: vedi core/prefs.js. */
 import { generateDemo, DEMO_VERSION } from './generator.js';
 import { demoSustainability } from './sustainability.js';
-import { applyDemoExtenders } from './extend.js';
+import { applyDemoExtenders, ESG18_EXTENDERS } from './extend.js';
 import { INGREDIENTS, SPECS } from './catalog.js';
 import { emptyData } from '../../core/schema.js';
 import { todayLocal, round } from '../../core/util.js';
@@ -65,8 +65,13 @@ export const DEMO_UPGRADES = [
     },
   },
   {
+    // elenco esplicito: gli estensori aggiunti dopo (ESG 18) girano solo nel loro passo, mai due volte
     to: 4, label: 'direzione, finanza, redditività, commerciale, acquisti, produzione e obiettivi',
-    up(d) { return applyDemoExtenders(d, d.settings.demoAnchor || todayLocal(), 16, { skip: ['costs'] }); },
+    up(d) { return applyDemoExtenders(d, d.settings.demoAnchor || todayLocal(), 16, { only: ['commerciale', 'acquisti', 'produzione', 'finanza', 'redditivita', 'direzione', 'piattaforma'] }); },
+  },
+  {
+    to: 5, label: 'ESG 18: clima, impronta, filiera, ambiente, persone, governance, rischi, piano, report',
+    up(d) { return applyDemoExtenders(d, d.settings.demoAnchor || todayLocal(), 16, { only: ESG18_EXTENDERS }); },
   },
 ];
 

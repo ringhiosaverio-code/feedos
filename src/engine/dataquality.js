@@ -7,11 +7,21 @@
 import { sum, addDays, mondayOf, byId, nf, dateIt } from '../core/util.js';
 import { calendarHours } from './lines.js';
 import { integrity } from './massbalance.js';
+// fondazione 18: regole dei nove pacchetti ESG (id riservati R21-R56, area 'esg')
+import { CLIMA_RULES } from './esg-clima.js';
+import { PCF_RULES } from './esg-pcf.js';
+import { FILIERA_RULES } from './esg-filiera.js';
+import { REPORT_RULES } from './esg-report.js';
+import { PERSONE_RULES } from './esg-persone.js';
+import { GOVERNANCE_RULES } from './esg-governance.js';
+import { PIANO_RULES } from './esg-piano.js';
+import { RISCHI_RULES } from './esg-rischi.js';
+import { AMBIENTE_RULES } from './esg-ambiente.js';
 
 const EMPTY = [];
 const n0 = v => (Number.isFinite(+v) ? +v : 0);
 const todayOf = (d, ctx) => ctx?.today || d?.settings?.demoAnchor || new Date().toISOString().slice(0, 10);
-export const DQ_AREAS = { tracciabilita: 'Tracciabilità', anagrafiche: 'Anagrafiche', produzione: 'Produzione', commerciale: 'Commerciale', amministrazione: 'Amministrazione', sistema: 'Archivio' };
+export const DQ_AREAS = { tracciabilita: 'Tracciabilità', anagrafiche: 'Anagrafiche', produzione: 'Produzione', commerciale: 'Commerciale', amministrazione: 'Amministrazione', sistema: 'Archivio', esg: 'ESG' };
 
 /** Prezzo di listino di un prodotto alla data (righe di listino, altrimenti il prezzo del prodotto). */
 function listAt(d) {
@@ -29,8 +39,8 @@ const dupes = (rows, keyOf) => {
   return out;
 };
 
-/** Regole: {id, area, severity, weight, scope, label, fix, check(d, ctx, opts) → {base, fails: [{id, coll, msg, link}]}}. */
-export const RULES = [
+/** Regole di base: {id, area, severity, weight, scope, label, fix, check(d, ctx, opts) → {base, fails: [{id, coll, msg, link}]}}. */
+const CORE_RULES = [
   { id: 'R1', area: 'tracciabilita', severity: 'critico', weight: 10, scope: ['all', 'closing', 'import'], label: 'Consegne con un lotto inesistente',
     check: d => { const lots = new Set((d.lots || EMPTY).map(l => l.id)); const s = d.shipments || EMPTY; return { base: s.length, fails: s.filter(x => !x.lotId || !lots.has(x.lotId)).map(x => ({ id: x.id, coll: 'shipments', msg: `Consegna ${x.ddt || x.id} del ${dateIt(x.date)}: lotto ${x.lotId || 'mancante'} non trovato`, link: { drawer: ['customer', x.customerId] } })) }; } },
   { id: 'R2', area: 'tracciabilita', severity: 'critico', weight: 8, scope: ['all', 'closing', 'import'], label: 'Consegne di un prodotto diverso da quello del lotto',
@@ -104,6 +114,8 @@ export const RULES = [
   { id: 'R20', area: 'sistema', severity: 'attenzione', weight: 3, scope: ['all'], label: 'Ultimo backup esportato più di 7 giorni fa',
     check: (d, ctx, opts) => { if (opts.lastBackupAt === undefined) return { base: 0, fails: [] }; const today = todayOf(d, ctx); const at = opts.lastBackupAt ? String(opts.lastBackupAt).slice(0, 10) : null; return { base: 1, fails: !at || at < addDays(today, -7) ? [{ id: 'backup', coll: 'settings', msg: at ? `Ultimo backup del ${dateIt(at)}` : 'Nessun backup esportato', link: { area: 'dati', tab: 'archivio' } }] : [] }; } },
 ];
+/** Tutte le regole: quelle di base più quelle dei pacchetti ESG. */
+export const RULES = [...CORE_RULES, ...CLIMA_RULES, ...PCF_RULES, ...FILIERA_RULES, ...REPORT_RULES, ...PERSONE_RULES, ...GOVERNANCE_RULES, ...PIANO_RULES, ...RISCHI_RULES, ...AMBIENTE_RULES];
 export const RULE = Object.fromEntries(RULES.map(r => [r.id, r]));
 
 /**

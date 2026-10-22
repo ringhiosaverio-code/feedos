@@ -27,11 +27,14 @@ const DEFS = {
     tabs: [T('clienti', 'Clienti'), T('offerte', 'Offerte'), T('listino', 'Listino'), T('visite', 'Visite'), T('rete', 'Agenti e provvigioni')] },
   economia: { icon: LuEuro, label: 'Economia', period: true, lead: 'Margini al costo effettivo, redditività per cliente, prodotto e agente, punto di pareggio, previsioni verificate e simulatore «E se…».',
     tabs: [T('margini', 'Margini'), T('redditivita', 'Redditività'), T('pareggio', 'Pareggio'), T('scenari', 'E se…'), T('previsioni', 'Previsioni')] },
+  // ESG (fondazione 18): schede nell'ordine del percorso dell'utente; i pacchetti disegnano le loro (modules/esg-pages.jsx)
   esg: { icon: LuLeaf, label: 'ESG', period: false,
-    lead: FULL ? 'Cruscotto ESG, questionario guidato, acqua, rifiuti, energia e CO₂: i 49 indicatori della tesi alimentati dai dati di ogni giorno.'
-      : 'Cruscotto ESG, questionario guidato, acqua, rifiuti, energia e CO₂: 49 indicatori alimentati dai dati di ogni giorno.',
-    tabs: [T('cruscotto', 'Cruscotto'), T('questionario', 'Questionario'), T('acqua', 'Acqua'), T('rifiuti', 'Rifiuti'), T('indicatori', 'Indicatori'), T('energia', 'Energia e CO₂'),
-      T('passaporto', 'Passaporto prodotto'), T('vsme', 'VSME e report'), ...(FULL ? [T('tesi', 'Dalla tesi all’azienda')] : [])] },
+    lead: FULL ? 'Clima, impronta dei mangimi, filiera, registri ambientali, persone, governance, obiettivi, rischi e report VSME: i 49 indicatori della tesi alimentati dai dati di ogni giorno.'
+      : 'Clima, impronta dei mangimi, filiera, registri ambientali, persone, governance, obiettivi, rischi e report VSME: 49 indicatori alimentati dai dati di ogni giorno.',
+    tabs: [T('cruscotto', 'Cruscotto'), T('clima', 'Clima e GHG'), T('energia', 'Energia e CO₂'), T('passaporto', 'Impronta mangimi'), T('filiera', 'EUDR e fornitori'),
+      T('ambiente', 'Registri ambientali'), T('acqua', 'Acqua'), T('rifiuti', 'Rifiuti'), T('persone', 'Persone e sicurezza'), T('governance', 'Governance ed evidenze'),
+      T('piano', 'Obiettivi e piano'), T('rischi', 'Rischi climatici'), T('vsme', 'Report e questionari'), T('indicatori', 'Indicatori'), T('questionario', 'Questionario'),
+      ...(FULL ? [T('tesi', 'Dalla tesi all’azienda')] : [])] },
   dati: { icon: LuDatabase, label: 'Dati', period: false, lead: 'Archivio, salvataggi, importazioni, anagrafiche, qualità dei dati, registro delle modifiche e impostazioni.',
     tabs: [T('archivio', 'Archivio'), T('importa', 'Importa'), T('anagrafiche', 'Anagrafiche'), T('qualita', 'Qualità dei dati'), T('registro', 'Registro modifiche'), T('impostazioni', 'Impostazioni')] },
 };

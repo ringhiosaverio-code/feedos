@@ -52,7 +52,7 @@ function useTwin(d, period) {
     const price = shipT ? revenue / shipT : null;
     const cost = { raw: raw / q, proc: proc / q, energy: enc / q, pack: pack / q, logi: logi / q };
     cost.total = cost.raw * 1.006 + cost.proc + cost.energy + cost.pack + cost.logi;
-    return { from, to, days, prod, recv, shipT, custN, revenue, price, lines, silos, b, cost, co2ing: co2ing / q, margin: price != null ? price - cost.total : null };
+    return { from, to, days, prod, recv, shipT, custN, revenue, price, lines, silos, b, f, cost, co2ing: co2ing / q, margin: price != null ? price - cost.total : null };
   }, [d, period, I, C]);
 }
 function lineName(n) { const s = n.replace(/^Linea /, ''); return s.charAt(0).toUpperCase() + s.slice(1); }
@@ -206,7 +206,7 @@ function TwinSvg({ T, mode, compact }) {
               <rect className="shape" x="800" y={y - 34} width="160" height="68" rx="12" fill="var(--surface)" stroke={l.kind === 'pellet' ? 'var(--ink-2)' : 'var(--line-2)'} strokeWidth="1.5" />
               {l.kind === 'pellet' && <g aria-hidden="true"><circle cx="828" cy={y} r="14" fill="none" stroke="var(--ink-2)" strokeWidth="1.5" /><circle cx="828" cy={y} r="6" fill="var(--ink-2)" opacity=".35" /></g>}
               <text x="850" y={compact ? y + 10 : y - 9} className="lbl-strong" style={{ fontSize: compact ? 28 : 13.5 }}>{compact ? `${l.code} ${nf(l.t)} t` : lineName(l.name)}</text>
-              {!compact && <text x="850" y={y + 9} style={{ fontSize: 12 }} className="lbl-ink">{mode === 'energia' ? `${nf(l.kwhT, 1)} kWh/t${l.gplT ? ` · ${nf(l.gplT, 2)} kg GPL/t` : ''}` : mode === 'co2' ? `${nf(((l.kwhT || 0) * DEFAULTS.feGrid * (1 - (T.b.coverage || 0)) + (l.gplT || 0) * DEFAULTS.feGpl), 1)} kg CO₂/t` : mode === 'costo' ? `energia ${nf((l.kwhT || 0) * 0.19 + (l.gplT || 0) * 0.98, 2)} €/t` : `${nf(l.t)} t`}</text>}
+              {!compact && <text x="850" y={y + 9} style={{ fontSize: 12 }} className="lbl-ink">{mode === 'energia' ? `${nf(l.kwhT, 1)} kWh/t${l.gplT ? ` · ${nf(l.gplT, 2)} kg GPL/t` : ''}` : mode === 'co2' ? `${nf(((l.kwhT || 0) * T.f.feGrid * (1 - (T.b.coverage || 0)) + (l.gplT || 0) * T.f.feGpl), 1)} kg CO₂/t` : mode === 'costo' ? `energia ${nf((l.kwhT || 0) * 0.19 + (l.gplT || 0) * 0.98, 2)} €/t` : `${nf(l.t)} t`}</text>}
               {!compact && <text x="850" y={y + 25} style={{ fontSize: 11 }}>{`utilizzo ${nf(Math.min(1.5, l.util) * 100)}%`}</text>}
             </g>
             <path d={paths.fin[i]} className="flow" stroke="var(--maize)" strokeWidth={flow(l.t, maxT)} opacity=".35" />

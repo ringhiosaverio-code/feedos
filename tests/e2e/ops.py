@@ -68,7 +68,7 @@ async def main():
         print('6b acqua:', await toast(), '· righe', await pg.evaluate("() => document.querySelectorAll('table.t tbody tr').length"))
         # 6c rifiuto pericoloso a smaltimento
         await go('esg.rifiuti.nuovo'); await pg.wait_for_timeout(600)
-        await pg.locator('#esg-waste-form select').select_option('15 01 10*'); await pg.wait_for_timeout(150)
+        await pg.locator('#esg-waste-form select').first.select_option('15 01 10*'); await pg.wait_for_timeout(150)
         haz = await pg.evaluate("() => document.querySelector('#esg-waste-form .chip')?.innerText")
         kg = pg.get_by_label('Quantità in kg'); await kg.fill('42'); await kg.press('Tab')
         await pg.locator('#esg-waste-form .btn.primary').click(); await pg.wait_for_timeout(500)

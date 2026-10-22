@@ -13,7 +13,7 @@ import { demoSustainability } from './sustainability.js';
 import { rng, iso, addDays, mondayOf, monthOf, parse, round, byId, sum, dayOfYear } from '../../core/util.js';
 import { COLLECTIONS, DEFAULT_SETTINGS } from '../../core/schema.js';
 
-export const DEMO_VERSION = 4;
+export const DEMO_VERSION = 5;
 // versione completa (con i riferimenti alla tesi) o pubblica; nei test in node __FULL__ non esiste
 const FULL = typeof __FULL__ !== 'undefined' && !!__FULL__;
 

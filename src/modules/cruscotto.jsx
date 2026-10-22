@@ -12,12 +12,15 @@ import { KPIS, kpiValues, kpiHistory, targetFor, statusFor, projection, topLosse
 import { Panel, Kpi, Empty } from '../ui/ui.jsx';
 import { Bars } from '../ui/charts.jsx';
 import { Def, money, eurTxt } from './direzione-conto.jsx';
+import { ESG_KPI_IDS } from '../engine/esg-registry.js';
 
 const GROUPS = [
   { id: 'eco', label: 'Economia e mercato', ids: ['ricavi-netti', 'volume-t', 'prezzo-netto-t', 'mdc-t', 'margine-pieno-t', 'quota-mp', 'ebitda-pct'] },
   { id: 'prod', label: 'Produzione e qualità', ids: ['oee', 'utilizzo-linee', 'kwh-t', 'scarto-pct', 'calo-effettivo', 'lotti-bloccati-pct', 'reclami-1000t'] },
   { id: 'acq', label: 'Acquisti e scorte', ids: ['otif', 'ppv-pct', 'copertura-mp-gg', 'dio', 'eccedenze-eur'] },
-  { id: 'fin', label: 'Clienti e finanza', ids: ['dso', 'scaduto-pct', 'successo-offerte-valore', 'top10-pct', 'hhi', 'co2-t'] },
+  { id: 'fin', label: 'Clienti e finanza', ids: ['dso', 'scaduto-pct', 'successo-offerte-valore', 'top10-pct', 'hhi'] },
+  // fondazione 18: indicatori ESG riservati ai pacchetti (un id non ancora nel catalogo non disegna nulla)
+  { id: 'esg', label: 'ESG', ids: ['co2-t', ...ESG_KPI_IDS] },
 ];
 const K = Object.fromEntries(KPIS.map(k => [k.id, k]));
 
@@ -95,7 +98,7 @@ export function Cruscotto({ d }) {
           ) : <Empty title="Nessuna perdita misurabile nel periodo" />}
         </Panel>
       </div>
-      {GROUPS.map(g => (
+      {GROUPS.filter(g => g.ids.some(id => K[id])).map(g => (
         <Panel key={g.id} title={g.label} id={`kpi-${g.id}`}>
           <div className="kpis">{g.ids.map(tile)}</div>
         </Panel>

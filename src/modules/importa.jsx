@@ -10,6 +10,15 @@ import { download, parseCSV, readFile } from '../core/io.js';
 import { FIELDS, COLL_LABEL } from '../core/fields.js';
 import { TYPES, autoMap, preview, toOps, template } from '../core/importers.js';
 import { Panel, Btn, Chip, Select, Field } from '../ui/ui.jsx';
+import { IMPORT_DESC_CLIMA } from '../data/fields-clima.js';
+import { IMPORT_DESC_PCF } from '../data/fields-pcf.js';
+import { IMPORT_DESC_FILIERA } from '../data/fields-filiera.js';
+import { IMPORT_DESC_REPORT } from '../data/fields-report.js';
+import { IMPORT_DESC_PERSONE } from '../data/fields-persone.js';
+import { IMPORT_DESC_GOVERNANCE } from '../data/fields-governance.js';
+import { IMPORT_DESC_PIANO } from '../data/fields-piano.js';
+import { IMPORT_DESC_RISCHI } from '../data/fields-rischi.js';
+import { IMPORT_DESC_AMBIENTE } from '../data/fields-ambiente.js';
 
 const STEPS = ['Tipo di dati', 'File', 'Colonne', 'Anteprima', 'Conferma'];
 const DESC = {
@@ -21,6 +30,7 @@ const DESC = {
   fatture: 'Numero, cliente, data, imponibile, IVA, totale, scadenza e stato. Si aggiornano per numero.',
   incassi: 'Data, cliente, fattura, importo e modalità.',
   energia: 'Mese, tonnellate prodotte, kWh dalla rete, fotovoltaico e ceduti, GPL.',
+  ...IMPORT_DESC_CLIMA, ...IMPORT_DESC_PCF, ...IMPORT_DESC_FILIERA, ...IMPORT_DESC_REPORT, ...IMPORT_DESC_PERSONE, ...IMPORT_DESC_GOVERNANCE, ...IMPORT_DESC_PIANO, ...IMPORT_DESC_RISCHI, ...IMPORT_DESC_AMBIENTE,
 };
 const STATUS = { new: { kind: 'good', label: 'nuovo', plural: 'nuovi' }, changed: { kind: 'accent', label: 'modificato', plural: 'modificati' }, same: { kind: '', label: 'invariato', plural: 'invariati' }, error: { kind: 'crit', label: 'errore', plural: 'con errori' } };
 const DATE_FIELD = { shipments: 'date', invoices: 'date', payments: 'date', fixedCosts: 'month' };
