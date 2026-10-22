@@ -1,0 +1,6 @@
+node_modules/
+dist/
+shots/
+tests/e2e/fixtures/backup.json
+__pycache__/
+.claude/worktrees/
