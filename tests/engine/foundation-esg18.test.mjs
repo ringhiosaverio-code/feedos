@@ -320,3 +320,17 @@ test('F10: criteri di maturità con valori plausibili e soglie da esgThresholds'
   // senza contesto delle soglie valgono i valori di sempre
   assert.equal(esgScore({ ...o.ctx, th: undefined }).items.find(x => x.id === 'recovery').label, 'Almeno metà dei rifiuti avviata a recupero');
 });
+
+test('settore e codice NACE: mangimi di base, agrofarmaci per la seconda edizione', async () => {
+  const { sectorOf, naceOf, SECTORS } = await import('../../src/engine/esg-years.js');
+  assert.equal(sectorOf({}), 'mangimi');
+  assert.equal(sectorOf(null), 'mangimi');
+  assert.equal(naceOf({}), '10.91');
+  const agro = { settings: { company: { sector: 'agrofarmaci' } } };
+  assert.equal(sectorOf(agro), 'agrofarmaci');
+  assert.equal(naceOf(agro), SECTORS.agrofarmaci.nace);
+  assert.equal(sectorOf({ settings: { esg18: { sector: 'mangimi' }, company: { sector: 'agrofarmaci' } } }), 'mangimi', 'esg18 prevale');
+  assert.equal(sectorOf({ settings: { company: { sector: 'toString' } } }), 'mangimi', 'solo settori noti');
+  assert.equal(naceOf({ settings: { esg18: { report: { nace: ' 10.91 ' } }, company: { sector: 'agrofarmaci' } } }), '10.91');
+  assert.equal(naceOf({ settings: { esg18: { report: { nace: 'abc' } } } }), '10.91', 'codice non valido → quello del settore');
+});

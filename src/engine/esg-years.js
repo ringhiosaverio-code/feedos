@@ -52,6 +52,25 @@ export function esgSettingsOp(pkg, patchOrFn) {
   };
 }
 
+/**
+ * Settori dello stesso codice (due edizioni): mangimi (FeedOS) e agrofarmaci. I pacchetti generici leggono il settore da qui
+ * invece di dare per scontato il mangimificio; nace è il codice NACE Rev. 2 di base per il VS B1 (modificabile nel report).
+ */
+export const SECTORS = {
+  mangimi: { label: 'Mangimi composti', nace: '10.91', naceLabel: 'Produzione di mangimi per animali da allevamento' },
+  agrofarmaci: { label: 'Agrofarmaci', nace: '20.20', naceLabel: 'Fabbricazione di agrofarmaci e altri prodotti chimici per l’agricoltura' },
+};
+/** Settore dell'archivio: settings.esg18.sector, poi settings.company.sector, altrimenti 'mangimi'. */
+export function sectorOf(d) {
+  const s = d?.settings?.esg18?.sector ?? d?.settings?.company?.sector;
+  return Object.prototype.hasOwnProperty.call(SECTORS, s) ? s : 'mangimi';
+}
+/** Codice NACE per il VS B1: quello indicato nel report (settings.esg18.report.nace) o quello di base del settore. */
+export function naceOf(d) {
+  const n = d?.settings?.esg18?.report?.nace;
+  return typeof n === 'string' && /^\d{2}(\.\d{1,2}){0,2}$/.test(n.trim()) ? n.trim() : SECTORS[sectorOf(d)].nace;
+}
+
 /** Mese di inizio dell'esercizio ESG: settings.esg18.report.fyStartMonth, poi quello finanziario, poi gennaio. */
 export function fyStartMonth(d) {
   const r = d?.settings?.esg18?.report;

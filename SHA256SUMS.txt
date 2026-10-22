@@ -3,7 +3,7 @@ bc5afd74709cf5363f53fd6336c3ce30b96a5cf5879b3e9802f00b8133902e82  ./CHANGELOG_16
 bafa077e485cda4a6b26a43c534fc2d556b0572b25dafd03921673480c061373  ./CHANGELOG_16.1.md
 0751dfcd4a87873e709756daef1cc53441833ec88664fe913821ecbb22d180cb  ./CHANGELOG_17.0.md
 ec0d23dc877d328dbfad71d55095bd7a77d3e75346b4894bd7b9cec6f1297e7f  ./FeedOS-16-completa-RISERVATA.html
-d27aa7071d8c6e168d97c4a78dc4e07e5d597d3a2367c833f01fdd23c12f4fcf  ./FeedOS-16-demo.html
+e3cb96c081f7b6fa1535152d63852727364a8aaba1da8a9765ef06236a3ce40a  ./FeedOS-16-demo.html
 a7655a553ae034f7deba5bcae01eab401cf0546ff6a4965637f09643429d1258  ./LEGGIMI.md
 2b9eb9012ae34eef79307933998e33dfd533a6f62987a8cae054051ebea6ecdc  ./LEGGIMI.txt
 a9a1b0b7463401b2233c71873c09c97cd66d330e6932cc4b6c76f7a163e1b0bc  ./README.md
@@ -16,7 +16,7 @@ ec733354b8ee5a8b66a7a57ec439013146ebf9952d8e352f085b9104720e69fa  ./fonts/mono-4
 dd92c0677e81b151c7ae43ae2e6138831321f7cc50be570a27b8a0f42ab4423b  ./fonts/sans-400.woff
 886bec12ec89a752c5600bee9cf8e9bf05316d0009781e1c5cfeaa6025b76447  ./fonts/sans-400i.woff
 78be11935c8bcf0acd7b81ead02e405da6eb493337cbb6b280d2e8dee2a27446  ./fonts/sans-700.woff
-d27aa7071d8c6e168d97c4a78dc4e07e5d597d3a2367c833f01fdd23c12f4fcf  ./index.html
+e3cb96c081f7b6fa1535152d63852727364a8aaba1da8a9765ef06236a3ce40a  ./index.html
 7521726a7719afb32c109acea3fe1d2dd388b9f18dd812ae038d836037bb350a  ./package-lock.json
 9d0f00ebebcb55ddc919c76efa0a8d3d694279ea9e8cd18dc3bad23ea7543eae  ./package.json
 45a54819e15f1928eb8a1d99ad803f2a8295c767568ed2e6ce29a21b40487d93  ./src/app/App.jsx
@@ -112,7 +112,7 @@ b0d50d071af156b6367cf98488343b951f27b092a8052f72eb705df64d0e5db5  ./src/engine/e
 676e88fbb1ceabc82790225428408d3b458432f31a957381205320e80b623626  ./src/engine/esg-registry.js
 6766d384d46547d09ddf536c57389598fafab4493d762dced380461dd599cdac  ./src/engine/esg-report.js
 8f340f7cb2aa4d180e6e6bdffcd74d426786f5fdade610f0c564dff9a1af4b79  ./src/engine/esg-rischi.js
-6f6cec72ffd4d1d987548266879b4fdb3040302994f4c34d1d66f825eea3e13d  ./src/engine/esg-years.js
+5d5d88787cbeb78b3d1666391d27c2bda624e0965b911f060be7d429341cff92  ./src/engine/esg-years.js
 8f6b256fbaea930ff1632dbb56e0034b9807db8193c5daa292d597f86170870e  ./src/engine/esg.js
 1029db7e51c83e23d43fd7b22772fb2edf841d367386156eb489fa3e87089325  ./src/engine/forecast.js
 e40c03d1875006d528624edd4d00ff9a3d681a15e5c5cdc1e3736f22bfb10b5c  ./src/engine/formulation.js
@@ -186,7 +186,7 @@ a66e6a27bb5e8bfbf3e2dbc600ed7115ca3bf9442bf977bd3aa514ec48eea036  ./src/modules/
 efdf625bdb8f7def85e1e1cfa2dc99f27e610ab31083e460e7cbbf90621166dc  ./src/modules/sostenibilita.jsx
 59f2791378a1b132205534c82c979e5ca9358a2785b989d959fae0b7c1a0702b  ./src/modules/varianze.jsx
 dc31f2395bf817d46360c85237f6246f54b4bab0d3048c37f0e10e7304e32e3f  ./src/styles/acquisti.css
-cac3b41bc8ddf7ac52f5cd4550eb4ab3b2a708c49d42540f2dadfd0363d283b8  ./src/styles/app.css
+cebf8e579be449160d538b3690711048b245702bd5ee3764a55a41287655e85e  ./src/styles/app.css
 382fda27ec8ac0e24c2f2ab740d4e8ff46e22363e0643353b0bc077b0ee2d0fd  ./src/styles/direzione.css
 7648ae65e9ae403e50f09b0bc3132bc012f6cd670e15cb8bd20eebda2401fa54  ./src/styles/esg-ambiente.css
 0806973022e798cd6180ba23417bfbe49023e71ebe41baee13ee0f36fd3f7997  ./src/styles/esg-clima.css
@@ -245,7 +245,7 @@ a5ce7f60ded09ac4b24ab8da7994340a060b4e7ec8f224ad50c193ab56734f94  ./tests/engine
 5dbd46b55eab12aba8a54e2599652f7a0ef672e8a1ae538869e39217473c74df  ./tests/engine/formulation.test.mjs
 67fc2fdd3efb2b94abf04462aaa8edda74a714d368e8e88d8ab8a6470b6a4838  ./tests/engine/foundation-core.test.mjs
 62e3fcba35719ee46818d538efc472d67ac4694f83b57a45f76874e8ba9c8140  ./tests/engine/foundation-economics.test.mjs
-a7225e3eb6e9bfa7f88788e240a311ec73538915c4feb3f7d0c85ac6fc8545d1  ./tests/engine/foundation-esg18.test.mjs
+23a1293f1af7743aaa96cc461cc5637b6bb2bb8260c4a5d3e746dc03e29a04b5  ./tests/engine/foundation-esg18.test.mjs
 9b654185d077f310452eca2d6d731b4c76e5f28ce4325a722888a15865804dc4  ./tests/engine/foundation.test.mjs
 3dce3523f1bb17e2b30f3253f1e1efa000ff2665d8623b0e28c1aba91d7044ba  ./tests/engine/inventory.test.mjs
 42df0dec4b713d876c04ccf9530e52d7cf3abc91ebdb99a90d3624e0cf59b9df  ./tests/engine/lp_runner.mjs
