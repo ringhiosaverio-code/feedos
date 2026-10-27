@@ -1,1 +1,10 @@
 # FeedOS 18 · Clima e GHG: percorsi in più per tests/e2e/smoke.py, uno per riga (es. esg.clima.sezione). Le righe con # sono commenti.
+esg.clima.riepilogo
+esg.clima.combustibili
+esg.clima.flotta
+esg.clima.fgas
+esg.clima.elettricita
+esg.clima.scope3
+esg.clima.fattori
+esg.clima.ponte
+esg.clima.metodo

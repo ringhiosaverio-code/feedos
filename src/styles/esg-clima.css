@@ -1,2 +1,44 @@
-/* FeedOS 18 · Clima e GHG (pacchetto WP1): stile del pacchetto, solo classi con il prefisso proprio e token del tema (var(--…)).
- * Il file viene incluso da build.mjs senza import. */
+/* FeedOS 18 · Clima e GHG (pacchetto WP1): stile del pacchetto, solo classi con il prefisso ecl- e token del tema (var(--…)).
+ * Il file viene incluso da build.mjs senza import. Chiaro e scuro, da 390 a 1440 px senza sbordi. */
+.ecl { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; min-width: 0; }
+.ecl > * { min-width: 0; }
+.ecl .split > *, .ecl .stack > * { min-width: 0; }
+.ecl-gap { gap: 12px; }
+.ecl-gap-s { gap: 6px; }
+.ecl-mt { margin-top: 10px; }
+.ecl-mb { margin-bottom: 0; }
+.ecl-pad { padding: 12px 16px; border-bottom: 1px solid var(--line); }
+.ecl-h3 { margin: 16px 0 6px; font-size: 12px; font-weight: 700; letter-spacing: .03em; text-transform: uppercase; color: var(--ink-2); }
+.ecl-legend { display: flex; flex-wrap: wrap; gap: 6px 16px; margin-top: 8px; font-size: 12.5px; color: var(--ink-2); }
+.ecl-legend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; }
+.ecl-legend b { color: var(--ink); }
+.ecl-wrap { display: block; white-space: normal; min-width: 160px; max-width: 46ch; overflow-wrap: anywhere; }
+.ecl-nowrap { flex-wrap: nowrap; gap: 2px; justify-content: flex-end; }
+.ecl-chips { display: inline-flex; flex-wrap: wrap; gap: 4px; }
+.ecl-bench { display: grid; gap: 6px; margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--line); }
+.ecl-import { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding-top: 10px; border-top: 1px dashed var(--line); }
+.ecl-import .btn { cursor: pointer; }
+.ecl-span2 { grid-column: span 2; }
+.ecl-reason { width: 100%; min-width: 200px; }
+.ecl-warn { color: var(--warn-ink); }
+.ecl-up { color: var(--crit-ink); }
+.ecl-down { color: var(--good-ink); }
+.ecl-lead { margin: 12px 0 6px; font-size: 14px; line-height: 1.55; color: var(--ink); max-width: 90ch; }
+.ecl-btns { display: flex; flex-wrap: wrap; gap: 8px; }
+.ecl-card-sig { margin: 2px 0 0; font-size: 12px; color: var(--warn-ink); overflow-wrap: anywhere; }
+.ecl-print h3 { margin: 10px 0 4px; font: 700 13px/1.2 var(--f-sans); text-transform: uppercase; letter-spacing: .03em; color: var(--ink); }
+.ecl-print p, .ecl-print li { margin: 4px 0; font-size: 12px; }
+.ecl-print ul { margin: 4px 0; padding-left: 18px; }
+.ecl-pt { font-size: 11.5px; }
+.ecl-pt td, .ecl-pt th { padding: 4px 6px; }
+.ecl-pt tr.ecl-tot td { font-weight: 700; border-top: 2px solid var(--line-2); }
+@media (max-width: 720px) {
+  .ecl-span2 { grid-column: auto; }
+  .ecl-wrap { min-width: 120px; }
+  .ecl-reason { min-width: 160px; }
+  .ecl-sheet .ecl-pt { font-size: 10.5px; }
+}
+@media print { .ecl-import, .ecl-btns { display: none !important; } }
+.ecl-sheet .pp-bd, .ecl-print { min-width: 0; max-width: 100%; }
+.ecl-print .tw { max-width: 100%; }
+.ecl-print .kv dd { overflow-wrap: anywhere; }

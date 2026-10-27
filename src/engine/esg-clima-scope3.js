@@ -219,8 +219,16 @@ function cat1(d, W, sector) {
 }
 
 /* ---------------- categoria 3 ---------------- */
-function cat3(d, fuels, kwhGrid, grid) {
+function cat3(d, fuelsIn, kwhGrid, grid) {
   const lines = [];
+  // una riga per combustibile (gli usi dello stesso combustibile si sommano)
+  const byFuel = new Map();
+  for (const f of fuelsIn) {
+    const g = byFuel.get(f.fuel);
+    if (!g) byFuel.set(f.fuel, { ...f });
+    else { g.qty += f.qty; g.records += f.records; if (f.quality !== 'misurato') g.quality = f.quality; }
+  }
+  const fuels = [...byFuel.values()];
   for (const f of fuels) {
     if (!f.spec?.wtt || !(f.qty > 0)) continue;
     const per = f.spec.wtt.value * (f.spec.wttPerUnit || 1);
