@@ -136,7 +136,8 @@ const KIND_COLOR = { impatto: 'var(--s1)', rischio: 'var(--s2)', opportunità: '
 function Matrix({ points, threshold }) {
   const W = 360, H = 300, x0 = 42, x1 = 346, y0 = 266, y1 = 12;
   const sx = v => x0 + ((v - 0) / 5) * (x1 - x0), sy = v => y0 - ((v - 0) / 5) * (y0 - y1);
-  const seen = {};
+  const seen = {}, count = {};
+  for (const p of points) count[`${p.x}|${p.y}`] = (count[`${p.x}|${p.y}`] || 0) + 1;
   return (
     <svg className="erp-matrix" viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`Matrice di materialità: ${points.filter(p => p.material).length} voci materiali su ${points.length}`}>
       <rect x={sx(threshold)} y={y1} width={x1 - sx(threshold)} height={y0 - y1} className="erp-mz" />
@@ -148,9 +149,11 @@ function Matrix({ points, threshold }) {
       <text x={12} y={(y0 + y1) / 2} className="erp-ax" textAnchor="middle" transform={`rotate(-90 12 ${(y0 + y1) / 2})`}>rilevanza d’impatto</text>
       {points.map((p, i) => {
         const k = `${p.x}|${p.y}`; const n = (seen[k] = (seen[k] || 0) + 1) - 1;
-        const cx = sx(p.x) + (n % 3) * 7 - (n ? 7 : 0), cy = sy(p.y) - Math.floor(n / 3) * 7;
+        const cx = sx(p.x) + [0, 9, -9][n % 3], cy = sy(p.y) - Math.floor(n / 3) * 9;
+        // un'etichetta sola per coordinata, con i numeri di tutte le voci materiali che vi cadono
+        const lbl = n === 0 ? points.map((q, j) => (q.material && q.x === p.x && q.y === p.y ? j + 1 : null)).filter(Boolean).join(', ') : '';
         return <g key={p.id}><circle cx={cx} cy={cy} r={p.material ? 6 : 4.5} fill={KIND_COLOR[p.kind] || 'var(--s4)'} className={p.material ? 'erp-pt-m' : 'erp-pt'}><title>{`${i + 1}. ${p.title}: impatto ${nf(p.y, 1)}, finanziaria ${nf(p.x, 1)}`}</title></circle>
-          {p.material && <text x={cx + 8} y={cy + 4} className="erp-pl">{i + 1}</text>}</g>;
+          {lbl && (cx > x1 - 40 ? <text x={cx - 9} y={cy + 4} className="erp-pl" textAnchor="end">{lbl}</text> : <text x={cx + (count[k] > 1 ? 17 : 8)} y={cy + 4} className="erp-pl">{lbl}</text>)}</g>;
       })}
     </svg>
   );
