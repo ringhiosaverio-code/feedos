@@ -1,9 +1,12 @@
 /* FeedOS 17 · Salvataggio locale: IndexedDB (principale), localStorage (riserva), memoria (ultima risorsa).
  * I dati restano nel browser di questo dispositivo. Istantanee automatiche giornaliere e manuali:
  * i dati in 'snap', i soli metadati in 'snapmeta' (l'elenco non legge mai gli archivi interi). */
+import { META as EDITION } from '../editions/meta.js';
 import { setPrefs } from './prefs.js';
 
-const DB = 'feedos16', DB_VERSION = 2, STORE = 'kv', SNAP = 'snap', META = 'snapmeta', LS_KEY = 'feedos16.data', MAX_AUTO = 10;
+// nomi dall'edizione (FeedOS: 'feedos16', invariato per gli archivi già salvati; FitoOS: archivio separato)
+const KEYP = EDITION.storageKey || 'feedos16';
+const DB = KEYP, DB_VERSION = 2, STORE = 'kv', SNAP = 'snap', META = 'snapmeta', LS_KEY = KEYP + '.data', MAX_AUTO = 10;
 let dbp = null;
 let mode = 'idb';
 
@@ -43,7 +46,7 @@ function openDb() {
   dbp.catch(e => { mode = e?.blocked ? 'blocked' : testLocal() ? 'local' : 'memory'; });
   return dbp;
 }
-function testLocal() { try { localStorage.setItem('feedos16.t', '1'); localStorage.removeItem('feedos16.t'); return true; } catch { return false; } }
+function testLocal() { try { localStorage.setItem(KEYP + '.t', '1'); localStorage.removeItem(KEYP + '.t'); return true; } catch { return false; } }
 /** Transazione su uno o più archivi: fn riceve gli object store nell'ordine dei nomi. */
 function tx(stores, kind, fn) {
   const names = [].concat(stores);

@@ -6,6 +6,7 @@ import { LuArrowLeft, LuArrowRight, LuX } from 'react-icons/lu';
 import { useUi, uiStore, useData, closeDrawer } from '../core/store.js';
 import { go } from '../core/router.js';
 import { Btn } from '../ui/ui.jsx';
+import { TOUR_STEPS } from '../editions/app.js';
 
 const FULL = __FULL__; // versione completa (con i riferimenti alla tesi) o pubblica
 
@@ -14,7 +15,7 @@ const MESI = ['gennaio', 'febbraio', 'marzo', 'aprile', 'maggio', 'giugno', 'lug
 const when = d => { const f = d.formulas.find(x => x.id === staleFormula(d)); return f?.approvedAt ? `a ${MESI[+f.approvedAt.slice(5, 7) - 1]}` : 'qualche mese fa'; };
 const staleFormula = d => d.formulas.find(f => f.id === 'f-vl18')?.id || d.formulas[0]?.id;
 
-export const STEPS = [
+const BASE_STEPS = [
   { to: ['oggi', 'decisioni'], sel: '#oggi-decisioni', title: 'Oggi: le decisioni, con il perché', text: 'FeedOS legge ogni giorno formule, scorte, lotti, energia e offerte e propone le decisioni in ordine di urgenza e di impatto economico. Ogni segnale spiega i numeri; nessuna azione parte da sola: si apre, si assegna, si rimanda o si ignora, e tutto resta nel registro.' },
   { to: ['gemello'], sel: '.twin', title: 'Il gemello digitale', text: 'Lo stabilimento in un solo disegno: dalle materie prime ai silos, alle linee, ai clienti. Lo stesso schema mostra materia, costo, energia e CO₂ dell’ultimo mese, con i flussi calcolati dai dati registrati.' },
   { to: d => ['formulazione', 'formule', staleFormula(d)], sel: '#fx-opt', title: 'Formule a costo minimo', text: d => `La formula approvata ${when(d)}, ai prezzi di oggi, costa più del necessario. «Ottimizza» trova la composizione di costo minimo che rispetta tutta la specifica e l’aflatossina; i prezzi ombra dicono quanto costa ogni vincolo. Nulla cambia senza approvazione.` },
@@ -26,6 +27,8 @@ export const STEPS = [
   { to: ['esg', 'indicatori'], sel: '#esg-kpi', title: FULL ? 'I 49 indicatori della tesi, dai dati' : 'I 49 indicatori ESG, dai dati', text: (FULL ? 'Il registro della tesi' : 'Il registro degli indicatori') + ' (ambiente, sociale, economia, governance) è alimentato dai dati di ogni giorno: ogni valore dichiara se viene dai dati, se è stato inserito o se manca. Da qui nascono energia e CO₂, il passaporto di prodotto e la bozza del VSME.' },
   { to: ['esg', 'passaporto'], sel: '#esg-passport', title: 'Il passaporto di prodotto', text: 'Per ogni mangime: impronta stimata dalla culla al cancello, origine delle materie prime, co-prodotti, soia certificata, conformità dei lotti. Uno strumento per parlare di sostenibilità con numeri verificabili.' },
 ];
+/** Passi della presentazione: quelli dell'edizione (FitoOS) o quelli di FeedOS. */
+export const STEPS = TOUR_STEPS || BASE_STEPS;
 
 export function Tour() {
   const step = useUi(s => s.tour);

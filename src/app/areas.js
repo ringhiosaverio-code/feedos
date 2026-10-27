@@ -1,8 +1,9 @@
 /* FeedOS 17 · Aree dell'applicazione: icona, nome, descrizione, periodo globale e schede.
  * Fonte unica: nav.js (NAV), roles.js (AREA_META) e il router (AREAS, da areaIds.js) derivano da qui.
  * period: true mostra la barra del periodo nella testata. La scheda «tesi» esiste solo nella versione completa. */
-import { LuHouse, LuLandmark, LuWallet, LuFactory, LuFlaskConical, LuShoppingCart, LuCog, LuShieldCheck, LuHandshake, LuEuro, LuLeaf, LuDatabase } from 'react-icons/lu';
+import { LuHouse, LuLandmark, LuWallet, LuFactory, LuFlaskConical, LuShoppingCart, LuCog, LuShieldCheck, LuHandshake, LuEuro, LuLeaf, LuDatabase, LuScale } from 'react-icons/lu';
 import { AREA_IDS } from '../core/areaIds.js';
+import { META } from '../editions/meta.js';
 
 const FULL = typeof __FULL__ !== 'undefined' && !!__FULL__;
 const T = (id, label) => ({ id, label });
@@ -35,11 +36,25 @@ const DEFS = {
       T('ambiente', 'Registri ambientali'), T('acqua', 'Acqua'), T('rifiuti', 'Rifiuti'), T('persone', 'Persone e sicurezza'), T('governance', 'Governance ed evidenze'),
       T('piano', 'Obiettivi e piano'), T('rischi', 'Rischi climatici'), T('vsme', 'Report e questionari'), T('indicatori', 'Indicatori'), T('questionario', 'Questionario'),
       ...(FULL ? [T('tesi', 'Dalla tesi all’azienda')] : [])] },
+  // edizione agrofarmaci (FitoOS): registrazioni, sostanze attive, schede di sicurezza, Seveso e ADR
+  regolatorio: { icon: LuScale, label: 'Regolatorio', period: false, lead: 'Registrazioni dei prodotti con usi in etichetta e finestre di vendita e uso, sostanze attive e rinnovi, schede di sicurezza e invii ai clienti, Seveso e trasporto ADR.',
+    tabs: [T('registrazioni', 'Registrazioni'), T('sostanze', 'Sostanze attive'), T('sds', 'Schede di sicurezza'), T('seveso', 'Seveso e ADR')] },
   dati: { icon: LuDatabase, label: 'Dati', period: false, lead: 'Archivio, salvataggi, importazioni, anagrafiche, qualità dei dati, registro delle modifiche e impostazioni.',
     tabs: [T('archivio', 'Archivio'), T('importa', 'Importa'), T('anagrafiche', 'Anagrafiche'), T('qualita', 'Qualità dei dati'), T('registro', 'Registro modifiche'), T('impostazioni', 'Impostazioni')] },
 };
 
+/* Edizione: schede nascoste, schede in più (dopo una scheda esistente) e testi propri di un'area. */
+function forEdition(id, def) {
+  const hide = META.hiddenTabs?.[id] || [], extra = META.extraTabs?.[id] || [], over = META.areaOverrides?.[id] || {};
+  let tabs = def.tabs.filter(t => !hide.includes(t.id));
+  for (const x of extra) {
+    const i = tabs.findIndex(t => t.id === x.after);
+    const tab = T(x.id, x.label);
+    tabs = i < 0 ? [...tabs, tab] : [...tabs.slice(0, i + 1), tab, ...tabs.slice(i + 1)];
+  }
+  return { ...def, ...over, tabs };
+}
 /** [{id, icon, label, lead, period, tabs: [{id, label}]}] nell'ordine di AREA_IDS. */
-export const AREA_DEFS = AREA_IDS.map(id => ({ id, ...DEFS[id] }));
+export const AREA_DEFS = AREA_IDS.map(id => ({ id, ...forEdition(id, DEFS[id]) }));
 /** Area per id. */
 export const AREA = Object.fromEntries(AREA_DEFS.map(a => [a.id, a]));

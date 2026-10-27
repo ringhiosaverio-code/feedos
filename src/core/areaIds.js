@@ -1,2 +1,5 @@
-/* FeedOS 17 · Identificativi delle aree, nell'ordine di definizione (senza dipendenze: li usa il router anche in node). */
-export const AREA_IDS = ['oggi', 'direzione', 'finanza', 'gemello', 'formulazione', 'acquisti', 'produzione', 'qualita', 'commerciale', 'economia', 'esg', 'dati'];
+/* FeedOS 17 · Identificativi delle aree, nell'ordine di definizione (senza dipendenze: li usa il router anche in node).
+ * L'elenco viene dall'edizione corrente (editions/meta.js: mangimi per FeedOS, agrofarmaci per FitoOS). */
+import { META } from '../editions/meta.js';
+
+export const AREA_IDS = META.areaIds;
