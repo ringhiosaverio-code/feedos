@@ -45,6 +45,7 @@ export const I18N_REPORT = {
   'report.dp.da-motivare': E('omissione da motivare', 'omission to be justified'),
   'report.dp.non-applicabile': E('non applicabile', 'not applicable'),
   'report.dp.facoltativo': E('facoltativo', 'optional'),
+  'report.dp.fuori-ambito': E('fuori ambito (modulo non scelto)', 'out of scope (module not selected)'),
   'report.efragNote': E('Ordine dei datapoint del modello digitale EFRAG VSME: verificare la corrispondenza con la versione del modello in uso prima della conversione in XBRL.', 'Datapoint order of the EFRAG VSME digital template: check the match with the template version in use before converting to XBRL.'),
 
   // paragrafi automatici
