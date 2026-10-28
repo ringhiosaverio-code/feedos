@@ -7,6 +7,7 @@ import { useData, store, toast, useUi, uiStore, openDrawer } from '../core/store
 import { go } from '../core/router.js';
 import { idx, appToday, costs, volumes, contaminantFor, weekly, signals } from '../core/derived.js';
 import { nf, sf, sum, dateIt, addDays, mondayOf, mean } from '../core/util.js';
+import { PM_LABEL, pm, nfPm, fmtPm, up, upDec, fmtUp, cellUp, colUp, upLabel, unitOf, SMALL_UNITS } from '../core/units.js';
 import { runScenario, scenarioBase } from '../engine/scenario.js';
 import { forecastAuto, MODEL_LABEL } from '../engine/forecast.js';
 import { PageHead, Panel, Btn, Table, Chip, Kpi, Field, Select, Empty, Seg, Kv } from '../ui/ui.jsx';
@@ -71,12 +72,13 @@ function MarginiEffettivi({ d, sel }) {
   const per = usePeriod(d); const ctx = ctxOf(d);
   const pp = useMemo(() => productProfit(d, ctx, per.P), [d, ctx, per.P]);
   const econ = useProductEconomics(d);
+  const I = idx(d); const P = r => I.prod[r?.id];
   const rows = pp.rows.filter(r => r.tonnes > 0).map(r => ({ ...r, below: econ.find(e => e.id === r.id)?.below, minPrice: econ.find(e => e.id === r.id)?.c.minPrice, priceT: r.revenue / r.tonnes, varT: (r.raw + r.shrink + r.energy + r.varConv + r.pack) / r.tonnes, mc2T: r.mc2 / r.tonnes, fullT: r.marginFull / r.tonnes }));
   const T = pp.totals || {};
   const cur = rows.find(r => r.id === sel) || [...rows].sort((a, b) => b.mc2 - a.mc2)[0];
   const sigs = signals(d).filter(s => s.area === 'economia');
   if (!rows.length) return <Panel title="Margini"><Empty title="Nessuna consegna nel periodo" /></Panel>;
-  const per1 = v => (cur ? v / cur.tonnes : 0);
+  const per1 = v => (cur ? up(v / cur.tonnes, P(cur)) : 0); // per tonnellata, o per kg o L nell'edizione agrofarmaci
   const steps = cur ? [
     { label: 'Prezzo netto', value: per1(cur.revenue), kind: 'total' },
     { label: 'Materie prime', value: -per1(cur.raw) }, { label: 'Calo', value: -per1(cur.shrink) }, { label: 'Energia', value: -per1(cur.energy) },
@@ -88,15 +90,15 @@ function MarginiEffettivi({ d, sel }) {
   return (
     <>
       <div className="kpis">
-        <Kpi label="Margine di contribuzione II" value={nf(T.mc2 / 1000)} unit="mila €" foot={`${nf(T.tonnes ? T.mc2 / T.tonnes : null, 1)} €/t · ${per.P.short}`} onClick={() => go('direzione', 'conto')} />
-        <Kpi label="Margine pieno" value={nf(T.marginFull / 1000)} unit="mila €" foot={`${nf(T.tonnes ? T.marginFull / T.tonnes : null, 1)} €/t dopo la trasformazione fissa`} />
+        <Kpi label="Margine di contribuzione II" value={nf(T.mc2 / 1000)} unit="mila €" foot={`${fmtPm(T.tonnes ? T.mc2 / T.tonnes : null, 1)} · ${per.P.short}`} onClick={() => go('direzione', 'conto')} />
+        <Kpi label="Margine pieno" value={nf(T.marginFull / 1000)} unit="mila €" foot={`${fmtPm(T.tonnes ? T.marginFull / T.tonnes : null, 1)} dopo la trasformazione fissa`} />
         <Kpi label="Materie prime sui ricavi" value={nf(T.revenue ? T.raw / T.revenue * 100 : null, 1)} unit="%" foot="al prezzo effettivo dei lotti consegnati" />
         <Kpi label="Prodotti sotto il prezzo minimo" value={econ.filter(r => r.below).length} status={econ.some(r => r.below) ? 'warn' : 'ok'} foot="prezzo netto incassato (90 giorni) contro il minimo ai costi di oggi" onClick={() => go('commerciale', 'listino')} />
       </div>
       {sigs.length > 0 && <Panel title="Da decidere" flush><SignalList items={sigs} limit={3} /></Panel>}
       <div className="split">
-        <Panel title={`Dal prezzo al margine · ${cur?.name}`} sub={`Per tonnellata nel periodo, al costo effettivo · ${nf(cur?.tonnes)} t consegnate`} id="eco-waterfall">
-          <Waterfall steps={steps} height={300} ariaLabel={`Cascata del margine effettivo di ${cur?.name}`} />
+        <Panel title={`Dal prezzo al margine · ${cur?.name}`} sub={`${SMALL_UNITS ? `Per ${unitOf(P(cur)) === 'L' ? 'litro' : 'kg'} venduto` : 'Per tonnellata'} nel periodo, al costo effettivo · ${nf(cur?.tonnes)} t consegnate`} id="eco-waterfall">
+          <Waterfall steps={steps} height={300} unit={upLabel(P(cur))} decimals={upDec(2)} ariaLabel={`Cascata del margine effettivo di ${cur?.name}`} />
         </Panel>
         <Panel title="Dove si guadagna" sub="Margine di contribuzione II del periodo per prodotto">
           <Bars data={[...rows].sort((a, b) => b.mc2 - a.mc2).map(r => ({ key: r.id, label: r.name, value: r.mc2 / 1000, color: r.mc2 < 0 ? 'var(--crit)' : r.id === cur?.id ? 'var(--maize)' : 'var(--s1)' }))} unit="mila €" decimals={0} onClick={x => go('economia', 'margini', x.key)} ariaLabel="Margine di contribuzione per prodotto" />
@@ -106,10 +108,10 @@ function MarginiEffettivi({ d, sel }) {
         <Table rows={rows} exportName="margini-effettivi" selected={cur?.id} onRow={r => go('economia', 'margini', r.id)} initialSort={{ key: 'mc2', dir: 'desc' }} cols={[
           { key: 'name', label: 'Prodotto', render: r => <><b>{r.name}</b><span className="sub">{r.code} · {r.packaging}</span></>, csv: r => r.name },
           { key: 'tonnes', label: 't', align: 'r', render: r => nf(r.tonnes), csv: r => r.tonnes },
-          { key: 'priceT', label: 'Prezzo netto', align: 'r', render: r => <>{nf(r.priceT, 1)}{r.below && <span className="sub" style={{ color: 'var(--warn-ink)' }}>sotto il minimo {nf(r.minPrice, 0)}</span>}</>, csv: r => r.priceT },
-          { key: 'varT', label: 'Costo variabile €/t', align: 'r', render: r => nf(r.varT, 1), csv: r => r.varT },
-          { key: 'mc2T', label: 'MdC II €/t', align: 'r', render: r => <span className={r.mc2T < 0 ? 'chip crit' : r.below ? 'chip warn' : ''}>{nf(r.mc2T, 1)}</span>, csv: r => r.mc2T },
-          { key: 'fullT', label: 'Margine pieno €/t', align: 'r', render: r => nf(r.fullT, 1), csv: r => r.fullT },
+          { key: 'priceT', label: colUp('Prezzo netto'), align: 'r', render: r => <>{cellUp(r.priceT, P(r), 1)}{r.below && <span className="sub" style={{ color: 'var(--warn-ink)' }}>sotto il minimo {cellUp(r.minPrice, P(r))}</span>}</>, csv: r => up(r.priceT, P(r)) },
+          { key: 'varT', label: colUp('Costo variabile'), align: 'r', render: r => cellUp(r.varT, P(r), 1), csv: r => up(r.varT, P(r)) },
+          { key: 'mc2T', label: colUp('MdC II'), align: 'r', render: r => <span className={r.mc2T < 0 ? 'chip crit' : r.below ? 'chip warn' : ''}>{cellUp(r.mc2T, P(r), 1)}</span>, csv: r => up(r.mc2T, P(r)) },
+          { key: 'fullT', label: colUp('Margine pieno'), align: 'r', render: r => cellUp(r.fullT, P(r), 1), csv: r => up(r.fullT, P(r)) },
           { key: 'mc2', label: 'MdC II', align: 'r', render: r => nf(r.mc2 / 1000, 1) + ' mila €', csv: r => r.mc2 },
         ]} />
       </Panel>
@@ -122,19 +124,19 @@ function MarginiOggi({ d, sel }) {
   const sigs = signals(d).filter(s => s.area === 'economia');
   const cur = rows.find(r => r.id === sel) || [...rows].sort((a, b) => b.vol - a.vol)[0];
   const T = sum(rows, r => r.vol);
-  const steps = cur ? [{ label: 'Prezzo incassato', value: cur.real, kind: 'total' }, ...cur.c.parts.filter(p => p.v > 0.005).map(p => ({ label: p.k, value: -p.v })), { label: 'Margine', value: cur.margin, kind: 'total', color: cur.margin >= 0 ? 'var(--s3)' : 'var(--crit)' }] : [];
+  const steps = cur ? [{ label: 'Prezzo incassato', value: up(cur.real, cur), kind: 'total' }, ...cur.c.parts.filter(p => p.v > 0.005).map(p => ({ label: p.k, value: -up(p.v, cur) })), { label: 'Margine', value: up(cur.margin, cur), kind: 'total', color: cur.margin >= 0 ? 'var(--s3)' : 'var(--crit)' }] : [];
   return (
     <>
       <div className="kpis">
         <Kpi label="Margine annuo stimato" value={nf(sum(rows, r => r.annual) / 1000)} unit="mila €" foot="stimato: prezzi netti di 90 giorni × volumi annui, costi pieni di oggi" />
-        <Kpi label="Margine medio" value={nf(sum(rows, r => r.annual) / Math.max(1, T), 1)} unit="€/t" foot={`su ${nf(T)} t/anno`} />
+        <Kpi label="Margine medio" value={nfPm(sum(rows, r => r.annual) / Math.max(1, T), 1)} unit={PM_LABEL} foot={`su ${nf(T)} t/anno`} />
         <Kpi label="Materie prime sul prezzo" value={nf(sum(rows, r => r.c.raw * r.vol) / Math.max(1, sum(rows, r => r.real * r.vol)) * 100, 1)} unit="%" foot="la leva principale del costo" />
         <Kpi label="Prodotti sotto il prezzo minimo" value={rows.filter(r => r.below).length} foot={`sul prezzo netto incassato · sconto medio ${nf(sum(rows, r => (r.discount || 0) * r.vol) / Math.max(1, T) * 100, 1)}%`} onClick={() => go('commerciale', 'listino')} />
       </div>
       {sigs.length > 0 && <Panel title="Da decidere" flush><SignalList items={sigs} limit={3} /></Panel>}
       <div className="split">
-        <Panel title={`Dal prezzo al margine · ${cur?.name}`} sub={`Per tonnellata, prezzo medio incassato negli ultimi 90 giorni (listino ${nf(cur?.listPrice)} €/t, sconto medio ${nf((cur?.discount || 0) * 100, 1)}%)`} id="eco-waterfall">
-          <Waterfall steps={steps} height={280} ariaLabel={`Cascata del margine di ${cur?.name}`} />
+        <Panel title={`Dal prezzo al margine · ${cur?.name}`} sub={`${SMALL_UNITS ? `Per ${unitOf(cur) === 'L' ? 'litro' : 'kg'}` : 'Per tonnellata'}, prezzo medio incassato negli ultimi 90 giorni (listino ${fmtUp(cur?.listPrice, cur)}, sconto medio ${nf((cur?.discount || 0) * 100, 1)}%)`} id="eco-waterfall">
+          <Waterfall steps={steps} height={280} unit={upLabel(cur)} decimals={upDec(2)} ariaLabel={`Cascata del margine di ${cur?.name}`} />
         </Panel>
         <Panel title="Dove si guadagna" sub="Contributo al margine annuo per prodotto">
           <Bars data={[...rows].sort((a, b) => b.annual - a.annual).map(r => ({ key: r.id, label: r.name, value: r.annual / 1000, color: r.annual < 0 ? 'var(--crit)' : r.id === cur?.id ? 'var(--maize)' : 'var(--s1)' }))} unit="mila €" decimals={0} onClick={x => go('economia', 'margini', x.key)} ariaLabel="Margine annuo per prodotto" />
@@ -144,10 +146,10 @@ function MarginiOggi({ d, sel }) {
         <Table rows={rows} selected={cur?.id} onRow={r => go('economia', 'margini', r.id)} initialSort={{ key: 'annual', dir: 'desc' }} cols={[
           { key: 'name', label: 'Prodotto', render: r => <><b>{r.name}</b><span className="sub">{r.code} · {r.packaging}</span></> },
           { key: 'vol', label: 't/anno', align: 'r', render: r => nf(r.vol) },
-          { key: 'real', label: 'Prezzo incassato', align: 'r', render: r => <>{nf(r.real, 1)}<span className="sub">listino {nf(r.listPrice)}</span></> },
-          { key: 'raw', label: 'Materie prime', align: 'r', sort: r => r.c.raw, render: r => nf(r.c.raw, 1) },
-          { key: 'total', label: 'Costo pieno', align: 'r', sort: r => r.c.total, render: r => nf(r.c.total, 1) },
-          { key: 'margin', label: 'Margine €/t', align: 'r', render: r => <span className={r.margin < 0 ? 'chip crit' : r.below ? 'chip warn' : ''} title={r.below ? 'Prezzo netto incassato sotto il prezzo minimo' : undefined}>{nf(r.margin, 1)}</span> },
+          { key: 'real', label: colUp('Prezzo incassato'), align: 'r', render: r => <>{cellUp(r.real, r, 1)}<span className="sub">listino {cellUp(r.listPrice, r)}</span></> },
+          { key: 'raw', label: colUp('Materie prime'), align: 'r', sort: r => r.c.raw, render: r => cellUp(r.c.raw, r, 1) },
+          { key: 'total', label: colUp('Costo pieno'), align: 'r', sort: r => r.c.total, render: r => cellUp(r.c.total, r, 1) },
+          { key: 'margin', label: colUp('Margine'), align: 'r', render: r => <span className={r.margin < 0 ? 'chip crit' : r.below ? 'chip warn' : ''} title={r.below ? 'Prezzo netto incassato sotto il prezzo minimo' : undefined}>{cellUp(r.margin, r, 1)}</span> },
           { key: 'marginPct', label: '%', align: 'r', render: r => nf(r.marginPct * 100, 1) },
           { key: 'annual', label: 'Margine annuo', align: 'r', render: r => nf(r.annual / 1000, 1) + ' mila €' },
         ]} />

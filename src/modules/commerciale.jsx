@@ -12,6 +12,7 @@ import { usePrefs } from '../core/prefs.js';
 import { nextCode } from '../core/codes.js';
 import { nf, sf, sum, dateIt, addDays, daysBetween, mean, round, relDays, uid, addMonths } from '../core/util.js';
 import { download, toCSV, stamp } from '../core/io.js';
+import { PM_LABEL, pm, pmDec, nfPm, fmtPm, up, upIn, upDec, upStep, fmtUp, cellUp, colUp, upLabel, SMALL_UNITS } from '../core/units.js';
 import { offerCheck } from '../engine/costing.js';
 import { listAt } from '../engine/actuals.js';
 import { SPECIES } from '../engine/nutrients.js';
@@ -138,7 +139,7 @@ function Clienti({ d, sel, per, scope }) {
       <div className="kpis">
         <Kpi label="Clienti serviti" value={served.length} cmp={cmpOf(C, cov, served.length, C ? servedC.length : null)} foot={`su ${rows.length} in ${scope ? 'portafoglio' : 'anagrafica'} · ${P.short}`} title="Clienti con almeno una consegna nel periodo" />
         <Kpi label="Consegnato" value={nf(T)} unit="t" cmp={cmpOf(C, cov, T, C ? TC : null)} foot={`${nf(sum(rows, r => r.revenue || 0) / 1e6, 2)} M€ di ricavi`} />
-        <Kpi label="Margine medio" value={T ? nf(M / T, 1) : '—'} unit="€/t" cmp={cmpOf(C, cov, T ? M / T : null, TC ? MC / TC : null, { kind: 'ratio', unit: '€/t' })} foot="costo effettivo, dopo le provvigioni"
+        <Kpi label="Margine medio" value={T ? nfPm(M / T, 1) : '—'} unit={PM_LABEL} cmp={cmpOf(C, cov, T ? pm(M / T) : null, TC ? pm(MC / TC) : null, { kind: 'ratio', unit: PM_LABEL })} foot="costo effettivo, dopo le provvigioni"
           title="Σ (ricavi − costo pieno effettivo dei lotti consegnati − provvigioni) / Σ t: materie prime dei lotti ai prezzi d’acquisto, energia misurata, trasformazione, imballo e logistica standard" />
         <Kpi label="Fermi da oltre 30 giorni" value={idle.length} status={idle.length ? 'warn' : null} foot="hanno comprato nel periodo, non negli ultimi 30 giorni" title={`Ultima consegna nel periodo prima del ${dateIt(addDays(P.to, -30), 'dm')}`} />
       </div>
@@ -155,7 +156,7 @@ function Clienti({ d, sel, per, scope }) {
             { key: 'abc', label: 'ABC', sort: c => abcOf(c.id) || 'Z', csv: c => abcOf(c.id), render: c => abcOf(c.id) || '—', className: 'hide-col' },
             { key: 'tonnes', label: 't nel periodo', align: 'r', csv: c => c.tonnes || 0, render: c => nf(c.tonnes || 0) },
             { key: 'trend', label: C && !C.budget ? `vs ${C.short}` : 'Tendenza', align: 'r', csv: c => c.trend, render: c => c.trend == null ? '—' : <span className={c.trend < -0.25 ? 'chip warn' : ''}>{sf(c.trend * 100)}%</span> },
-            { key: 'marginT', label: 'Margine €/t', align: 'r', csv: c => c.marginT, render: c => c.marginT == null ? '—' : <span className={c.marginT < 0 ? 'chip crit' : ''}>{nf(c.marginT, 1)}</span> },
+            { key: 'marginT', label: `Margine ${PM_LABEL}`, align: 'r', csv: c => pm(c.marginT), render: c => c.marginT == null ? '—' : <span className={c.marginT < 0 ? 'chip crit' : ''}>{nfPm(c.marginT, 1)}</span> },
             ...(hasCredit ? [{ key: 'risk', label: 'Credito', sort: c => byCredit[c.id]?.riskClass || 'Z', csv: c => byCredit[c.id]?.riskClass, render: c => { const r = byCredit[c.id]; return r?.riskClass ? <Chip kind={RISK_KIND[r.riskClass]} title={`Classe di rischio ${r.riskClass}${r.util != null ? ` · fido usato ${pctTxt(r.util, 0)}` : ''}${r.overdue ? ` · scaduto ${nf(r.overdue)} €` : ''}`}>{r.riskClass}</Chip> : '—'; } }] : []),
             { key: 'idle', label: 'Ultima consegna', align: 'r', sort: c => c.last, csv: c => c.last, render: c => c.last ? <span className={c.idle > 30 ? 'chip warn' : ''}>{relDays(c.last, today)}</span> : '—' },
             ...(scope ? [] : [{ key: 'agent', label: 'Agente' }]),
@@ -195,7 +196,7 @@ function CustomerMap({ d, rows, onPick, agent }) {
           </g>
         ))}
       </svg>
-      {h && <div className="tip" style={{ left: Math.min(Math.max(x(h.lon), 90), W - 90), top: y(h.lat) - r(h.tonnes) - 6 }}><b>{h.name}</b><div className="small">{h.city} · {nf(h.tonnes || 0)} t · {h.marginT != null ? nf(h.marginT, 1) + ' €/t' : '—'}</div>{h.idle > 30 && <div className="small">nessuna consegna negli ultimi {h.idle} giorni del periodo</div>}</div>}
+      {h && <div className="tip" style={{ left: Math.min(Math.max(x(h.lon), 90), W - 90), top: y(h.lat) - r(h.tonnes) - 6 }}><b>{h.name}</b><div className="small">{h.city} · {nf(h.tonnes || 0)} t · {h.marginT != null ? fmtPm(h.marginT, 1) : '—'}</div>{h.idle > 30 && <div className="small">nessuna consegna negli ultimi {h.idle} giorni del periodo</div>}</div>}
       <p className="xs muted" style={{ margin: '6px 0 0' }}>Posizioni dei comuni (coordinate approssimate), senza base cartografica · cerchio vuoto = nessuna consegna negli ultimi 30 giorni del periodo.</p>
     </div>
   );
@@ -247,8 +248,8 @@ function Offerte({ d, sel, per, scope }) {
           { key: 'code', label: 'Offerta', csv: o => o.code, render: o => <><span className="code">{o.code}</span><span className="sub">{dateIt(o.date, 'dm')} · valida fino al {dateIt(o.validUntil, 'dm')}</span></> },
           { key: 'cname', label: 'Cliente', csv: o => o.cname, render: o => <><b>{o.cname}</b><span className="sub">{o.pname}</span></> },
           { key: 'tonnes', label: 't', align: 'r', render: o => nf(o.tonnes) },
-          { key: 'price', label: 'Prezzo €/t', align: 'r', render: o => <>{nf(o.price)}<span className="sub">minimo {nf(o.chk?.minPrice)}</span></> },
-          { key: 'margin', label: 'Margine', align: 'r', sort: o => o.chk?.marginPct, csv: o => o.chk?.margin, render: o => o.chk ? <>{nf(o.chk.margin, 1)} €/t<span className="sub">{nf(o.chk.marginPct * 100, 1)}%</span></> : '—' },
+          { key: 'price', label: colUp('Prezzo'), align: 'r', csv: o => up(o.price, I.prod[o.productId]), render: o => <>{cellUp(o.price, I.prod[o.productId])}<span className="sub">minimo {cellUp(o.chk?.minPrice, I.prod[o.productId])}</span></> },
+          { key: 'margin', label: 'Margine', align: 'r', sort: o => o.chk?.marginPct, csv: o => o.chk?.margin, render: o => o.chk ? <>{fmtUp(o.chk.margin, I.prod[o.productId], 1)}<span className="sub">{nf(o.chk.marginPct * 100, 1)}%</span></> : '—' },
           { key: 'chk', label: 'Controllo', sort: o => o.chk?.status, csv: o => o.chk ? OCHECK[o.chk.status].label : '', render: o => o.chk ? <span className="com-chips"><Chip kind={OCHECK[o.chk.status].kind} icon={o.chk.status === 'ok' ? LuCheck : LuTriangleAlert}>{OCHECK[o.chk.status].label}</Chip>{o.approval?.by && <Chip kind="outline" title={`Deroga approvata da ${o.approval.by} il ${dateIt(o.approval.at)}`}>deroga</Chip>}{o.creditException?.by && <Chip kind="outline" title={`Fuori fido: eccezione di ${o.creditException.by}`}>fido</Chip>}</span> : '—' },
           { key: 'state', label: 'Stato', csv: o => o.state, render: o => <Chip kind={OFFER_STATES[o.state]?.kind}>{OFFER_STATES[o.state]?.label || o.state}</Chip> },
           { key: 'act', label: '', nosort: true, csv: false, render: actions },
@@ -262,7 +263,7 @@ function Offerte({ d, sel, per, scope }) {
         <Panel title="Perché perdiamo" sub={`Offerte perse nel periodo per motivo (valore) · ${P.short}`}>
           {losses.length ? <>
             <Bars data={losses.map(r => ({ key: r.reason, label: `${r.label} (${r.n})`, value: r.value / 1000, color: r.reason === 'prezzo' || r.reason === 'concorrente' ? 'var(--s2)' : 'var(--s7)' }))} unit="mila €" decimals={1} ariaLabel="Offerte perse per motivo" />
-            {losses.filter(r => r.competitorGap != null).map(r => <p key={r.reason} className="small muted" style={{ margin: '8px 0 0' }}>{r.label}: concorrenti più bassi di {nf(r.competitorGap, 1)} €/t in media ({Object.entries(r.competitors).map(([k, v]) => `${k} ×${v}`).join(', ') || 'concorrente non indicato'}).</p>)}
+            {losses.filter(r => r.competitorGap != null).map(r => <p key={r.reason} className="small muted" style={{ margin: '8px 0 0' }}>{r.label}: concorrenti più bassi di {fmtPm(r.competitorGap, 1)} in media ({Object.entries(r.competitors).map(([k, v]) => `${k} ×${v}`).join(', ') || 'concorrente non indicato'}).</p>)}
           </> : <Empty icon={LuHandshake} title="Nessuna offerta persa nel periodo" />}
         </Panel>
       </div>
@@ -277,6 +278,7 @@ export function LossDialog({ d, offer, onClose }) {
   const today = appToday(d);
   const [f, setF] = useState({ reason: offer.lossReason || 'prezzo', competitor: offer.competitor || '', competitorPrice: offer.competitorPrice ?? null, note: '' });
   const gap = f.competitorPrice > 0 ? offer.price - f.competitorPrice : null;
+  const pp = (d.products || []).find(x => x.id === offer.productId);
   const save = () => {
     const note = f.note.trim() ? [offer.note, f.note.trim()].filter(Boolean).join(' · ') : offer.note;
     store.update('offers', offer.id, { status: 'persa', decidedAt: today, lossReason: f.reason, competitor: f.competitor.trim() || null, competitorPrice: f.competitorPrice > 0 ? f.competitorPrice : null, note: note || '' }, `Offerta ${offer.code}: persa (${lossLabel(f.reason).toLowerCase()})`);
@@ -291,7 +293,7 @@ export function LossDialog({ d, offer, onClose }) {
       </Field>
       <div className="form">
         <Field label="Concorrente"><input className="input" value={f.competitor} onChange={e => setF(x => ({ ...x, competitor: e.target.value }))} placeholder="Nome del concorrente" /></Field>
-        <Field label="Prezzo del concorrente €/t" hint={gap != null ? `${gap > 0 ? 'più basso' : 'più alto'} di ${nf(Math.abs(gap))} €/t rispetto ai nostri ${nf(offer.price)}` : `nostro prezzo ${nf(offer.price)} €/t`}><NumInput value={f.competitorPrice} onChange={v => setF(x => ({ ...x, competitorPrice: v }))} decimals={0} min={0} /></Field>
+        <Field label={`Prezzo del concorrente ${upLabel(pp)}`} hint={gap != null ? `${gap > 0 ? 'più basso' : 'più alto'} di ${fmtUp(Math.abs(gap), pp)} rispetto ai nostri ${fmtUp(offer.price, pp)}` : `nostro prezzo ${fmtUp(offer.price, pp)}`}><NumInput value={up(f.competitorPrice, pp)} onChange={v => setF(x => ({ ...x, competitorPrice: upIn(v, pp) }))} decimals={upDec(0)} min={0} /></Field>
       </div>
       <Field label="Nota"><textarea className="input" value={f.note} onChange={e => setF(x => ({ ...x, note: e.target.value }))} placeholder="Cosa ha deciso il cliente" /></Field>
     </Dialog>
@@ -316,9 +318,9 @@ export function RenewDialog({ d, offer, onClose }) {
     <Dialog title={`Rinnova l’offerta ${offer.code}`} onClose={onClose} onOk={save} ok="Rinnova" okDisabled={!valid} hint={needApp && !by.trim() ? 'Sotto il minimo serve chi approva' : null}>
       <div className="form">
         <Field label="Valida fino al"><input type="date" className="input" value={until} min={today} onChange={e => setUntil(e.target.value)} /></Field>
-        <Field label="Prezzo €/t" hint={cost ? `minimo ${nf(cost.minPrice)} · obiettivo ${nf(cost.targetPrice)} ai costi di oggi` : ''}><NumInput value={price} onChange={v => setPrice(v || 0)} decimals={0} step={5} /></Field>
+        <Field label={`Prezzo ${upLabel(p)}`} hint={cost ? `minimo ${fmtUp(cost.minPrice, p)} · obiettivo ${fmtUp(cost.targetPrice, p)} ai costi di oggi` : ''}><NumInput value={up(price, p)} onChange={v => setPrice(upIn(v, p) || 0)} decimals={upDec(0)} step={upStep} /></Field>
       </div>
-      {chk && <div className={`note ${chk.status === 'sotto-minimo' ? 'crit' : chk.status === 'ok' ? 'good' : 'warn'}`}>Margine {nf(chk.margin, 1)} €/t ({nf(chk.marginPct * 100, 1)}%) ai costi di oggi · {OCHECK[chk.status].label}{offer.costAtOffer ? ` · costo pieno all’offerta ${nf(offer.costAtOffer, 1)}, oggi ${nf(cost.total, 1)} €/t` : ''}</div>}
+      {chk && <div className={`note ${chk.status === 'sotto-minimo' ? 'crit' : chk.status === 'ok' ? 'good' : 'warn'}`}>Margine {fmtUp(chk.margin, p, 1)} ({nf(chk.marginPct * 100, 1)}%) ai costi di oggi · {OCHECK[chk.status].label}{offer.costAtOffer ? ` · costo pieno all’offerta ${fmtUp(offer.costAtOffer, p, 1)}, oggi ${fmtUp(cost.total, p, 1)}` : ''}</div>}
       {needApp && <Field label="Deroga approvata da" hint="Nome di chi autorizza il prezzo sotto il minimo (resta nell’offerta e nel registro)"><input className="input" value={by} onChange={e => setBy(e.target.value)} placeholder="Es. Direzione commerciale" /></Field>}
     </Dialog>
   );
@@ -335,7 +337,7 @@ function NuovaOfferta({ d, prefill, scope }) {
   const [pid, setPid] = useState(null);
   const p = I.prod[pid && prods.some(x => x.id === pid) ? pid : prods[0]?.id];
   const cost = p ? C[p.id] : null;
-  const [t, setT] = useState(60), [price, setPrice] = useState(null), [until, setUntil] = useState(addDays(today, 30));
+  const [t, setT] = useState(SMALL_UNITS ? 2 : 60), [price, setPrice] = useState(null), [until, setUntil] = useState(addDays(today, 30));
   const [by, setBy] = useState(''), [why, setWhy] = useState(''), [creditBy, setCreditBy] = useState('');
   const list = p ? listAt(d.priceLists, p, today) : 0;
   const pr = price ?? (p ? round5(list * (1 - (c?.discountPct || 0) / 100)) : 0);
@@ -354,7 +356,7 @@ function NuovaOfferta({ d, prefill, scope }) {
     const obj = { id, code, date: today, customerId: c.id, productId: p.id, tonnes: t, price: pr, validUntil: until, status, agentId: c.agentId, note: '', costAtOffer: round(cost.total, 2), listAtOffer: list,
       ...(needApp ? { approval: { by: by.trim(), at: today, note: why.trim() } } : {}),
       ...(overCredit ? { creditException: { by: creditBy.trim(), at: today, exposure: round(+cr.exposure || 0), limit: +cr.creditLimit } } : {}) };
-    store.batch([{ kind: 'add', coll: 'offers', obj }, op], `Nuova offerta ${code} a ${c.name}: ${nf(t)} t di ${p.name} a ${nf(pr)} €/t`);
+    store.batch([{ kind: 'add', coll: 'offers', obj }, op], `Nuova offerta ${code} a ${c.name}: ${nf(t)} t di ${p.name} a ${fmtUp(pr, p)}`);
     toast(status === 'inviata' ? `Offerta ${code} registrata come inviata` : `Bozza ${code} salvata`, 'ok', { label: 'Annulla', fn: () => store.undo() });
     go('commerciale', 'offerte', id);
   };
@@ -369,12 +371,12 @@ function NuovaOfferta({ d, prefill, scope }) {
           </div>
           <div className="form">
             <Field label="Quantità (t)"><NumInput value={t} onChange={v => setT(v || 0)} decimals={0} min={0} id="of-t" /></Field>
-            <Field label="Prezzo €/t" hint={`listino in vigore ${nf(list)} €/t · sconto abituale ${nf(c?.discountPct, 1)}%`}><NumInput value={pr} onChange={setPrice} decimals={0} step={5} id="of-price" /></Field>
+            <Field label={`Prezzo ${upLabel(p)}`} hint={`listino in vigore ${fmtUp(list, p)} · sconto abituale ${nf(c?.discountPct, 1)}%`}><NumInput value={up(pr, p)} onChange={v => setPrice(v == null ? null : upIn(v, p))} decimals={upDec(0)} step={upStep} id="of-price" /></Field>
             <Field label="Valida fino al"><input type="date" className="input" value={until} min={today} onChange={e => setUntil(e.target.value)} id="of-until" /></Field>
           </div>
           <div className="row">
-            <Btn small icon={LuSparkles} disabled={!cost} onClick={() => setPrice(ceil5(cost.targetPrice))}>Prezzo obiettivo {nf(ceil5(cost?.targetPrice || 0))}</Btn>
-            <Btn small disabled={!cost} onClick={() => setPrice(ceil5(cost.minPrice))}>Prezzo minimo {nf(ceil5(cost?.minPrice || 0))}</Btn>
+            <Btn small icon={LuSparkles} disabled={!cost} onClick={() => setPrice(ceil5(cost.targetPrice))}>Prezzo obiettivo {cellUp(ceil5(cost?.targetPrice || 0), p)}</Btn>
+            <Btn small disabled={!cost} onClick={() => setPrice(ceil5(cost.minPrice))}>Prezzo minimo {cellUp(ceil5(cost?.minPrice || 0), p)}</Btn>
             {list > 0 && <Btn small kind="ghost" onClick={() => setPrice(null)}>Listino − sconto abituale</Btn>}
           </div>
           {disc > auth + 1e-9 && <div className="note warn small">Sconto sul listino {nf(disc, 1)}%: oltre il {nf(auth, 1)}% autorizzato per questo cliente (sconto abituale + {nf(auth - (c?.discountPct || 0), 1)} punti di trattativa).</div>}
@@ -392,7 +394,7 @@ function NuovaOfferta({ d, prefill, scope }) {
           <div className={`offer-check ${chk.status}`}>
             <div className="eyebrow">Esito</div>
             <div className="big"><Chip kind={OCHECK[chk.status].kind} icon={chk.status === 'ok' ? LuCheck : LuTriangleAlert}>{OCHECK[chk.status].label}</Chip></div>
-            <Kv items={[['Margine', `${nf(chk.margin, 1)} €/t · ${nf(chk.marginPct * 100, 1)}% del prezzo`], ['Margine dell’offerta', `${nf(chk.total)} €`], ['Costo pieno oggi', `${nf(cost.total, 1)} €/t (materie prime ${nf(cost.raw, 1)})`], ['Prezzo minimo', `${nf(cost.minPrice, 1)} €/t (margine ${nf(p.minMarginPct)}%)`], ['Prezzo obiettivo', `${nf(cost.targetPrice, 1)} €/t (margine ${nf(p.targetMarginPct)}%)`], ['Sconto sul listino', `${nf(disc, 1)}% (autorizzato ${nf(auth, 1)}%)`], ['Volume annuo del prodotto', `${nf(V[p.id] || 0)} t`], cr && +cr.creditLimit > 0 ? ['Fido del cliente', `${nf(cr.exposure)} € su ${nf(cr.creditLimit)} €`] : null]} />
+            <Kv items={[['Margine', `${fmtUp(chk.margin, p, 1)} · ${nf(chk.marginPct * 100, 1)}% del prezzo`], ['Margine dell’offerta', `${nf(chk.total)} €`], ['Costo pieno oggi', `${fmtUp(cost.total, p, 1)} (materie prime ${fmtUp(cost.raw, p, 1)})`], ['Prezzo minimo', `${fmtUp(cost.minPrice, p, 1)} (margine ${nf(p.minMarginPct)}%)`], ['Prezzo obiettivo', `${fmtUp(cost.targetPrice, p, 1)} (margine ${nf(p.targetMarginPct)}%)`], ['Sconto sul listino', `${nf(disc, 1)}% (autorizzato ${nf(auth, 1)}%)`], ['Volume annuo del prodotto', `${nf(V[p.id] || 0)} t`], cr && +cr.creditLimit > 0 ? ['Fido del cliente', `${nf(cr.exposure)} € su ${nf(cr.creditLimit)} €`] : null]} />
             {chk.status === 'sotto-minimo' && <p className="small" style={{ margin: 0 }}>Sotto il minimo il prezzo non copre il margine deciso dalla direzione: per registrare l’offerta serve il nome di chi approva la deroga.</p>}
           </div>
         )}
@@ -418,7 +420,7 @@ function StepSpark({ d, p, today, w = 104, h = 26 }) {
   const X = s => 2 + daysBetween(from, s) / span * (w - 4), Y = v => mx === mn ? h / 2 : h - 4 - (v - mn) / rg * (h - 8);
   const past = segs.filter(s => !s.future), fut = segs.filter(s => s.future);
   const path = list => list.map((s, i) => `${i ? `V${Y(s.v).toFixed(1)}` : `M${X(s.a).toFixed(1)} ${Y(s.v).toFixed(1)}`}H${X(s.b).toFixed(1)}`).join('');
-  const tip = hist.map(x => `dal ${dateIt(x.validFrom)}: ${nf(x.price)} €/t${x.reason ? ` (${x.reason})` : ''}`).join('\n') || `listino ${nf(p.listPrice)} €/t, nessuna versione registrata`;
+  const tip = hist.map(x => `dal ${dateIt(x.validFrom)}: ${fmtUp(x.price, p)}${x.reason ? ` (${x.reason})` : ''}`).join('\n') || `listino ${fmtUp(p.listPrice, p)}, nessuna versione registrata`;
   const cur = listAt(d.priceLists, p, today);
   return (
     <svg className="com-step" viewBox={`0 0 ${w} ${h}`} width={w} height={h} role="img" aria-label={`Storico del listino di ${p.name}`}><title>{tip}</title>
@@ -447,29 +449,29 @@ function Listino({ d, per, scope }) {
   const setPrice = (r, price) => {
     const ops = newPriceListOps(d, { productId: r.id, price, validFrom: today, reason: 'Modifica dal listino', today });
     if (!ops.length) return;
-    store.batch(ops, `Listino: ${r.name} a ${nf(price)} €/t da oggi`);
-    toast(`${r.name}: ${nf(price)} €/t da oggi (nuova versione)`, 'ok', { label: 'Annulla', fn: () => store.undo() });
+    store.batch(ops, `Listino: ${r.name} a ${fmtUp(price, r.p)} da oggi`);
+    toast(`${r.name}: ${fmtUp(price, r.p)} da oggi (nuova versione)`, 'ok', { label: 'Annulla', fn: () => store.undo() });
   };
-  const alignAll = () => confirm(`Allineare ${under.length} listini al prezzo obiettivo?`, <><p>Per i prodotti con il prezzo netto sotto il minimo il listino passa, da oggi, al <b>listino necessario</b> (prezzo obiettivo ai costi di oggi diviso per 1 − sconto medio degli ultimi 90 giorni), arrotondato a 5 €/t:</p><p className="small">{under.map(r => `${r.name} ${nf(r.listNow)} → ${nf(ceil5(r.required))}`).join(' · ')}.</p><p className="small muted">Ogni prodotto riceve una nuova versione di listino; le offerte già inviate non cambiano.</p></>, () => {
+  const alignAll = () => confirm(`Allineare ${under.length} listini al prezzo obiettivo?`, <><p>Per i prodotti con il prezzo netto sotto il minimo il listino passa, da oggi, al <b>listino necessario</b> (prezzo obiettivo ai costi di oggi diviso per 1 − sconto medio degli ultimi 90 giorni), arrotondato a {SMALL_UNITS ? 'mezzo centesimo' : '5 €/t'}:</p><p className="small">{under.map(r => `${r.name} ${cellUp(r.listNow, r.p)} → ${fmtUp(ceil5(r.required), r.p)}`).join(' · ')}.</p><p className="small muted">Ogni prodotto riceve una nuova versione di listino; le offerte già inviate non cambiano.</p></>, () => {
     const ops = bulkRevisionOps(d, { byProduct: Object.fromEntries(under.map(r => [r.id, ceil5(r.required)])), validFrom: today, reason: 'Allineamento al prezzo obiettivo', approvedBy: '', today });
     store.batch(ops, `Listino allineato: ${under.length} prodotti`);
     toast('Listino aggiornato da oggi', 'ok', { label: 'Annulla', fn: () => store.undo() });
   }, { ok: 'Aggiorna' });
-  const exportList = () => download(`listino-${stamp()}.csv`, toCSV(rows, [{ key: 'code', label: 'Codice' }, { key: 'name', label: 'Prodotto' }, { label: 'Forma', value: r => r.p.form }, { label: 'Confezione', value: r => r.p.packaging }, { label: 'Prezzo €/t', value: r => r.listNow }, { label: 'In vigore dal', value: r => [...r.hist].reverse().find(h => h.validFrom <= today)?.validFrom || '' }, { label: 'Condizioni', value: () => 'franco destino, trasporto standard incluso, IVA esclusa' }]), 'text/csv;charset=utf-8');
+  const exportList = () => download(`listino-${stamp()}.csv`, toCSV(rows, [{ key: 'code', label: 'Codice' }, { key: 'name', label: 'Prodotto' }, { label: 'Forma', value: r => r.p.form }, { label: 'Confezione', value: r => r.p.packaging }, { label: colUp('Prezzo'), value: r => up(r.listNow, r.p) }, { label: 'Unità', value: r => upLabel(r.p) }, { label: 'In vigore dal', value: r => [...r.hist].reverse().find(h => h.validFrom <= today)?.validFrom || '' }, { label: 'Condizioni', value: () => 'franco destino, trasporto standard incluso, IVA esclusa' }]), 'text/csv;charset=utf-8');
   const exportCust = () => {
     const c = (d.customers || []).find(x => x.id === csvCust); if (!c) return;
     const mine = rows.filter(r => !c.products?.length || c.products.includes(r.code));
-    download(`listino-${c.code || c.id}-${stamp()}.csv`, toCSV(mine, [{ key: 'code', label: 'Codice' }, { key: 'name', label: 'Prodotto' }, { label: 'Listino €/t', value: r => r.listNow }, { label: 'Sconto %', value: () => +c.discountPct || 0 }, { label: 'Prezzo netto €/t', value: r => round(r.listNow * (1 - (+c.discountPct || 0) / 100), 2) }, { label: 'Condizioni', value: () => 'franco destino, trasporto standard incluso, IVA esclusa' }]), 'text/csv;charset=utf-8');
+    download(`listino-${c.code || c.id}-${stamp()}.csv`, toCSV(mine, [{ key: 'code', label: 'Codice' }, { key: 'name', label: 'Prodotto' }, { label: colUp('Listino'), value: r => up(r.listNow, r.p) }, { label: 'Unità', value: r => upLabel(r.p) }, { label: 'Sconto %', value: () => +c.discountPct || 0 }, { label: colUp('Prezzo netto'), value: r => round(up(r.listNow * (1 - (+c.discountPct || 0) / 100), r.p), upDec(2)) }, { label: 'Condizioni', value: () => 'franco destino, trasporto standard incluso, IVA esclusa' }]), 'text/csv;charset=utf-8');
   };
   const openDraft = (byProduct = {}) => setDraft({ validFrom: firstOfNextMonth(today), mode: 'prodotti', byProduct, bySpecies: {}, reason: '', approvedBy: '', elasticity: +(d.settings?.finance?.elasticity ?? 0) || 0 });
   const W = sel ? pocketWaterfall(d, ctx, P, { productId: sel.id, agentId: scope }) : null;
   return (
     <>
       {sync.length > 0 && <div className="note maize row between"><span><b>{sync.length} versioni di listino sono entrate in vigore</b>: i prezzi in anagrafica (usati da costi e margini a listino) vanno allineati.</span><Btn small kind="primary" onClick={() => { store.batch(sync, `Listini entrati in vigore: ${sync.length} prodotti`); toast('Listino in anagrafica allineato', 'ok', { label: 'Annulla', fn: () => store.undo() }); }}>Applica i listini in vigore</Btn></div>}
-      {under.length > 0 && !scope && <div className="note crit row between"><span><b>{under.length} prodotti hanno il prezzo netto sotto il margine minimo</b> (realizzato negli ultimi 90 giorni, ai costi di oggi): {under.map(r => r.name).join(', ')}.</span><Btn small kind="primary" onClick={alignAll}>Allinea al prezzo obiettivo</Btn></div>}
+      {under.length > 0 && !scope && <div className="note crit row between"><span><b>{under.length === 1 ? '1 prodotto ha' : `${under.length} prodotti hanno`} il prezzo netto sotto il margine minimo</b> (realizzato negli ultimi 90 giorni, ai costi di oggi): {under.map(r => r.name).join(', ')}.</span><Btn small kind="primary" onClick={alignAll}>Allinea al prezzo obiettivo</Btn></div>}
       <div className="kpis">
         <Kpi label="Realizzazione sul listino" value={RT.list > 0 ? nf(RT.net / RT.list * 100, 1) : '—'} unit="%" cmp={cmpOf(C, cov, RT.list > 0 ? RT.net / RT.list * 100 : null, RC?.list > 0 ? RC.net / RC.list * 100 : null, { kind: 'ratio', unit: 'pt' })}
-          foot={`prezzo netto medio ${nf(RT.netT, 1)} €/t`} title="Σ ricavi / Σ (t × listino in vigore il giorno della consegna)" />
+          foot={`prezzo netto medio ${fmtPm(RT.netT, 1)}`} title="Σ ricavi / Σ (t × listino in vigore il giorno della consegna)" />
         <Kpi label="Sconto medio realizzato" value={RT.discountPct != null ? nf(RT.discountPct * 100, 2) : '—'} unit="%" cmp={cmpOf(C, cov, RT.discountPct != null ? RT.discountPct * 100 : null, RC?.discountPct != null ? RC.discountPct * 100 : null, { kind: 'ratio', unit: 'pt', good: 'down', decimals: 2 })} foot={`${nf(RT.discount / 1000)} mila € sotto il listino`} />
         <Kpi label="Pass-through materie prime" value={ptW ? nf(ptN / ptW * 100) : '—'} unit="%" foot={`dal ${dateIt(P.from, 'dm')} a oggi, pesato sui volumi`} title="(listino oggi − listino a inizio periodo) / (materie prime €/t dell’ultimo mese − del primo mese), dai costi effettivi dei lotti" />
         <Kpi label="Listini sotto il necessario" value={gaps.length} status={gaps.length ? 'warn' : 'ok'} foot="oltre il 3% sotto il prezzo che dà il margine obiettivo" title="Listino necessario = prezzo obiettivo ai costi di oggi / (1 − sconto medio degli ultimi 90 giorni)" />
@@ -479,13 +481,13 @@ function Listino({ d, per, scope }) {
         actions={<>{!draft && !scope && <Btn small kind="primary" icon={LuCalendarClock} onClick={() => openDraft()}>Nuovo listino dal…</Btn>}<Btn small icon={LuDownload} onClick={exportList}>Esporta listino</Btn></>}>
         <Table rows={rows} selected={sel?.id} onRow={r => setSel(r.id)} initialSort={{ key: 'gapPct', dir: 'desc' }} exportName="listino-analisi" cols={[
           { key: 'name', label: 'Prodotto', csv: r => r.name, render: r => <><b>{r.name}</b><span className="sub">{r.code} · {r.p.form} · {r.p.packaging}</span></> },
-          { key: 'listNow', label: 'Listino €/t', align: 'r', render: r => <div className="com-li" onClick={e => e.stopPropagation()}>{scope ? <b>{nf(r.listNow)}</b> : <NumInput value={r.listNow} decimals={0} slim step={5} onChange={v => v > 0 && Math.abs(v - r.listNow) >= 0.5 && setPrice(r, v)} ariaLabel={`Listino di ${r.name} da oggi`} />}{r.next && <span className="sub" title={r.next.reason || ''}>→ {nf(r.next.price)} dal {dateIt(r.next.validFrom, 'dm')}</span>}</div> },
-          { key: 'netT', label: 'Netto medio', align: 'r', render: r => r.netT == null ? '—' : <>{nf(r.netT, 1)}<span className="sub">{nf(r.tonnes)} t</span></> },
+          { key: 'listNow', label: colUp('Listino'), align: 'r', csv: r => up(r.listNow, r.p), render: r => <div className="com-li" onClick={e => e.stopPropagation()}>{scope ? <b>{cellUp(r.listNow, r.p)}</b> : <NumInput value={up(r.listNow, r.p)} decimals={upDec(0)} slim step={upStep} onChange={v => { const t = upIn(v, r.p); if (t > 0 && Math.abs(t - r.listNow) >= 0.5) setPrice(r, t); }} ariaLabel={`Listino di ${r.name} da oggi in ${upLabel(r.p)}`} />}{SMALL_UNITS && !scope && <span className="sub">{upLabel(r.p)}</span>}{r.next && <span className="sub" title={r.next.reason || ''}>→ {nf(r.next.price)} dal {dateIt(r.next.validFrom, 'dm')}</span>}</div> },
+          { key: 'netT', label: colUp('Netto medio'), align: 'r', csv: r => up(r.netT, r.p), render: r => r.netT == null ? '—' : <>{cellUp(r.netT, r.p, 1)}<span className="sub">{nf(r.tonnes)} t</span></> },
           { key: 'discountPct', label: 'Sconto', align: 'r', render: r => pctTxt(r.discountPct, 2) },
-          { key: 'passThrough', label: 'Pass-through', align: 'r', render: r => r.pt ? <span title={`Listino ${nf(r.pt.listFrom)} → ${nf(r.pt.listNow)} €/t; materie prime ${nf(r.pt.rawFrom, 1)} → ${nf(r.pt.rawNow, 1)} €/t (${r.pt.monthFrom} → ${r.pt.monthNow})`}>{nf(r.pt.value * 100)}%</span> : <span className="muted" title="Materie prime ferme (meno di 1 €/t) o dati insufficienti">—</span> },
-          { key: 'required', label: 'Necessario', align: 'r', render: r => r.required == null ? '—' : <>{nf(r.required)}<span className="sub">sconto 90 gg {pctTxt(r.discount90, 1)}</span></> },
-          { key: 'gapPct', label: 'Gap', align: 'r', csv: r => r.gap, render: r => r.gap == null ? '—' : <span className={r.gapPct > 0.03 ? 'chip warn' : r.gapPct > 0 ? '' : 'muted'}>{sf(r.gap)} €/t<span className="sub">{sf(r.gapPct * 100, 1)}%</span></span> },
-          { key: 'status', label: 'Controllo netto', sort: r => ({ 'sotto-minimo': 0, 'sotto-obiettivo': 1, ok: 2 })[r.status], csv: r => r.status ? OCHECK[r.status].label : '', render: r => r.status ? <Chip kind={OCHECK[r.status].kind} title={`Netto ${nf(r.netCheck, 1)} €/t (${r.net90 != null ? 'ultimi 90 giorni' : 'listino, nessuna consegna in 90 giorni'}) · minimo ${nf(r.cost?.minPrice, 1)} · obiettivo ${nf(r.cost?.targetPrice, 1)}`}>{OCHECK[r.status].label}</Chip> : '—' },
+          { key: 'passThrough', label: 'Pass-through', align: 'r', render: r => r.pt ? <span title={`Listino ${fmtUp(r.pt.listFrom, r.p)} → ${fmtUp(r.pt.listNow, r.p)}; materie prime ${fmtUp(r.pt.rawFrom, r.p, 1)} → ${fmtUp(r.pt.rawNow, r.p, 1)} (${r.pt.monthFrom} → ${r.pt.monthNow})`}>{nf(r.pt.value * 100)}%</span> : <span className="muted" title="Materie prime ferme (meno di 1 €/t) o dati insufficienti">—</span> },
+          { key: 'required', label: colUp('Necessario'), align: 'r', csv: r => up(r.required, r.p), render: r => r.required == null ? '—' : <>{cellUp(r.required, r.p)}<span className="sub">sconto 90 gg {pctTxt(r.discount90, 1)}</span></> },
+          { key: 'gapPct', label: 'Gap', align: 'r', csv: r => r.gap, render: r => r.gap == null ? '—' : <span className={r.gapPct > 0.03 ? 'chip warn' : r.gapPct > 0 ? '' : 'muted'}>{r.gap > 0 ? '+' : ''}{fmtUp(r.gap, r.p)}<span className="sub">{sf(r.gapPct * 100, 1)}%</span></span> },
+          { key: 'status', label: 'Controllo netto', sort: r => ({ 'sotto-minimo': 0, 'sotto-obiettivo': 1, ok: 2 })[r.status], csv: r => r.status ? OCHECK[r.status].label : '', render: r => r.status ? <Chip kind={OCHECK[r.status].kind} title={`Netto ${fmtUp(r.netCheck, r.p, 1)} (${r.net90 != null ? 'ultimi 90 giorni' : 'listino, nessuna consegna in 90 giorni'}) · minimo ${fmtUp(r.cost?.minPrice, r.p, 1)} · obiettivo ${fmtUp(r.cost?.targetPrice, r.p, 1)}`}>{OCHECK[r.status].label}</Chip> : '—' },
           { key: 'hist', label: 'Storico', nosort: true, csv: r => r.hist.map(h => `${h.validFrom}:${h.price}`).join(' '), render: r => <StepSpark d={d} p={r.p} today={today} /> },
         ]} />
         <div className="row com-foot">
@@ -497,16 +499,16 @@ function Listino({ d, per, scope }) {
       </Panel>
       {sel && W && (
         <div className="split">
-          <Panel title={`Dal listino al margine pocket · ${sel.name}`} sub={`€/t sulle consegne del periodo (${nf(W.tonnes)} t): sconti, premi, provvigione, dilazione e trasporto, poi il costo industriale effettivo`} id="com-pocket">
+          <Panel title={`Dal listino al margine pocket · ${sel.name}`} sub={`${upLabel(sel.p)} sulle consegne del periodo (${nf(W.tonnes)} t): sconti, premi, provvigione, dilazione e trasporto, poi il costo industriale effettivo`} id="com-pocket">
             {W.tonnes > 0 ? <Waterfall steps={W.steps.map(s => ({ label: s.label, value: s.value, kind: s.kind === 'total' ? 'total' : undefined, color: s.key === 'margin' ? (s.value >= 0 ? 'var(--s3)' : 'var(--crit)') : s.key === 'pocket' ? 'var(--s1)' : undefined }))} height={280} ariaLabel={`Cascata del prezzo di ${sel.name}`} />
               : <Empty title="Nessuna consegna nel periodo" />}
             <p className="xs muted" style={{ margin: '6px 0 0' }}>Prezzo pocket = netto − premio di fine anno − provvigione − onere della dilazione − trasporto; margine pocket = prezzo pocket − (materie prime dei lotti, calo, energia misurata, trasformazione variabile, imballo).</p>
           </Panel>
           <Panel title="Versioni del listino" sub="Ogni revisione ha decorrenza e motivo; le precedenti restano per la realizzazione storica" flush
             actions={<Btn small kind="ghost" onClick={() => openDrawer('product', sel.id)}>Scheda prodotto</Btn>}>
-            {sel.hist.length ? <div className="tw"><table className="t"><thead><tr><th>Dal</th><th>Al</th><th className="r">€/t</th><th>Motivo</th></tr></thead>
-              <tbody>{[...sel.hist].reverse().map(h => <tr key={h.id}><td>{dateIt(h.validFrom)}</td><td>{h.validTo ? dateIt(h.validTo) : h.validFrom > today ? 'futura' : 'in vigore'}</td><td className="r"><b>{nf(h.price)}</b></td><td>{h.reason || '—'}{h.approvedBy && <span className="sub">approvato da {h.approvedBy}</span>}</td></tr>)}</tbody></table></div>
-              : <Empty icon={LuTags} title="Nessuna versione registrata">Il prezzo di listino è {nf(sel.listPrice)} €/t; la prima revisione registrerà anche il prezzo precedente.</Empty>}
+            {sel.hist.length ? <div className="tw"><table className="t"><thead><tr><th>Dal</th><th>Al</th><th className="r">{upLabel(sel.p)}</th><th>Motivo</th></tr></thead>
+              <tbody>{[...sel.hist].reverse().map(h => <tr key={h.id}><td>{dateIt(h.validFrom)}</td><td>{h.validTo ? dateIt(h.validTo) : h.validFrom > today ? 'futura' : 'in vigore'}</td><td className="r"><b>{nf(up(h.price, sel.p), upDec(0))}</b></td><td>{h.reason || '—'}{h.approvedBy && <span className="sub">approvato da {h.approvedBy}</span>}</td></tr>)}</tbody></table></div>
+              : <Empty icon={LuTags} title="Nessuna versione registrata">Il prezzo di listino è {fmtUp(sel.listPrice, sel.p)}; la prima revisione registrerà anche il prezzo precedente.</Empty>}
           </Panel>
         </div>
       )}
@@ -556,10 +558,10 @@ function Revisione({ d, ctx, rows, draft, setDraft }) {
             {draft.mode === 'prodotti' && <span className="row gap-s"><Btn small kind="ghost" onClick={() => set({ byProduct: Object.fromEntries(rows.filter(r => r.required).map(r => [r.id, ceil5(r.required)])) })}>Al listino necessario</Btn><Btn small kind="ghost" onClick={() => set({ byProduct: {} })}>Azzera</Btn></span>}
           </div>
           {draft.mode === 'prodotti' ? (
-            <div className="tw tall"><table className="t"><thead><tr><th>Prodotto</th><th className="r">Alla decorrenza</th><th className="r">Necessario</th><th className="r">Nuovo €/t</th><th className="r">Δ</th></tr></thead>
+            <div className="tw tall"><table className="t"><thead><tr><th>Prodotto</th><th className="r">Alla decorrenza</th><th className="r">Necessario</th><th className="r">{colUp('Nuovo')}</th><th className="r">Δ</th></tr></thead>
               <tbody>{rows.map(r => { const v = draft.byProduct[r.id] ?? null, base = at(r); return (
-                <tr key={r.id}><td><b>{r.name}</b><span className="sub">{r.code}</span></td><td className="r">{nf(base)}</td><td className="r">{r.required ? nf(r.required) : '—'}</td>
-                  <td className="r"><div className="com-li"><NumInput value={v} decimals={0} slim step={5} placeholder={nf(base)} onChange={x => set({ byProduct: { ...draft.byProduct, [r.id]: x } })} ariaLabel={`Nuovo prezzo di ${r.name}`} /></div></td>
+                <tr key={r.id}><td><b>{r.name}</b><span className="sub">{r.code}</span></td><td className="r">{cellUp(base, r.p)}</td><td className="r">{r.required ? cellUp(r.required, r.p) : '—'}</td>
+                  <td className="r"><div className="com-li"><NumInput value={up(v, r.p)} decimals={upDec(0)} slim step={upStep} placeholder={nf(up(base, r.p), upDec(0))} onChange={x => set({ byProduct: { ...draft.byProduct, [r.id]: upIn(x, r.p) } })} ariaLabel={`Nuovo prezzo di ${r.name} in ${upLabel(r.p)}`} /></div></td>
                   <td className="r">{v > 0 && base > 0 ? <span className={v < base ? 'chip warn' : ''}>{sf((v / base - 1) * 100, 1)}%</span> : '—'}</td></tr>); })}</tbody></table></div>
           ) : (
             <div className="com-species">{species.map(s => <Field key={s} label={SPECIES_LABEL(s)} hint={rows.filter(r => r.species === s).map(r => r.code).join(', ')}><NumInput value={draft.bySpecies[s] ?? null} decimals={1} step={0.5} placeholder="0" onChange={x => set({ bySpecies: { ...draft.bySpecies, [s]: x } })} ariaLabel={`Variazione % per ${SPECIES_LABEL(s)}`} /></Field>)}</div>
@@ -707,20 +709,20 @@ function Prestazioni({ d, P, C, cov, scope }) {
     <>
       <div className="kpis">
         <Kpi label="Ricavi della rete" value={nf(Rv / 1e6, 2)} unit="M€" cmp={cmpOf(C, cov, Rv, C ? RvC : null)} foot={`${nf(T)} t · ${P.short}`} />
-        <Kpi label="MdC dopo le provvigioni" value={T ? nf(M / T, 1) : '—'} unit="€/t" cmp={cmpOf(C, cov, T ? M / T : null, TC ? MC / TC : null, { kind: 'ratio', unit: '€/t' })} foot="con la provvigione dello schema di ogni agente" title="Margine di contribuzione = ricavi − costi variabili effettivi − logistica − provvigioni dello schema" />
+        <Kpi label="MdC dopo le provvigioni" value={T ? nfPm(M / T, 1) : '—'} unit={PM_LABEL} cmp={cmpOf(C, cov, T ? pm(M / T) : null, TC ? pm(MC / TC) : null, { kind: 'ratio', unit: PM_LABEL })} foot="con la provvigione dello schema di ogni agente" title="Margine di contribuzione = ricavi − costi variabili effettivi − logistica − provvigioni dello schema" />
         <Kpi label="Provvigioni del periodo" value={nf(Cm / 1000, 1)} unit="mila €" foot={`${pctTxt(Rv ? Cm / Rv : null, 2)} dei ricavi`} title="Calcolate con lo schema di ogni agente (scaglioni, prodotti, riduzione sotto il prezzo minimo)" />
         <Kpi label="Tonnellate sotto il prezzo minimo" value={T ? nf(below / T * 100, 1) : '—'} unit="%" status={T && below / T > 0.2 ? 'warn' : null} foot="prezzo sotto il minimo al costo pieno effettivo" />
       </div>
       <div className="grid g2 start">
         <Panel title="Tonnellate per agente" sub={P.short}><Bars data={rows.map(a => ({ key: a.id, label: a.name, value: a.tonnes, color: agentColor(d, a.id) }))} unit="t" ariaLabel="Tonnellate per agente" onClick={x => openDrawer('agent', x.key)} /></Panel>
-        <Panel title="MdC per tonnellata dopo le provvigioni" sub="Costo effettivo dei lotti consegnati"><Bars data={rows.map(a => ({ key: a.id, label: a.name, value: a.mc2T || 0, color: agentColor(d, a.id) }))} unit="€/t" decimals={1} ariaLabel="Margine per agente" onClick={x => openDrawer('agent', x.key)} /></Panel>
+        <Panel title="MdC per tonnellata dopo le provvigioni" sub="Costo effettivo dei lotti consegnati"><Bars data={rows.map(a => ({ key: a.id, label: a.name, value: pm(a.mc2T || 0), color: agentColor(d, a.id) }))} unit={PM_LABEL} decimals={pm(1000) < 10 ? 2 : 1} ariaLabel="Margine per agente" onClick={x => openDrawer('agent', x.key)} /></Panel>
       </div>
       <Panel title="Prestazioni degli agenti" sub={C && !C.budget ? `Scostamenti rispetto a ${C.short}${cov != null && cov < 0.9 ? ' (non confrontabile: dati insufficienti)' : ''}` : 'Periodo selezionato'} flush>
         <Table rows={rows} onRow={a => openDrawer('agent', a.id)} initialSort={{ key: 'revenue', dir: 'desc' }} exportName="agenti" cols={[
           { key: 'name', label: 'Agente', csv: a => a.name, render: a => <><b>{a.name}</b><span className="sub">{a.zone}</span></> },
           { key: 'customers', label: 'Clienti', align: 'r' },
           { key: 'revenue', label: 'Ricavi', align: 'r', render: a => <>{kEur(a.revenue)} mila €{dlt(a, 'revenue')}</> },
-          { key: 'mc2T', label: 'MdC €/t', align: 'r', render: a => <>{nf(a.mc2T, 1)}{dlt(a, 'mc2T', { ratio: true, unit: ' €/t' })}</> },
+          { key: 'mc2T', label: `MdC ${PM_LABEL}`, align: 'r', csv: a => pm(a.mc2T), render: a => <>{nfPm(a.mc2T, 1)}{dlt(a, 'mc2T', { ratio: true, unit: ` ${PM_LABEL}`, scale: pm(1), dec: pmDec(1) })}</> },
           { key: 'realization', label: 'Realizzazione', align: 'r', render: a => <span title="Σ ricavi / Σ (t × listino del giorno)">{pctTxt(a.realization, 1)}</span> },
           { key: 'shareBelowMinT', label: 'Sotto il minimo', align: 'r', render: a => <span className={a.shareBelowMinT > 0.25 ? 'chip warn' : ''}>{pctTxt(a.shareBelowMinT, 0)}</span> },
           { key: 'winRateValue', label: 'Successo', align: 'r', render: a => <span title="A valore, offerte decise nel periodo">{pctTxt(a.winRateValue, 0)}</span> },
@@ -747,7 +749,7 @@ function Provvigioni({ d, P, scope, deep }) {
   const Q = quarterRange(q);
   const csv = s => download(`estratto-${s.agent.name.toLowerCase().replace(/\W+/g, '-')}-${q}-${stamp()}.csv`, toCSV(s.rows, [
     { key: 'date', label: 'Data' }, { label: 'Cliente', value: r => I.cust[r.customerId]?.name }, { label: 'Prodotto', value: r => I.prod[r.productId]?.name }, { label: 'Fattura', value: r => r.invoice || '' },
-    { label: 't', value: r => round(r.tonnes, 2) }, { label: 'Fatturato €', value: r => round(r.revenue, 2) }, { label: 'Prezzo €/t', value: r => round(r.price, 2) }, { label: 'Minimo €/t', value: r => round(r.minPrice, 2) },
+    { label: 't', value: r => round(r.tonnes, 2) }, { label: 'Fatturato €', value: r => round(r.revenue, 2) }, { label: colUp('Prezzo'), value: r => round(up(r.price, I.prod[r.productId]), upDec(2)) }, { label: colUp('Minimo'), value: r => round(up(r.minPrice, I.prod[r.productId]), upDec(2)) }, ...(SMALL_UNITS ? [{ label: 'Unità', value: r => upLabel(I.prod[r.productId]) }] : []),
     { label: 'Aliquota %', value: r => round(r.pct, 3) }, { label: 'Origine', value: r => r.source + (r.belowMin ? ' · sotto il minimo' : '') }, { label: 'Provvigione €', value: r => round(r.amount, 2) },
     { label: 'Maturata €', value: r => round(r.accrued, 2) }, { label: 'Stato', value: r => r.state + (r.estimated ? ' (stimato)' : '') },
   ]), 'text/csv;charset=utf-8');

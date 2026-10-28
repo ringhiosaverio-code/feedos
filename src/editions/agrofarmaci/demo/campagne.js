@@ -1,4 +1,4 @@
-/* FitoOS · Estensore del demo: campagne commerciali (stagione da ottobre a settembre), ordini anticipati, obiettivi e premi
+/* DifesaOS · Estensore del demo: campagne commerciali (stagione da ottobre a settembre), ordini anticipati, obiettivi e premi
  * dei clienti, resi. Dati inventati e deterministici, coerenti con le consegne del generatore: la campagna chiusa ha i premi
  * da liquidare, quella aperta raccoglie ordini anticipati più lenti dell'anno prima (segnale «Oggi»). */
 import { addDays, round, byId } from '../../../core/util.js';

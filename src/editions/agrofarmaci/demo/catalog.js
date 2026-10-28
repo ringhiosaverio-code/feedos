@@ -1,4 +1,4 @@
-/* FitoOS · Catalogo dell'azienda di agrofarmaci dimostrativa «Arvale Dimostrativa S.p.A.» (TUTTO INVENTATO).
+/* DifesaOS · Catalogo dell'azienda di agrofarmaci dimostrativa «Arvale Dimostrativa S.p.A.» (TUTTO INVENTATO).
  * Nomi commerciali, clienti, fornitori e numeri di registrazione sono di fantasia; le sostanze attive hanno il solo nome comune
  * ISO. Stati regolatori, date, dosi e prezzi sono dati dimostrativi: non usarli come riferimento.
  * Unità dei motori: tonnellate di massa (i prodotti liquidi si convertono con la densità), prezzi in €/t. */

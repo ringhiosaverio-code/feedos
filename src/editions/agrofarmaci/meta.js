@@ -1,12 +1,14 @@
-/* FitoOS · Edizione «agrofarmaci» (difesa delle colture): metadati senza dipendenze.
+/* DifesaOS · Edizione «agrofarmaci» (difesa delle colture): metadati senza dipendenze.
  * Stesso codice di FeedOS: le aree comuni restano, si aggiunge l'area Regolatorio, si nascondono le parti solo da mangimificio
  * (formulazione a costo minimo, gemello del mangimificio, impronta dei mangimi, EUDR della soia, questionario e registro della tesi).
- * Nome del prodotto provvisorio («FitoOS»), da verificare prima di un uso commerciale. */
+ * Nome «DifesaOS» scelto il 28/10/2026 dopo una ricerca sul web senza omonimi (lontano da «Fitos», FitoFarma, FitoAid, FitoSER);
+ * prima della vendita resta da fare la ricerca di anteriorità nei registri dei marchi (UIBM, EUIPO). */
 export const META = {
   id: 'agrofarmaci',
-  product: 'FitoOS',
+  product: 'DifesaOS',
   version: '1.0',
-  storageKey: 'fitoos1',         // archivio separato da FeedOS anche quando i due file si aprono dallo stesso computer
+  storageKey: 'difesaos1',
+  priceUnit: 'unit',            // prezzi in € per kg o per litro (unità di vendita del prodotto), medie in €/kg         // archivio separato da FeedOS anche quando i due file si aprono dallo stesso computer
   sector: 'agrofarmaci',
   companyFallback: 'Agrofarmaci',
   areaIds: ['oggi', 'direzione', 'finanza', 'regolatorio', 'acquisti', 'produzione', 'qualita', 'commerciale', 'economia', 'esg', 'dati'],

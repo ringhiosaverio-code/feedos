@@ -8,7 +8,7 @@ theme = sys.argv[2] if len(sys.argv) > 2 else 'light'
 FILE = sys.argv[3] if len(sys.argv) > 3 and sys.argv[3].endswith('.html') else 'FeedOS-16.html'
 BASE = (Path(__file__).resolve().parents[2] / 'dist' / FILE).as_uri()
 STARTER = 'starter' in sys.argv
-AGRO = FILE.startswith('FitoOS')  # edizione agrofarmaci: aree e schede proprie, niente parti del mangimificio
+AGRO = FILE.startswith('DifesaOS')  # edizione agrofarmaci: aree e schede proprie, niente parti del mangimificio
 ROUTES = ['oggi', 'oggi.cruscotto', 'oggi.attivita', 'oggi.registro',
   'direzione', 'direzione.sintesi', 'direzione.conto', 'direzione.ponte', 'direzione.budget', 'direzione.costi', 'direzione.chiusura', 'direzione.report',
   'finanza', 'finanza.crediti', 'finanza.cassa', 'finanza.circolante', 'finanza.rimanenze', 'finanza.parametri',
@@ -34,7 +34,7 @@ if AGRO:
     SWAP = {'acquisti.fabbisogni.mais': 'acquisti.fabbisogni.cuoh', 'esg.vsme.questionari.q-caseificio-sila': 'esg.vsme.questionari.q-gdo-ortofrutta'}
     ROUTES = [SWAP.get(r, r) for r in ROUTES if not any(r == h or r.startswith(h + '.') or r.startswith(h + '~') for h in HIDDEN)]
     ROUTES += ['regolatorio', 'regolatorio.registrazioni', 'regolatorio.registrazioni.reg-fl50sc', 'regolatorio.sostanze', 'regolatorio.sostanze.rame',
-               'regolatorio.sds', 'regolatorio.sds.p-cu30wg', 'regolatorio.seveso', 'commerciale.campagne', 'commerciale.campagne.premi', 'commerciale.campagne.resi',
+               'regolatorio.sds', 'regolatorio.sds.p-cu30wg', 'regolatorio.seveso', 'regolatorio.fonti', 'commerciale.campagne', 'commerciale.campagne.premi', 'commerciale.campagne.resi',
                'esg.co2', 'esg.co2.vite', 'esg.co2.melo']
 PERIOD_AREAS = {'oggi', 'direzione', 'finanza', 'gemello', 'acquisti', 'produzione', 'qualita', 'commerciale', 'economia'}
 # scheda laterale: (tipo, ricerca nella barra comandi, tipo atteso del primo risultato)

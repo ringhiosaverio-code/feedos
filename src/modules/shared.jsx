@@ -1,4 +1,5 @@
 /* FeedOS 17 · elementi condivisi tra i moduli: elenco dei segnali, azioni sulle decisioni, sezione in preparazione, piccoli formattatori. */
+import { fmtPm } from '../core/units.js';
 import React, { useState } from 'react';
 import { LuCircleAlert, LuTriangleAlert, LuInfo, LuArrowRight, LuListChecks, LuClock, LuEyeOff, LuHourglass } from 'react-icons/lu';
 import { store, toast, useData } from '../core/store.js';
@@ -68,7 +69,7 @@ export function SignalList({ items, limit = 8, compact, emptyText = 'Nessuna dec
 }
 
 export const T = v => v == null ? '—' : nf(v, v < 10 ? 1 : 0) + ' t';
-export const E = (v, dcm = 2) => v == null ? '—' : nf(v, dcm) + ' €/t';
+export const E = (v, dcm = 2) => fmtPm(v, dcm); // € per tonnellata, o per kg nell'edizione agrofarmaci
 export function when(d, s) { return dateIt(s, 'dm'); }
 
 /** Scheda non ancora realizzata: riquadro neutro con lo scopo della sezione (lo sostituisce il pacchetto che possiede la scheda). */

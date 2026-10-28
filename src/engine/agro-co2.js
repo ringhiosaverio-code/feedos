@@ -1,15 +1,17 @@
-/* FitoOS · CO₂ dei programmi di difesa consigliati (edizione agrofarmaci).
+/* DifesaOS · CO₂ dei programmi di difesa consigliati (edizione agrofarmaci).
  * Per un programma (coltura, resa, trattamenti con prodotto, dose e numero di interventi, passaggi della macchina):
  * emissioni dei prodotti dalla culla al cancello (ricetta × fattori delle materie prime + energia della linea + imballo),
  * gasolio dei passaggi, totale per ettaro e per kg di raccolto (o di olio), rame metallo per ettaro.
  * Gli assorbimenti del suolo (inerbimento, potature trinciate) si mostrano a parte e non si sottraggono mai.
- * Fattori indicativi da verificare: nessuna dichiarazione di neutralità o di «impatto zero» si può basare su questo calcolo. */
+ * Gasolio, rete elettrica e GPL dal pacchetto dei fattori della scheda Clima (stessa fonte, stesso stato, stesse sostituzioni);
+ * fattori delle materie prime e degli imballi indicativi. Nessuna dichiarazione di neutralità o di «impatto zero» si può basare su questo calcolo. */
 import { byId, round, sum } from '../core/util.js';
 import { copperBudget } from './agro-reg.js';
+import { factor } from './esg-clima-factors.js';
 
 export const CO2_FACTORS = {
-  version: '2026.1 (indicativo)',
-  dieselKgL: 3.2,            // kg CO₂e per litro di gasolio agricolo, combustione più filiera del carburante (da verificare)
+  version: '2026.2',
+  dieselKgL: 3.27,           // ripiego: DEFRA 2025, combustione 2,66 + dal pozzo al serbatoio 0,61 kg CO₂e/l (si usa il pacchetto Clima se c'è)
   pack: { tanica: 0.12, flacone: 0.18, sacco: 0.04, scatola: 0.08 }, // kg CO₂e per kg o L di prodotto, per tipo di imballo (stima)
   soilNote: 'Assorbimenti del suolo stimati e mostrati a parte: non si sottraggono dalle emissioni e non permettono dichiarazioni di neutralità.',
 };
@@ -33,6 +35,16 @@ export function productFootprint(d, productId) {
   return { productId, perUnit: round(perUnit, 3), raw: round(rawT / 1000 * dens, 3), energy: round(energyT / 1000 * dens, 3), pack: packFactor(p), unit: p.uom === 'L' ? 'L' : 'kg' };
 }
 
+/** Gasolio dei passaggi, kg CO₂e per litro: combustione più filiera del carburante dal pacchetto Clima, con fonte e stato. */
+export function dieselFactor(d) {
+  let c = null, w = null;
+  try { c = factor(d, 'diesel.co2e'); w = factor(d, 'wtt.diesel'); } catch { c = w = null; }
+  if (!c) return { value: CO2_FACTORS.dieselKgL, source: 'DEFRA 2025 (valore di ripiego)', status: 'da verificare', parts: [] };
+  const parts = [c, w].filter(Boolean);
+  const weak = parts.find(x => x.status !== 'verificato');
+  return { value: c.value + (w?.value || 0), source: parts.map(x => `${x.label}: ${x.value} ${x.unit} (${x.source})`).join(' + '), status: weak ? weak.status : 'verificato', parts };
+}
+
 /** Calcolo di un programma: righe per trattamento e totali per ettaro, per kg di raccolto e, per l'olivo, per kg di olio. */
 export function programmeCo2(d, prog) {
   if (!prog) return null;
@@ -43,13 +55,14 @@ export function programmeCo2(d, prog) {
     return { i, ...a, product: p?.name || a.productId, code: p?.code || '', unit: fp?.unit || 'kg', qty, ef: fp?.perUnit ?? null, co2: fp ? qty * fp.perUnit : 0,
       cost: qty * (+p?.unitPrice || 0), organic: !!p?.organic };
   });
-  const products = sum(rows, r => r.co2), fuel = (+prog.passes || 0) * (+prog.fuelLPerPass || 0) * CO2_FACTORS.dieselKgL;
+  const df = dieselFactor(d);
+  const products = sum(rows, r => r.co2), fuel = (+prog.passes || 0) * (+prog.fuelLPerPass || 0) * df.value;
   const total = products + fuel, yieldKg = (+prog.yieldTHa || 0) * 1000;
   const oilKg = prog.oilYieldPct ? yieldKg * prog.oilYieldPct / 100 : null;
   const cu = copperBudget(prog.applications, d);
   return {
     id: prog.id, rows, products, fuel, total, perKg: yieldKg > 0 ? total / yieldKg : null, perKgOil: oilKg ? total / oilKg : null, oilKg, yieldKg,
-    copperKgHa: cu, copper7y: round(cu * 7, 2), copperOk: cu <= 4, cost: sum(rows, r => r.cost), passes: +prog.passes || 0,
+    copperKgHa: cu, copper7y: round(cu * 7, 2), copperOk: cu <= 4, diesel: df, cost: sum(rows, r => r.cost), passes: +prog.passes || 0,
     soil: prog.soil || null, organicShare: rows.length ? rows.filter(r => r.organic).length / rows.length : null,
   };
 }

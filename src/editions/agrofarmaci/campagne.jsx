@@ -1,4 +1,4 @@
-/* FitoOS · Commerciale › Campagne e premi: ordini anticipati contro l'anno prima alla stessa data, premi di fine campagna
+/* DifesaOS · Commerciale › Campagne e premi: ordini anticipati contro l'anno prima alla stessa data, premi di fine campagna
  * sugli obiettivi dei clienti, resi con tetto. I calcoli stanno in engine/agro-camp.js. */
 import React, { useMemo } from 'react';
 import { LuCalendarCheck, LuCheck } from 'react-icons/lu';

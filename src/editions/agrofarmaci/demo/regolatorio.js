@@ -1,4 +1,4 @@
-/* FitoOS · Estensore del demo: registrazioni, usi in etichetta, procedimenti, sostanze attive, schede di sicurezza,
+/* DifesaOS · Estensore del demo: registrazioni, usi in etichetta, procedimenti, sostanze attive, schede di sicurezza,
  * classificazione Seveso e ADR (area Regolatorio). TUTTO INVENTATO: numeri di registrazione, date, dosi e stati sono
  * dimostrativi e non descrivono prodotti reali. La struttura dei dati (coltura, avversità, dose per ettolitro e per ettaro,
  * trattamenti all'anno, carenza) è quella delle etichette italiane. Contratto e regola «solo aggiunte» come in data/demo/extend.js. */

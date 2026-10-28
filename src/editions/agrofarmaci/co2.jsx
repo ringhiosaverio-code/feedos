@@ -1,4 +1,4 @@
-/* FitoOS · ESG › CO₂ dei programmi di difesa: per olivo, vite e melo il programma aziendale e l'alternativa a confronto,
+/* DifesaOS · ESG › CO₂ dei programmi di difesa: per olivo, vite e melo il programma aziendale e l'alternativa a confronto,
  * in kg CO₂e per ettaro e per kg di raccolto (o di olio), con rame per ettaro e costo. Dosi e trattamenti si possono
  * provare qui senza salvarli. Gli assorbimenti del suolo stanno a parte e non si sottraggono. */
 import React, { useMemo, useState } from 'react';
@@ -57,10 +57,10 @@ export function Co2Programmi({ d, route }) {
             {p.soil && <div className="note maize"><LuSprout /> Assorbimenti del suolo stimati {nf(p.soil.lo, 1)}–{nf(p.soil.hi, 1)} t CO₂/ha all’anno ({p.soil.practice}): mostrati a parte, <b>non sottratti</b> dalle emissioni.</div>}
           </Panel>))}
       </div>
-      <Panel title="Metodo" sub={`Fattori ${CO2_FACTORS.version}`}>
+      <Panel title="Metodo" sub={`Versione del calcolo ${CO2_FACTORS.version} · fattori delle materie prime e degli imballi indicativi`}>
         <ul className="list small">
           <li>Prodotti dalla culla al cancello: materie prime della ricetta per i loro fattori, energia della linea di formulazione (elettricità e GPL dello stabilimento), imballo per tipo di confezione.</li>
-          <li>Gasolio dei passaggi: litri per passaggio × {nf(CO2_FACTORS.dieselKgL, 1)} kg CO₂e per litro (combustione e filiera del carburante, da verificare).</li>
+          <li>Gasolio dei passaggi: litri per passaggio × {nf(base.r.diesel.value, 2)} kg CO₂e per litro, dai fattori della scheda Clima: {base.r.diesel.source} · stato «{base.r.diesel.status}».</li>
           <li>Per kg di raccolto: emissioni per ettaro divise per la resa; per l’olivo anche per kg di olio con la resa in olio indicata.</li>
           <li>Esclusi: concimi, irrigazione, potatura, raccolta e trasporti; per un’impronta completa del prodotto agricolo servono i dati dell’azienda agricola.</li>
           <li>{CO2_FACTORS.soilNote} Il calcolo non permette di dichiarare un prodotto «a impatto zero» o «neutrale».</li>

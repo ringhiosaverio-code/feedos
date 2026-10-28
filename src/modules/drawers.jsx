@@ -7,6 +7,8 @@ import { useData, useUi, store, toast, closeDrawer, openDrawer } from '../core/s
 import { go } from '../core/router.js';
 import { idx, appToday, costs, volumes, mrp, traceIndex, customerStats, shippedByLot } from '../core/derived.js';
 import { nf, sf, sum, dateIt, addDays, daysBetween, relDays, round } from '../core/util.js';
+import { PM_LABEL, pm, pmIn, pmDec, nfPm, fmtUp, fmtPm } from '../core/units.js';
+import { NAV } from '../app/nav.js';
 import { NUT } from '../engine/nutrients.js';
 import { offerCheck } from '../engine/costing.js';
 import { backward } from '../engine/trace.js';
@@ -42,13 +44,13 @@ function ProductD({ d, id }) {
   const parts = c.parts.filter(x => x.v > 0.01);
   return (
     <Drawer title={p.name} sub={`Prodotto · ${p.code}`} icon={<span className="dicon"><LuBoxes /></span>} wide
-      actions={<><Btn icon={LuFlaskConical} onClick={() => nav('formulazione', 'formule', p.formulaId)}>Formula</Btn><Btn icon={LuLeaf} onClick={() => nav('esg', 'passaporto', p.id)}>Passaporto</Btn><Btn kind="primary" icon={LuArrowRight} onClick={() => nav('economia', 'margini', p.id)}>Margini</Btn></>}>
+      actions={<>{NAV.formulazione && <Btn icon={LuFlaskConical} onClick={() => nav('formulazione', 'formule', p.formulaId)}>Formula</Btn>}{NAV.esg?.tabs.some(t => t.id === 'passaporto') && <Btn icon={LuLeaf} onClick={() => nav('esg', 'passaporto', p.id)}>Passaporto</Btn>}<Btn kind="primary" icon={LuArrowRight} onClick={() => nav('economia', 'margini', p.id)}>Margini</Btn></>}>
       <Kv items={[['Forma e confezione', `${p.form} · ${p.packaging}`], ['Linea', I.line[p.lineId]?.name], ['Formula', f ? `${f.code} · versione ${f.version}` : '—'], ['Volume', `${nf(V[id] || 0)} t negli ultimi 12 mesi`]]} />
-      <div className="dsec"><div className="eyebrow">Costo pieno di oggi · {nf(c.total, 1)} €/t</div>
+      <div className="dsec"><div className="eyebrow">Costo pieno di oggi · {fmtUp(c.total, p, 1)}</div>
         <StackBar parts={parts.map((x, i) => ({ key: x.k, label: x.k, value: x.v, color: SERIES[i] }))} ariaLabel="Composizione del costo" />
         <Legend items={parts.map((x, i) => ({ label: `${x.k} ${nf(x.v, 1)}`, color: SERIES[i] }))} />
       </div>
-      <Kv items={[['Prezzo di listino', `${nf(p.listPrice)} €/t`], ['Margine a listino', `${nf(c.margin, 1)} €/t (${nf(c.marginPct * 100, 1)}%)`], ['Prezzo minimo', `${nf(c.minPrice, 1)} €/t · margine ${p.minMarginPct}%`], ['Prezzo obiettivo', `${nf(c.targetPrice, 1)} €/t · margine ${p.targetMarginPct}%`]]} />
+      <Kv items={[['Prezzo di listino', fmtUp(p.listPrice, p)], ['Margine a listino', `${fmtUp(c.margin, p, 1)} (${nf(c.marginPct * 100, 1)}%)`], ['Prezzo minimo', `${fmtUp(c.minPrice, p, 1)} · margine ${p.minMarginPct}%`], ['Prezzo obiettivo', `${fmtUp(c.targetPrice, p, 1)} · margine ${p.targetMarginPct}%`]]} />
       {c.price < c.minPrice && <div className="note crit">Il listino è sotto il prezzo minimo: rivedere il prezzo o la formula.</div>}
       <Sections list={PRODUCT_SECTIONS} d={d} id={id} />
       <div className="dsec"><div className="eyebrow">Clienti principali</div>
@@ -74,7 +76,7 @@ function IngredientD({ d, id }) {
     <Drawer title={ing.name} sub={`Materia prima · ${ing.code}`} icon={<span className="dicon"><LuWheat /></span>} wide
       actions={<><Btn onClick={() => nav('acquisti', 'fabbisogni', id)}>Fabbisogni</Btn><Btn onClick={() => nav('acquisti', 'scorte', id)}>Scorte</Btn><Btn kind="primary" icon={LuShieldAlert} onClick={() => nav('qualita', 'lotti-mp')}>Lotti</Btn></>}>
       <div className="form">
-        <Field label="Prezzo €/t" hint="usato da formule, costi e scenari"><NumInput value={ing.price} decimals={1} onChange={v => v != null && v >= 0 && upd({ price: v, priceDate: appToday(d) }, `Prezzo di ${ing.name}: ${nf(v, 1)} €/t`)} /></Field>
+        <Field label={`Prezzo ${PM_LABEL}`} hint="usato da formule, costi e scenari"><NumInput value={pm(ing.price)} decimals={pmDec(1)} onChange={x => { const v = pmIn(x); if (v != null && v >= 0) upd({ price: v, priceDate: appToday(d) }, `Prezzo di ${ing.name}: ${fmtPm(v, 1)}`); }} /></Field>
         <Field label="Consegna (giorni)"><NumInput value={ing.leadDays} decimals={0} onChange={v => v != null && upd({ leadDays: v }, `Tempo di consegna di ${ing.name}`)} /></Field>
         <Field label="Scorta di sicurezza (giorni)"><NumInput value={ing.safetyDays} decimals={0} onChange={v => v != null && upd({ safetyDays: v }, `Scorta di sicurezza di ${ing.name}`)} /></Field>
         <Field label="Massimo in formula (kg/t)"><NumInput value={ing.maxKg} decimals={0} onChange={v => upd({ maxKg: v }, `Limite di ${ing.name}`)} /></Field>
@@ -107,7 +109,7 @@ function CustomerD({ d, id }) {
       actions={<><Btn onClick={() => nav('commerciale', 'visite')}>Visite</Btn><Btn onClick={() => nav('economia', 'redditivita', id)}>Redditività</Btn><Btn kind="primary" icon={LuPlus} onClick={() => nav('commerciale', 'offerte', 'nuova.' + id)}>Nuova offerta</Btn></>}>
       <div className="kpis two">
         <div className="kpi"><span className="lbl">Consegnato in 12 mesi</span><span className="val">{nf(S.tonnes || 0)}<small>t</small></span><span className="foot">{nf((S.revenue || 0) / 1000)} mila € di ricavi</span></div>
-        <div className="kpi"><span className="lbl">Margine (costo effettivo)</span><span className="val">{S.tonnes ? nf(S.margin / S.tonnes, 1) : '—'}<small>€/t</small></span><span className="foot">ultima consegna {S.last ? relDays(S.last, today) : '—'}</span></div>
+        <div className="kpi"><span className="lbl">Margine (costo effettivo)</span><span className="val">{S.tonnes ? nfPm(S.margin / S.tonnes, 1) : '—'}<small>{PM_LABEL}</small></span><span className="foot">ultima consegna {S.last ? relDays(S.last, today) : '—'}</span></div>
       </div>
       <Sections list={CUSTOMER_SECTIONS} d={d} id={id} />
       <Kv items={[['Comune', `${c.city} (${c.province})`], ['Agente', I.agent[c.agentId]?.name], ['Specie', (c.species || []).join(', ')], ['Capi', c.heads ? nf(c.heads) : '—'], ['Prodotti abituali', (c.products || []).map(code => d.products.find(p => p.code === code)?.name || code).join(', ')], ['Pagamento', `${c.paymentDays} giorni · sconto abituale ${nf(c.discountPct, 1)}%`], ['Cliente dal', c.since]]} />
@@ -135,15 +137,15 @@ function OfferD({ d, id }) {
       actions={<><Btn onClick={() => openDrawer('customer', o.customerId)}>Cliente</Btn><Btn onClick={() => openDrawer('product', o.productId)}>Prodotto</Btn>
         {open && <Btn onClick={() => setDlg('rinnova')}>Rinnova</Btn>}{open && <Btn kind="danger" onClick={() => setDlg('persa')}>Chiudi come persa</Btn>}</>}>
       <div className="row gap-s"><Chip kind={S.kind}>{S.label}</Chip>{st === 'scaduta' && <span className="small muted">validità finita il {dateIt(o.validUntil)}: rinnovala o chiudila, non conta più tra le offerte aperte</span>}</div>
-      <Kv items={[['Prodotto', p?.name], ['Quantità', `${nf(o.tonnes)} t`], ['Prezzo', `${nf(o.price)} €/t (listino ${nf(p?.listPrice)})`], ['Valida fino al', dateIt(o.validUntil)], ['Agente', I.agent[o.agentId]?.name],
-        o.lossReason ? ['Motivo della perdita', `${lossLabel ? lossLabel(o.lossReason) : o.lossReason}${o.competitor ? ` · ${o.competitor}` : ''}${o.competitorPrice ? ` a ${nf(o.competitorPrice)} €/t` : ''}`] : null,
+      <Kv items={[['Prodotto', p?.name], ['Quantità', `${nf(o.tonnes)} t`], ['Prezzo', `${fmtUp(o.price, p)} (listino ${fmtUp(p?.listPrice, p)})`], ['Valida fino al', dateIt(o.validUntil)], ['Agente', I.agent[o.agentId]?.name],
+        o.lossReason ? ['Motivo della perdita', `${lossLabel ? lossLabel(o.lossReason) : o.lossReason}${o.competitor ? ` · ${o.competitor}` : ''}${o.competitorPrice ? ` a ${fmtUp(o.competitorPrice, p)}` : ''}`] : null,
         o.approval ? ['Prezzo sotto il minimo approvato da', `${o.approval.by}${o.approval.at ? ` il ${dateIt(o.approval.at)}` : ''}${o.approval.note ? ` · ${o.approval.note}` : ''}`] : null,
         o.decidedAt ? ['Decisa il', dateIt(o.decidedAt)] : null]} />
       {dlg === 'persa' && <LossDialog d={d} offer={o} onClose={() => setDlg(null)} />}
       {dlg === 'rinnova' && <RenewDialog d={d} offer={o} onClose={() => setDlg(null)} />}
       <div className={`offer-check ${chk.status}`}>
         <Chip kind={OCHECK[chk.status].kind}>{OCHECK[chk.status].label}</Chip>
-        <Kv items={[['Margine ai costi di oggi', `${nf(chk.margin, 1)} €/t · ${nf(chk.marginPct * 100, 1)}%`], ['Margine dell’offerta', `${nf(chk.total)} €`], ['Prezzo minimo · obiettivo', `${nf(cost.minPrice, 1)} · ${nf(cost.targetPrice, 1)} €/t`], o.costAtOffer ? ['Costo pieno all’offerta', `${nf(o.costAtOffer, 1)} €/t (oggi ${nf(cost.total, 1)})`] : null]} />
+        <Kv items={[['Margine ai costi di oggi', `${fmtUp(chk.margin, p, 1)} · ${nf(chk.marginPct * 100, 1)}%`], ['Margine dell’offerta', `${nf(chk.total)} €`], ['Prezzo minimo · obiettivo', `${fmtUp(cost.minPrice, p, 1)} · ${fmtUp(cost.targetPrice, p, 1)}`], o.costAtOffer ? ['Costo pieno all’offerta', `${fmtUp(o.costAtOffer, p, 1)} (oggi ${fmtUp(cost.total, p, 1)})`] : null]} />
       </div>
       <Field label="Stato"><Select value={o.status} onChange={v => store.update('offers', o.id, { status: v, decidedAt: ['accettata', 'persa'].includes(v) ? appToday(d) : null }, `Offerta ${o.code}: ${v}`)} options={['bozza', 'inviata', 'accettata', 'persa']} /></Field>
       <Field label="Nota" hint="Motivo di una scelta commerciale, esito della trattativa"><textarea className="input" value={note} onChange={e => setNote(e.target.value)} onBlur={() => note !== (o.note || '') && store.update('offers', o.id, { note }, `Offerta ${o.code}: nota`)} /></Field>

@@ -1,7 +1,7 @@
-/* FitoOS · Area Regolatorio: registrazioni e usi in etichetta, sostanze attive e rinnovi, schede di sicurezza, Seveso e ADR.
+/* DifesaOS · Area Regolatorio: registrazioni e usi in etichetta, sostanze attive e rinnovi, schede di sicurezza, Seveso e ADR.
  * I calcoli stanno in engine/agro-reg.js; qui solo la presentazione e le poche registrazioni (invii delle schede). */
 import React, { useMemo, useState } from 'react';
-import { LuScale, LuSend, LuFlaskConical, LuTruck, LuLeaf } from 'react-icons/lu';
+import { LuScale, LuSend, LuFlaskConical, LuTruck, LuLeaf, LuRotateCcw } from 'react-icons/lu';
 import { useData, store, toast } from '../../core/store.js';
 import { go } from '../../core/router.js';
 import { appToday, signals } from '../../core/derived.js';
@@ -11,9 +11,10 @@ import { Bars } from '../../ui/charts.jsx';
 import { SignalList } from '../../modules/shared.jsx';
 import { NAV } from '../../app/nav.js';
 import {
-  AGRO_RULES, SALE_LABEL, saleStatus, art43Due, revenueAtRisk, disposalPlan, usesMatrix, substanceBoard, sdsGaps, needsUfi,
+  AGRO_RULES, rulesOf, SALE_LABEL, saleStatus, art43Due, revenueAtRisk, disposalPlan, usesMatrix, substanceBoard, sdsGaps, needsUfi,
   sevesoIndex, finishedStock, rawStock, transportUnits, productRevenue, copperBudget,
 } from '../../engine/agro-reg.js';
+import { AGRO_RULE_SOURCES, AGRO_ESTIMATES, RULES_CHECKED_AT } from '../../data/agro-rules.js';
 
 const SALE_KIND = { vendibile: 'good', 'vendibile-smaltimento': 'warn', 'solo-impiego': 'warn', 'non-vendibile': 'crit', 'non-registrato': 'outline' };
 const KIND_LABEL = { autorizzazione: 'Autorizzazione', 'CE-fertilizzante': 'Fertilizzante CE', 'commercio-parallelo': 'Commercio parallelo', 'emergenza-art53': 'Emergenza (art. 53)' };
@@ -34,6 +35,7 @@ export function Regolatorio({ route }) {
         : tab === 'sostanze' ? <Sostanze d={d} today={today} route={route} />
         : tab === 'sds' ? <Sds d={d} today={today} route={route} />
         : tab === 'seveso' ? <Seveso d={d} today={today} />
+        : tab === 'fonti' ? <Fonti d={d} />
         : <Registrazioni d={d} today={today} route={route} sig={sig} />}
     </>
   );
@@ -71,9 +73,9 @@ function Registrazioni({ d, today, route, sig }) {
               </li>))}
           </ul>
         </Panel>
-        <Panel title="Ricavi a rischio per prodotto" sub={`Probabilità di mancato rinnovo entro ${AGRO_RULES.horizonMonths} mesi (stime modificabili, non fatti)`}>
+        <Panel title="Ricavi a rischio per prodotto" sub={`Probabilità di mancato rinnovo entro ${rulesOf(d).horizonMonths} mesi: stime dell’azienda, si cambiano in Regole e fonti`}>
           <Bars data={rar.rows.filter(r => r.rar > 0).slice(0, 8).map(r => ({ key: r.productId, label: `${r.name} (${nf(r.r * 100)}%)`, value: r.rar / 1000, color: r.r >= 1 ? 'var(--s2)' : 'var(--s1)' }))} unit="mila €" ariaLabel="Ricavi a rischio per prodotto" onClick={x => go('regolatorio', 'registrazioni', rows.find(r => r.productId === x.key)?.id)} />
-          <p className="small muted">Prodotto con più sostanze: r = 1 − Π(1 − r sostanza). Candidata alla sostituzione {nf(AGRO_RULES.pNonRenewal.cfs * 100)}%, in rinnovo {nf(AGRO_RULES.pNonRenewal['in rinnovo'] * 100)}%, basso rischio {nf(AGRO_RULES.pNonRenewal['basso rischio'] * 100)}%; revoca o mancato rinnovo 100%.</p>
+          <p className="small muted">Prodotto con più sostanze: r = 1 − Π(1 − r sostanza). Candidata alla sostituzione {nf(rulesOf(d).pNonRenewal.cfs * 100)}%, in rinnovo {nf(rulesOf(d).pNonRenewal['in rinnovo'] * 100)}%, basso rischio {nf(rulesOf(d).pNonRenewal['basso rischio'] * 100)}%; revoca o mancato rinnovo 100%.</p>
         </Panel>
       </div>
       <Panel title="Registrazioni" sub="Clic su una riga per usi, procedimenti e piano di smaltimento" flush>
@@ -154,7 +156,7 @@ function RegDrawer({ d, today, reg }) {
           ['Gruppo di resistenza', p?.moa || '—'],
         ]} />
         {reg.note && <div className="note">{reg.note}</div>}
-        {plan && <DisposalPlan plan={plan} />}
+        {plan && <DisposalPlan plan={plan} R={rulesOf(d)} />}
         {uses.length > 0 && <Table rows={uses} pageSize={20} cols={[
           { key: 'cropName', label: 'Coltura' }, { key: 'pest', label: 'Avversità' },
           { key: 'doseMin', label: 'Dose/ha', align: 'r', render: u => `${doseTxt(u.doseMin, u.doseMax)} ${u.doseUnit}` },
@@ -166,12 +168,12 @@ function RegDrawer({ d, today, reg }) {
   );
 }
 
-function DisposalPlan({ plan }) {
+function DisposalPlan({ plan, R }) {
   const tech = sum(plan.rawRows, x => x.tonnes);
   return (
     <Panel title="Piano di smaltimento delle scorte" sub={`${plan.canProduce ? `Revoca dal ${dateIt(plan.withdrawal)} · ` : ''}vendita fino al ${dateIt(plan.saleUntil)} · impiego fino al ${dateIt(plan.useUntil)}`} inset>
       <div className="kpis">
-        <Kpi label="Domanda stimata" value={nf(plan.demandT, 1)} unit="t" foot={`stesso periodo dell’anno prima × ${nf(AGRO_RULES.graceDemandFactor * 100)}%`} />
+        <Kpi label="Domanda stimata" value={nf(plan.demandT, 1)} unit="t" foot={`stesso periodo dell’anno prima × ${nf(R.graceDemandFactor * 100)}% (stima)`} />
         <Kpi label="Prodotto in magazzino" value={nf(plan.stockT, 1)} unit="t" foot={tech ? `più ${nf(tech, 1)} t di sostanza tecnica` : 'nessuna sostanza tecnica'} />
         {plan.canProduce && <Kpi label="Ultima produzione utile" value={nf(plan.makeT, 1)} unit="t" foot={`entro il ${dateIt(plan.withdrawal)}`} />}
         <Kpi label="Accantonamento" value={eur(plan.provision)} foot={`invenduto ${nf(plan.unsoldT, 1)} t equivalenti`} status={plan.provision > 5e4 ? 'bad' : plan.provision > 0 ? 'warn' : 'ok'} />
@@ -251,7 +253,7 @@ function CopperCalc({ d }) {
   const p = cu.find(x => x.id === pid);
   const kg = copperBudget([{ productId: pid, dose, n }], d);
   return (
-    <Panel title="Bilancio del rame per ettaro" sub="Massimo 28 kg di rame metallo per ettaro in 7 anni, media raccomandata 4 kg all’anno (da verificare in etichetta)" id="as-copper">
+    <Panel title="Bilancio del rame per ettaro" sub="Massimo 28 kg di rame metallo per ettaro in 7 anni (Reg. UE 2018/1981); molti Stati membri fissano anche 4 kg all’anno. Vale l’etichetta del prodotto" id="as-copper">
       {!cu.length ? <Empty title="Nessun prodotto rameico" /> : (
         <div className="stack">
           <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 10 }}>
@@ -305,7 +307,7 @@ function Sds({ d, today, route }) {
           { key: 'act', label: '', nosort: true, csv: false, render: x => <Btn small kind="ghost" onClick={e => { e.stopPropagation(); send([x]); }}>Inviata</Btn> },
         ]} />
       </Panel>
-      <Panel title="Schede per prodotto" sub="Versione in vigore, classificazione indicativa (dati dimostrativi), UFI e notifica" flush>
+      <Panel title="Schede per prodotto" sub="Versione in vigore, classificazione (nel demo indicativa), UFI e notifica" flush>
         <Table rows={docs} initialSort={{ key: 'date', dir: 'desc' }} exportName="schede-di-sicurezza" cols={[
           { key: 'name', label: 'Prodotto', sort: s => s.product?.name, render: s => <b>{s.product?.name}</b> },
           { key: 'version', label: 'Versione', align: 'r', render: s => `v${s.version}` },
@@ -358,7 +360,7 @@ function Seveso({ d, today }) {
             { key: 'hi', label: 'q/Q sup.', align: 'r', render: c => <span className={c.hi >= 1 ? 'neg' : ''}>{nf(c.hi, 2)}</span> },
           ]} />
         </Panel>
-        <Panel title="Che cosa c’è in magazzino" sub="Prodotti e materie prime con una categoria Seveso (classificazione indicativa da verificare)">
+        <Panel title="Che cosa c’è in magazzino" sub="Prodotti e materie prime con una categoria Seveso, dalla classificazione delle schede di sicurezza (nel demo indicativa)">
           <Bars data={sv.items.slice(0, 10).map(x => ({ key: x.kind + x.id + x.cat, label: `${x.name} · ${x.cat}`, value: x.tonnes, color: x.kind === 'prodotto' ? 'var(--s1)' : 'var(--s4)' }))} unit="t" decimals={1} ariaLabel="Giacenze per categoria Seveso" />
         </Panel>
       </div>
@@ -383,8 +385,52 @@ function Seveso({ d, today }) {
           ]} />
         </Panel>
       </div>
-      <p className="small muted">Soglie, categorie e regole ADR sono un riassunto da verificare sui testi ufficiali e sulle schede di sicurezza; la classificazione dei prodotti del demo è indicativa. UN3077 e UN3082 in imballaggi fino a 5 kg o 5 L non sono soggetti all’ADR (disposizione speciale 375).</p>
+      <p className="small muted">Soglie e regole con riferimento e fonte in Regolatorio › Regole e fonti (verificate il {dateIt(RULES_CHECKED_AT)}). La classificazione dei prodotti del demo è indicativa: in azienda viene dalle schede di sicurezza. UN3077 e UN3082 in imballaggi fino a 5 kg o 5 L non sono soggetti all’ADR (disposizione speciale 375, facoltativa).</p>
     </>
   );
 }
 
+
+/* ================= Regole e fonti ================= */
+const ST_KIND = { verificato: 'good', parziale: 'warn', stima: 'outline' };
+const getPath = (o, k) => k.split('.').length > 1 && k.startsWith('pNonRenewal.') ? o.pNonRenewal?.[k.slice(12)] : o[k];
+function Fonti({ d }) {
+  const R = rulesOf(d), saved = d.settings?.agro?.rules || {};
+  const setEst = (k, v) => store.settings(s => {
+    const a = s.agro || {}, r = { ...(a.rules || {}) };
+    if (k.startsWith('pNonRenewal.')) r.pNonRenewal = { ...(r.pNonRenewal || {}), [k.slice(12)]: v };
+    else r[k] = v;
+    return { ...s, agro: { ...a, rules: r } };
+  }, 'Stima regolatoria modificata');
+  const reset = () => { store.settings(s => ({ ...s, agro: { ...(s.agro || {}), rules: {} } }), 'Stime regolatorie riportate ai valori di partenza'); toast('Stime riportate ai valori di partenza', 'ok', { label: 'Annulla', fn: () => store.undo() }); };
+  const ver = AGRO_RULE_SOURCES.filter(r => r.status === 'verificato').length;
+  return (
+    <>
+      <div className="kpis">
+        <Kpi label="Regole verificate" value={`${nf(ver)}/${nf(AGRO_RULE_SOURCES.length)}`} foot={`controllo del ${dateIt(RULES_CHECKED_AT)}`} status={ver === AGRO_RULE_SOURCES.length ? 'ok' : 'warn'} />
+        <Kpi label="Da completare" value={nf(AGRO_RULE_SOURCES.length - ver)} foot={AGRO_RULE_SOURCES.filter(r => r.status !== 'verificato').map(r => r.area).join(', ') || 'nessuna'} />
+        <Kpi label="Stime dell’azienda" value={nf(AGRO_ESTIMATES.length)} foot={Object.keys(saved).length ? 'modificate in questo archivio' : 'valori di partenza'} />
+      </div>
+      <Panel title="Regole usate dai calcoli" sub="Riferimento normativo, fonte consultata e stato della verifica. Prima di una decisione vale sempre il testo in vigore e il decreto del prodotto" id="reg-sources" flush>
+        <Table rows={AGRO_RULE_SOURCES} pageSize={30} exportName="regole-e-fonti" cols={[
+          { key: 'area', label: 'Ambito' },
+          { key: 'rule', label: 'Regola', render: r => <span>{r.rule}{r.note && <div className="muted small">{r.note}</div>}</span> },
+          { key: 'value', label: 'Valore', render: r => <b>{r.value}</b> },
+          { key: 'law', label: 'Riferimento' },
+          { key: 'status', label: 'Stato', render: r => <Chip kind={ST_KIND[r.status] || 'outline'}>{r.status}</Chip> },
+          { key: 'sources', label: 'Fonti', csv: true, render: r => (r.sources.length ? <span className="small" style={{ wordBreak: 'break-all' }}>{r.sources.map((u, i) => <div key={i}><a href={u} target="_blank" rel="noopener noreferrer">{u.replace(/^https?:\/\//, '').slice(0, 60)}{u.length > 68 ? '…' : ''}</a></div>)}</span> : <span className="muted small">indicazione tecnica</span>) },
+        ]} />
+      </Panel>
+      <Panel title="Stime dell’azienda" sub="Non sono regole: probabilità e parametri usati per ricavi a rischio e piani di smaltimento. Si salvano nell’archivio" id="reg-estimates"
+        actions={<Btn small kind="ghost" icon={LuRotateCcw} onClick={reset} disabled={!Object.keys(saved).length}>Valori di partenza</Btn>}>
+        <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 }}>
+          {AGRO_ESTIMATES.map(e => (
+            <Field key={e.key} label={`${e.label} (${e.unit})`}>
+              <NumInput id={`est-${e.key.replace(/[^a-z]/gi, '')}`} value={(getPath(R, e.key) ?? 0) * e.scale} decimals={e.scale === 100 ? 0 : 0} min={e.min} max={e.max}
+                onChange={v => v != null && setEst(e.key, v / e.scale)} ariaLabel={e.label} />
+            </Field>))}
+        </div>
+      </Panel>
+    </>
+  );
+}

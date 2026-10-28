@@ -33,7 +33,7 @@ import { META } from '../editions/meta.js';
 import { PAGES as EDITION_PAGES, TAB_PAGES } from '../editions/app.js';
 
 const PAGES = { oggi: Oggi, direzione: Direzione, finanza: Finanza, gemello: Gemello, formulazione: Formulazione, acquisti: Acquisti, produzione: Produzione, qualita: Qualita, commerciale: Commerciale, economia: Economia, esg: Esg, dati: Dati, ...EDITION_PAGES };
-/** Nome e versione mostrati: quelli dell'edizione (FitoOS 1.0) o di FeedOS con la versione dell'app. */
+/** Nome e versione mostrati: quelli dell'edizione (DifesaOS 1.0) o di FeedOS con la versione dell'app. */
 const PRODUCT_VERSION = META.version || VERSION;
 import { VERSION } from './version.js';
 export { VERSION };
@@ -73,7 +73,7 @@ export function App() {
 
   if (!ready) return <div className="content"><p className="muted">Apertura dell’archivio…</p></div>;
   const blocked = role.id === 'agente' && AGENT_HIDDEN.includes(route.area);
-  // scheda in più dell'edizione dentro un'area esistente (es. Commerciale › Campagne in FitoOS): testata dell'area + pagina della scheda
+  // scheda in più dell'edizione dentro un'area esistente (es. Commerciale › Campagne in DifesaOS): testata dell'area + pagina della scheda
   const TabPage = TAB_PAGES[`${route.area}.${route.tab}`];
   const Page = TabPage ? EditionTab : (NAV[route.area] && PAGES[route.area]) || Oggi; // aree di un'altra edizione: Oggi
   // una scheda nascosta in questa edizione (indirizzo vecchio o scritto a mano) apre la prima scheda dell'area

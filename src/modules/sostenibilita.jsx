@@ -18,6 +18,7 @@ import { esgThresholds } from '../engine/esg-piano.js';
 import { ESG_DASHBOARD_CARDS } from './esg-slots.jsx';
 import { SlotGuard } from './slots.jsx';
 import { Panel, Btn, Table, Chip, Kpi, Field, Select, Empty, Seg, NumInput, confirm, Spark } from '../ui/ui.jsx';
+import { printNow } from '../ui/print.jsx';
 import { Columns, LineChart, StackBar, Legend } from '../ui/charts.jsx';
 
 const SEC_ICON = { building: LuBuilding2, wheat: LuWheat, zap: LuZap, cloud: LuCloud, droplet: LuDroplets, recycle: LuRecycle, users: LuUsers, helmet: LuHardHat, book: LuBookOpen, heart: LuHeartHandshake, landmark: LuLandmark, scale: LuScale, shield: LuShield, sprout: LuSprout, truck: LuTruck, folder: LuFolder };
@@ -322,7 +323,7 @@ export function Questionario({ d, sec }) {
         </div>
         <label className="check small"><input type="checkbox" checked={onlyOpen} onChange={e => setOnlyOpen(e.target.checked)} /> Solo domande senza risposta</label>
         <Btn small icon={LuDownload} onClick={csv}>CSV</Btn>
-        <Btn small icon={LuPrinter} onClick={() => window.print()}>Stampa</Btn>
+        <Btn small icon={LuPrinter} onClick={printNow}>Stampa</Btn>
       </div>
       <div className="survey no-print">
         <nav className="snav" aria-label="Sezioni del questionario">

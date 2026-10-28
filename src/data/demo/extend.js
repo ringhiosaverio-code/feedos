@@ -111,7 +111,7 @@ export function applyPatch(d, patch) {
  */
 export function applyDemoExtenders(d, today = d?.settings?.demoAnchor, seed = 16, { only = null, skip = [], list = EXTENDERS } = {}) {
   let out = d;
-  for (const [name, fn, offset] of list) { // list: gli estensori di un'altra edizione (FitoOS)
+  for (const [name, fn, offset] of list) { // list: gli estensori di un'altra edizione (DifesaOS)
     if ((only && !only.includes(name)) || skip.includes(name)) continue; // aggiornamenti per passi: ogni estensore una sola volta
     let patch;
     try { patch = fn(out, { today, R: rng(seed + offset) }); } catch (e) { console.warn(`FeedOS: estensore del demo «${name}» non applicato`, e); continue; }

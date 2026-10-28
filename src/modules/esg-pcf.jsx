@@ -10,6 +10,7 @@ import { nf, sum, dateIt, addDays } from '../core/util.js';
 import { balance, aggregate, scope1PerKg, DEFAULTS } from '../engine/energy.js';
 import { formulaCO2, coProductShare, afb1Check } from '../engine/formulation.js';
 import { Panel, Btn, Table, Select, Empty, Kv } from '../ui/ui.jsx';
+import { printNow } from '../ui/print.jsx';
 import { StackBar, Legend, SERIES } from '../ui/charts.jsx';
 import { lotCheck } from './qualita.jsx';
 import { EsgCard } from './esg-shared.jsx';
@@ -65,7 +66,7 @@ function Passaporto({ d, sel }) {
     <>
       <div className="row between no-print">
         <Select value={P.p.id} onChange={v => go('esg', 'passaporto', v)} options={d.products.map(p => ({ id: p.id, label: p.name }))} ariaLabel="Prodotto" className="auto" />
-        <Btn icon={LuPrinter} onClick={() => window.print()}>Stampa o salva in PDF</Btn>
+        <Btn icon={LuPrinter} onClick={printNow}>Stampa o salva in PDF</Btn>
       </div>
       <div className="passport" id="esg-passport">
         <div className="pp-head">

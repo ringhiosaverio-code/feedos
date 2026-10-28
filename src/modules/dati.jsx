@@ -8,6 +8,7 @@ import { go } from '../core/router.js';
 import { idx, appToday } from '../core/derived.js';
 import { ROLES, ROLE } from '../core/roles.js';
 import { nf, sf, dateIt, round, norm } from '../core/util.js';
+import { PM_LABEL, pmIn, nfPm, SMALL_UNITS } from '../core/units.js';
 import { download, toCSV, parseCSV, num, readFile, stamp } from '../core/io.js';
 import { listSnapshots, getSnapshot, deleteSnapshot, saveSnapshot, quota, storageMode, markBackup } from '../core/persist.js';
 import { usePrefs, setPrefs } from '../core/prefs.js';
@@ -50,7 +51,8 @@ function Archivio({ d, hi }) {
   const refresh = () => listSnapshots().then(setSnaps);
   useEffect(() => { refresh(); quota().then(setQ); }, [d]);
   const counts = [['Materie prime', d.ingredients], ['Formule', d.formulas], ['Prodotti', d.products], ['Clienti', d.customers], ['Lotti di prodotto', d.lots], ['Lotti di materie prime', d.ingLots], ['Registrazioni di produzione', d.runs], ['Consegne', d.shipments], ['Reclami', d.complaints], ['Offerte', d.offers]];
-  const backup = () => { download(`${META.storageKey || 'feedos16'}-backup-${stamp()}.json`, JSON.stringify({ format: 'feedos16', version: VERSION, exportedAt: new Date().toISOString(), data: getState().data }), 'application/json'); markBackup(); toast('Backup esportato: conservalo fuori dal browser'); };
+  const backup = () => download(`${META.storageKey || 'feedos16'}-backup-${stamp()}.json`, JSON.stringify({ format: 'feedos16', version: VERSION, exportedAt: new Date().toISOString(), data: getState().data }), 'application/json', { notify: false })
+    .then(ok => { if (ok) { markBackup(); toast('Backup esportato: conservalo fuori dal browser'); } });
   const restore = async e => {
     const f = e.target.files?.[0]; e.target.value = '';
     if (!f) return;
@@ -117,7 +119,7 @@ function Archivio({ d, hi }) {
 
 /* ---------------- importa ---------------- */
 const KINDS = {
-  prezzi: { label: 'Prezzi delle materie prime', cols: ['codice', 'prezzo'], hint: 'codice (es. MP01) o nome; prezzo in €/t', template: [['codice', 'nome', 'prezzo'], ['MP01', 'Mais granella', '231,50'], ['MP07', 'Farina di estrazione di soia 44%', '392']] },
+  prezzi: { label: 'Prezzi delle materie prime', cols: ['codice', 'prezzo'], hint: `codice (es. MP01) o nome; prezzo in ${PM_LABEL}`, template: SMALL_UNITS ? [['codice', 'nome', 'prezzo'], ['MP01', 'Rame idrossido tecnico', '9,40'], ['MP04', 'Tetraconazolo tecnico', '120']] : [['codice', 'nome', 'prezzo'], ['MP01', 'Mais granella', '231,50'], ['MP07', 'Farina di estrazione di soia 44%', '392']] },
   giacenze: { label: 'Giacenze delle materie prime', cols: ['codice', 'scorta'], hint: 'codice o nome; scorta in tonnellate', template: [['codice', 'nome', 'scorta'], ['MP01', 'Mais granella', '812,4'], ['MP02', 'Orzo', '64']] },
   quotazioni: { label: 'Quotazioni di mercato', cols: ['data', 'prodotto', 'prezzo'], hint: 'data (gg/mm/aaaa o aaaa-mm-gg); prodotto come nell’elenco dei mercati; prezzo €/t', template: [['data', 'prodotto', 'prezzo'], ['2026-09-17', 'Mais nazionale', '224']] },
 };
@@ -138,7 +140,7 @@ function Importa({ d }) {
       const low = rs.map(r => Object.fromEntries(Object.entries(r).map(([k, v]) => [norm(k).replace(/[^a-z]/g, ''), v])));
       const out = low.map(r => {
         if (kind === 'quotazioni') { const date = parseDate(r.data), p = num(r.prezzo), com = commodities.find(([id, l]) => norm(l) === norm(r.prodotto) || id === norm(r.prodotto)); return { r, ok: !!(date && p && com), date, price: p, com: com?.[0], label: com?.[1] || r.prodotto }; }
-        const ing = findIng(r), v = num(kind === 'prezzi' ? r.prezzo : r.scorta);
+        const ing = findIng(r), v = kind === 'prezzi' ? pmIn(num(r.prezzo)) : num(r.scorta); // prezzi nell'unità dell'edizione, salvati in €/t
         return { r, ok: !!ing && v != null && v >= 0, ing, v, old: ing ? (kind === 'prezzi' ? ing.price : ing.stock) : null };
       });
       setRows(out); setFname(f.name);
@@ -181,7 +183,7 @@ function Importa({ d }) {
                 <thead><tr>{kind === 'quotazioni' ? <><th>Data</th><th>Prodotto</th><th className="r">€/t</th></> : <><th>Materia prima</th><th className="r">Attuale</th><th className="r">Nuovo</th><th className="r">Variazione</th></>}<th>Esito</th></tr></thead>
                 <tbody>{rows.slice(0, 200).map((x, i) => <tr key={i}>
                   {kind === 'quotazioni' ? <><td>{x.date ? dateIt(x.date) : x.r.data}</td><td>{x.label}</td><td className="r">{nf(x.price, 1)}</td></> :
-                    <><td>{x.ing ? <><span className="code">{x.ing.code}</span> {x.ing.name}</> : (x.r.codice || x.r.nome)}</td><td className="r">{nf(x.old, 1)}</td><td className="r"><b>{nf(x.v, 1)}</b></td><td className="r">{x.old ? sf((x.v / x.old - 1) * 100, 1) + '%' : '—'}</td></>}
+                    <><td>{x.ing ? <><span className="code">{x.ing.code}</span> {x.ing.name}</> : (x.r.codice || x.r.nome)}</td><td className="r">{kind === 'prezzi' ? nfPm(x.old, 1) : nf(x.old, 1)}</td><td className="r"><b>{kind === 'prezzi' ? nfPm(x.v, 1) : nf(x.v, 1)}</b></td><td className="r">{x.old ? sf((x.v / x.old - 1) * 100, 1) + '%' : '—'}</td></>}
                   <td>{x.ok ? <Chip kind="good" icon={LuCheck}>ok</Chip> : <Chip kind="warn">non riconosciuta</Chip>}</td></tr>)}</tbody>
               </table></div>
               <div className="row"><Btn kind="primary" icon={LuCheck} onClick={apply} disabled={!rows.some(x => x.ok)}>Applica {rows.filter(x => x.ok).length} righe</Btn><Btn kind="ghost" onClick={() => setRows(null)}>Annulla</Btn></div>

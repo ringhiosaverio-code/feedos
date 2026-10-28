@@ -8,6 +8,7 @@ import { LuTruck, LuPlus, LuSave } from 'react-icons/lu';
 import { store, toast, openDrawer } from '../core/store.js';
 import { ctxOf, appToday } from '../core/derived.js';
 import { nf, sf, dateIt, addDays, daysBetween, relDays, sum, byId, monthLabel, slug } from '../core/util.js';
+import { fmtPm, PM_LABEL } from '../core/units.js';
 import { usePeriod } from '../ui/period.jsx';
 import { scorecard, supplierOf, supplierTrend, docsScore, APPROVAL } from '../engine/suppliers.js';
 import { Panel, Kpi, Table, Chip, Btn, Field, Select, NumInput, Empty, Drawer, Kv, SearchBox, filterRows, useWidth } from '../ui/ui.jsx';
@@ -170,7 +171,7 @@ function SupplierBody({ d, s }) {
         </div>
       )}
       <div className="dsec"><div className="eyebrow">Ordini aperti</div>
-        {open.length ? open.map(p => <div key={p.id} className="dlink" style={{ cursor: 'default' }}><span className="code">{p.code}</span><span>{ing[p.ingId]?.name} · {nf(p.tonnes)} t a {nf(p.price, 1)} €/t<span className="sub">consegna {dateIt(p.deliveryDate, 'dm')}</span></span><Chip kind={p.deliveryDate < today ? 'crit' : ''}>{p.deliveryDate < today ? 'in ritardo' : p.status}</Chip></div>) : <p className="small muted">Nessuno.</p>}
+        {open.length ? open.map(p => <div key={p.id} className="dlink" style={{ cursor: 'default' }}><span className="code">{p.code}</span><span>{ing[p.ingId]?.name} · {nf(p.tonnes)} t a {fmtPm(p.price, 1)}<span className="sub">consegna {dateIt(p.deliveryDate, 'dm')}</span></span><Chip kind={p.deliveryDate < today ? 'crit' : ''}>{p.deliveryDate < today ? 'in ritardo' : p.status}</Chip></div>) : <p className="small muted">Nessuno.</p>}
       </div>
       <div className="dsec"><div className="eyebrow">Ultimi lotti ricevuti</div>
         {lots.length ? lots.slice(0, 8).map(l => (

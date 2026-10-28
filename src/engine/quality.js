@@ -15,9 +15,9 @@ const TOL = {
 export const TOLERANCE_NOTE = 'Tolleranze del Reg. (CE) 767/2009, all. IV, parte A (testo modificato dal Reg. UE 2017/2279), mangimi per animali da produzione alimentare.';
 
 /* Agrofarmaci: tolleranze sul contenuto di sostanza attiva dichiarato (g/kg o g/L), secondo lo schema del manuale FAO/OMS
- * delle specifiche (da verificare): fino a 25 ±15% (±25% per granuli e WG), oltre 25 fino a 100 ±10%, oltre 100 fino a 250 ±6%,
+ * delle specifiche (fonti e stato in data/agro-rules.js, regola «fao-tol»): fino a 25 ±15% (±25% per granuli e WG), oltre 25 fino a 100 ±10%, oltre 100 fino a 250 ±6%,
  * oltre 250 fino a 500 ±5%, oltre 500 ±25 g. */
-export const AS_TOLERANCE_NOTE = 'Tolleranze sul contenuto di sostanza attiva secondo lo schema FAO/OMS delle specifiche degli agrofarmaci (da verificare sulla specifica del prodotto).';
+export const AS_TOLERANCE_NOTE = 'Tolleranze sul contenuto di sostanza attiva per fasce, secondo il manuale FAO/OMS delle specifiche (fonti in Regolatorio › Regole e fonti); vale la specifica del prodotto registrato.';
 export function asToleranceRange(declared, form = '') {
   if (declared == null || !(declared > 0)) return null;
   const het = /^(WG|WDG|GR|DP|WP)$/i.test(String(form));

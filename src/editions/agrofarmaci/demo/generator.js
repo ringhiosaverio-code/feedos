@@ -1,4 +1,4 @@
-/* FitoOS · Generatore dell'azienda di agrofarmaci dimostrativa «Arvale Dimostrativa S.p.A.» (dati SINTETICI e deterministici).
+/* DifesaOS · Generatore dell'azienda di agrofarmaci dimostrativa «Arvale Dimostrativa S.p.A.» (dati SINTETICI e deterministici).
  * Stessa forma dei dati del mangimificio (stesse raccolte), così direzione, finanza, commerciale, acquisti, produzione e qualità
  * funzionano senza modifiche: ricette per tonnellata di prodotto, lotti di materia prima consumati in ordine di arrivo (FIFO),
  * lotti di prodotto esauriti dalle spedizioni, energia, acqua e rifiuti derivati dalla produzione.

@@ -6,6 +6,7 @@ import { store, toast } from '../core/store.js';
 import { getPrefs } from '../core/prefs.js';
 import { go } from '../core/router.js';
 import { nf, sf, monthLabel, dateIt, addDays } from '../core/util.js';
+import { PM_LABEL, pm, fmtPm } from '../core/units.js';
 import { toCSV, download, stamp } from '../core/io.js';
 import { SPECIES } from '../engine/nutrients.js';
 import { pnlFor } from '../engine/pnl.js';
@@ -132,14 +133,14 @@ export function Budget({ d }) {
     <>
       {head}
       <div className="kpis">
-        <Kpi label={`EBIT a budget ${year}`} {...money(bt.ebit)} foot={`MdC II ${nf(bt.tonnes ? bt.mc2 / bt.tonnes : null, 1)} €/t · ${nf(bt.tonnes)} t · fissi ${eurTxt(bt.fixed)}`} />
+        <Kpi label={`EBIT a budget ${year}`} {...money(bt.ebit)} foot={`MdC II ${fmtPm(bt.tonnes ? bt.mc2 / bt.tonnes : null, 1)} · ${nf(bt.tonnes)} t · fissi ${eurTxt(bt.fixed)}`} />
         <Kpi label="EBIT da inizio anno" {...money(ytd.act.ebit)} cmp={{ cur: ytd.act.ebit, value: ytd.bud.ebit, kind: 'flow', good: 'up', label: 'budget' }} foot={year === curYear ? `a oggi · budget pro quota ${eurTxt(ytd.bud.ebit)}` : `budget ${eurTxt(ytd.bud.ebit)}`} />
         {L && <Kpi label={<Def text="EBIT da inizio anno + MdC II previsto per il resto dell’anno (previsione settimanale per prodotto × margine unitario a prezzi netti degli ultimi 90 giorni e costi di oggi) − costi fissi del resto dell’anno. Banda P10–P90 approssimata: per ogni prodotto le settimane previste si combinano come errori indipendenti, poi si sommano i limiti dei prodotti.">Stima di chiusura</Def>}
           {...money(L.landing)} status={L.budgetEbit == null ? null : L.landing >= L.budgetEbit ? 'ok' : L.landing >= L.budgetEbit * 0.9 ? 'warn' : 'bad'}
           foot={`P10–P90 ${kEur(L.p10, 0)} – ${kEur(L.p90, 0)} · approssimata`} cmp={L.budgetEbit != null ? { cur: L.landing, value: L.budgetEbit, kind: 'flow', good: 'up', label: 'budget' } : undefined} />}
         {L && L.gap != null && <Kpi label={<Def text="Differenza tra stima di chiusura e budget, divisa per i mesi che restano: quanto EBIT in più (o in meno) serve ogni mese per arrivare al budget.">Gap per mese</Def>} {...money(-L.gapPerMonth)} status={gapBad ? 'bad' : 'ok'}
           foot={gapBad ? `da recuperare in ${nf(L.restMonths, 1)} mesi` : `di margine sul budget in ${nf(L.restMonths, 1)} mesi`} />}
-        {L && L.requiredPerT != null && <Kpi label={<Def text="Gap totale diviso per le tonnellate previste nel resto dell’anno: aumento del MdC per tonnellata necessario per chiudere a budget.">€/t necessari</Def>} value={nf(Math.max(0, L.requiredPerT), 1)} unit="€/t"
+        {L && L.requiredPerT != null && <Kpi label={<Def text="Gap totale diviso per le tonnellate previste nel resto dell’anno: aumento del MdC per tonnellata necessario per chiudere a budget.">{PM_LABEL} necessari</Def>} value={nf(pm(Math.max(0, L.requiredPerT)), 1)} unit={PM_LABEL}
           status={L.requiredPerT > 0 ? 'bad' : 'ok'} foot={`in più sulle ${nf(L.restT)} t previste (stimate)`} />}
       </div>
       <Panel title={`Budget e consuntivo ${year} per mese`} sub={`Versione ${version}${st?.approvedAt && locked ? `, approvata il ${dateIt(st.approvedAt)}` : ''} · barre vuote: budget; piene: consuntivo; tratteggiate: previsione dei mesi rimanenti (stimata)`}
@@ -199,7 +200,7 @@ function BudgetWizard({ d, ctx, today, year, version, mode, basedOn, onClose, on
           row('Tonnellate', prev.tonnes, cur ? cur.tonnes : last12?.tonnes, v => nf(v) + ' t'),
           row('Ricavi netti', prev.revenue, cur ? cur.revenue : last12?.revenueNet),
           row('MdC II', prev.mc2, cur ? cur.mc2 : last12?.by.mdc2),
-          row('MdC II per t', prev.tonnes ? prev.mc2 / prev.tonnes : null, cur ? (cur.tonnes ? cur.mc2 / cur.tonnes : null) : last12?.tonnes ? last12.by.mdc2 / last12.tonnes : null, v => nf(v, 1) + ' €/t'),
+          row('MdC II per t', prev.tonnes ? prev.mc2 / prev.tonnes : null, cur ? (cur.tonnes ? cur.mc2 / cur.tonnes : null) : last12?.tonnes ? last12.by.mdc2 / last12.tonnes : null, v => fmtPm(v, 1)),
           row('Costi fissi', prev.fixed, cur ? cur.fixed : last12?.fixedTotal),
           row('EBIT', prev.ebit, cur ? cur.ebit : last12?.by.ebit),
         ]} /> : <p className="small muted">Nessun volume di partenza.</p>}

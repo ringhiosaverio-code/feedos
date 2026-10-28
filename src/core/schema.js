@@ -18,7 +18,7 @@ const ADDED_18 = [
   'esgTargets', 'measures', 'sllLoans', 'taxonomyDossiers', // piano
   'esgAnswers', 'esgClosings', 'esgHistory', 'questionnaires', 'materiality', // report
 ];
-// edizione agrofarmaci (FitoOS): stesso schema per le due edizioni, raccolte vuote nel mangimificio
+// edizione agrofarmaci (DifesaOS): stesso schema per le due edizioni, raccolte vuote nel mangimificio
 const ADDED_AGRO = [
   'registrations', 'regUses', 'regEvents', 'activeSubstances', 'sdsDocs', 'sdsDispatches', // regolatorio
   'campaigns', 'earlyOrders', 'returns', // campagne e premi

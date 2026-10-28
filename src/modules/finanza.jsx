@@ -10,6 +10,8 @@ import { usePrefs } from '../core/prefs.js';
 import { AREA_META } from '../core/roles.js';
 import { ctxOf, idx, appToday } from '../core/derived.js';
 import { nf, sum, dateIt, daysBetween, addDays, endOfMonth, monthLabel, pct } from '../core/util.js';
+import { PM_LABEL, nfPm, fmtPm } from '../core/units.js';
+import { META } from '../editions/meta.js';
 import { creditSummary, ledger, invoicesOf, registerPaymentOps, allocatePaymentOps, dunningOps, AGING_BUCKETS, pdOf, lgdOf, PD_DEFAULT, LGD_DEFAULT, customerTerms, creditStart, AR_HORIZON } from '../engine/credit.js';
 import { workingCapital, workingCapitalHistory, finOf, vatOf } from '../engine/cash.js';
 import { inventorySummary, valuationAt, finishedAt, stockHistory, abcXyz, slowMovers, carryRate, stockStart, STOCK_HORIZON } from '../engine/inventory.js';
@@ -461,7 +463,7 @@ function Circolante({ d }) {
           <div className="fin-wc-stats">
             <span title="Capitale circolante ÷ vendite lorde (IVA compresa) degli ultimi 12 mesi chiusi"><small>Sulle vendite annue</small><b>{w.gross12 > 0 ? pct(w.nwc / w.gross12, 1) : '—'}</b></span>
             <span title="Costo annuo del capitale circolante ÷ 365"><small>Costo al giorno</small><b>{eur(w.costPerYear / 365)}</b></span>
-            <span title="Costo annuo del capitale circolante ÷ tonnellate consegnate negli ultimi 12 mesi"><small>Costo per tonnellata venduta</small><b>{t12 > 0 ? nf(w.costPerYear / t12, 2) + ' €/t' : '—'}</b></span>
+            <span title="Costo annuo del capitale circolante ÷ tonnellate consegnate negli ultimi 12 mesi"><small>Costo per tonnellata venduta</small><b>{t12 > 0 ? fmtPm(w.costPerYear / t12, 2) : '—'}</b></span>
           </div>
         </Panel>
         <Panel title="Il ciclo in giorni" sub="Dal pagamento delle materie prime all’incasso dai clienti">
@@ -648,16 +650,16 @@ function StockSheet({ d, ctx, date, mpM, fgM, onClose }) {
         <LuFileText aria-hidden="true" /><b>Rimanenze al {dateIt(date)}</b><span className="muted small">anteprima A4</span><span className="sp" />
         <Btn kind="primary" icon={LuPrinter} onClick={printNow}>Stampa</Btn><Btn icon={LuX} onClick={close}>Chiudi</Btn>
       </div>
-      <PrintPage title={`Rimanenze al ${dateIt(date)}`} period={`al ${dateIt(date, 'long')}`} footer="Valorizzazione gestionale, non fiscale · elaborata con FeedOS">
+      <PrintPage title={`Rimanenze al ${dateIt(date)}`} period={`al ${dateIt(date, 'long')}`} footer={`Valorizzazione gestionale, non fiscale · elaborata con ${META.product}`}>
         <p className="small">Materie prime valorizzate con il metodo <b>{MP_METHODS.find(m => m.id === mpM).label}</b> ({MP_METHODS.find(m => m.id === mpM).title.toLowerCase()}); prodotto finito al costo <b>{fgM}</b>. <b>Valorizzazione gestionale, non fiscale.</b></p>
         <table className="t">
-          <thead><tr><th>Materia prima</th><th className="r">t</th><th className="r">€/t</th><th className="r">Valore €</th></tr></thead>
-          <tbody>{v.byIng.map(r => <tr key={r.ingId}><td>{I.ing[r.ingId]?.code} {I.ing[r.ingId]?.name || r.ingId}</td><td className="r">{nf(r.t, 1)}</td><td className="r">{nf(r.price, 1)}</td><td className="r">{nf(r.value)}</td></tr>)}</tbody>
+          <thead><tr><th>Materia prima</th><th className="r">t</th><th className="r">{PM_LABEL}</th><th className="r">Valore €</th></tr></thead>
+          <tbody>{v.byIng.map(r => <tr key={r.ingId}><td>{I.ing[r.ingId]?.code} {I.ing[r.ingId]?.name || r.ingId}</td><td className="r">{nf(r.t, 1)}</td><td className="r">{nfPm(r.price, 1)}</td><td className="r">{nf(r.value)}</td></tr>)}</tbody>
           <tfoot><tr><td>Totale materie prime</td><td className="r">{nf(v.t, 1)}</td><td /><td className="r">{nf(v.value)}</td></tr></tfoot>
         </table>
         <table className="t">
-          <thead><tr><th>Prodotto finito</th><th className="r">Lotti</th><th className="r">t</th><th className="r">€/t</th><th className="r">Valore €</th></tr></thead>
-          <tbody>{f.byProduct.map(r => <tr key={r.productId}><td>{I.prod[r.productId]?.code} {I.prod[r.productId]?.name || r.productId}</td><td className="r">{r.lots}</td><td className="r">{nf(r.t, 1)}</td><td className="r">{nf(fgv(r) / r.t, 1)}</td><td className="r">{nf(fgv(r))}</td></tr>)}</tbody>
+          <thead><tr><th>Prodotto finito</th><th className="r">Lotti</th><th className="r">t</th><th className="r">{PM_LABEL}</th><th className="r">Valore €</th></tr></thead>
+          <tbody>{f.byProduct.map(r => <tr key={r.productId}><td>{I.prod[r.productId]?.code} {I.prod[r.productId]?.name || r.productId}</td><td className="r">{r.lots}</td><td className="r">{nf(r.t, 1)}</td><td className="r">{nfPm(fgv(r) / r.t, 1)}</td><td className="r">{nf(fgv(r))}</td></tr>)}</tbody>
           <tfoot><tr><td>Totale prodotto finito</td><td /><td className="r">{nf(f.t, 1)}</td><td /><td className="r">{nf(fgM === 'pieno' ? f.valueFull : f.valueVar)}</td></tr></tfoot>
         </table>
         <p><b>Totale rimanenze: {eur(v.value + (fgM === 'pieno' ? f.valueFull : f.valueVar))}</b>{v.quarantine > 0.5 ? ` · in quarantena, non comprese: ${eur(v.quarantine)}` : ''}</p>

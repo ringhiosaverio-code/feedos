@@ -19,7 +19,7 @@ import { governanceSignals, governanceReportSection } from './esg-governance.js'
 import { pianoSignals, pianoReportSection } from './esg-piano.js';
 import { rischiSignals, rischiReportSection } from './esg-rischi.js';
 import { ambienteSignals, ambienteReportSection } from './esg-ambiente.js';
-// edizione agrofarmaci (FitoOS): senza registrazioni non producono niente
+// edizione agrofarmaci (DifesaOS): senza registrazioni non producono niente
 import { agroSignals, agroReportSection } from './agro-reg.js';
 import { campSignals } from './agro-camp.js';
 

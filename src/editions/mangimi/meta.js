@@ -5,6 +5,7 @@ export const META = {
   product: 'FeedOS',
   version: null,                 // null = la versione dell'app (src/app/version.js)
   storageKey: 'feedos16',        // database e chiavi del browser: invariati per gli archivi già salvati
+  priceUnit: 't',                // prezzi in € per tonnellata
   sector: 'mangimi',
   companyFallback: 'Mangimificio',
   areaIds: ['oggi', 'direzione', 'finanza', 'gemello', 'formulazione', 'acquisti', 'produzione', 'qualita', 'commerciale', 'economia', 'esg', 'dati'],

@@ -6,6 +6,7 @@ import { LuTriangleAlert, LuSettings2 } from 'react-icons/lu';
 import { store, toast, openDrawer } from '../core/store.js';
 import { ctxOf, appToday } from '../core/derived.js';
 import { nf, pct } from '../core/util.js';
+import { PM_LABEL, pm, pmDec, fmtPm } from '../core/units.js';
 import { resolvePeriod } from '../core/period.js';
 import { usePeriod } from '../ui/period.jsx';
 import { customerProfit, productProfit, agentProfit, churnRisk, lossImpact, logisticsSettings, QUADRANTS } from '../engine/profitability.js';
@@ -16,7 +17,7 @@ import { Def, money, eurTxt, kEur, HWaterfall } from './direzione-conto.jsx';
 
 const QCOLOR = { Difendere: 'var(--s3)', Sviluppare: 'var(--s1)', 'Rinegoziare prezzo': 'var(--s4)', 'Ristrutturare servizio': 'var(--s2)' };
 const QHINT = QUADRANTS; // spiegazione di ogni azione suggerita, dal motore
-const t1 = v => (v == null || !Number.isFinite(+v) ? '—' : nf(v, 1));
+const t1 = v => (v == null || !Number.isFinite(+v) ? '—' : nf(pm(v), pmDec(1))); // per tonnellata, o per kg nell'edizione agrofarmaci
 
 /** Dati del periodo e del confronto (solo periodi, non il budget: il budget non ha clienti). */
 function useProfit(d, by) {
@@ -53,7 +54,7 @@ export function Redditivita({ d, sel }) {
       </div>
       <div className="kpis">
         <Kpi label={<Def text="Margine di contribuzione I (ricavi netti meno costi variabili effettivi) meno trasporto ripartito per distanza e consegne, provvigioni, costo della dilazione di pagamento (termini + ritardo medio), reclami e visite.">Margine netto</Def>}
-          {...money(tot.net)} foot={`${t1(tot.netT)} €/t su ${nf(tot.tonnes)} t`} cmp={kcmp(pr, tot.net, totC?.net)} />
+          {...money(tot.net)} foot={`${t1(tot.netT)} ${PM_LABEL} su ${nf(tot.tonnes)} t`} cmp={kcmp(pr, tot.net, totC?.net)} />
         <Kpi label={<Def text="Curva della balena: clienti ordinati dal più redditizio. Il picco è il margine cumulato massimo in % del totale: oltre il 100% significa che i clienti in coda lo erodono.">Picco della curva</Def>}
           value={cpAll.peakPct != null ? nf(cpAll.peakPct * 100, 0) : '—'} unit="%" status={cpAll.peakPct > 1.05 ? 'warn' : undefined} foot="margine dei clienti migliori sul totale" />
         <Kpi label="Clienti in perdita" value={neg.length} status={neg.length ? 'bad' : 'ok'} foot={neg.length ? `${kEur(-neg.reduce((s, r) => s + r.net, 0))} da recuperare` : 'nessuno nel periodo'} onClick={neg.length ? () => { setBy('clienti'); openDrawer('customer', neg[0].id); } : undefined} />
@@ -83,7 +84,7 @@ function ClientiView({ d, pr, cp, cur }) {
             refs={[{ y: 100, label: 'totale', kind: 'muted' }]} ariaLabel="Curva della balena dei clienti" />
           <p className="small muted" style={{ marginTop: 6 }}>Picco al {nf((cp.peakPct || 0) * 100)}%: i clienti oltre il picco riducono il margine complessivo di {kEur(Math.max(0, (cp.peakPct || 1) - 1) * (cp.totals?.net || 0))}.</p>
         </Panel>
-        <Panel title="Matrice dei clienti" sub={`Tonnellate (asse orizzontale, scala logaritmica) e margine netto per tonnellata; obiettivo ${nf(target)} €/t · clic per la scheda`}>
+        <Panel title="Matrice dei clienti" sub={`Tonnellate (asse orizzontale, scala logaritmica) e margine netto per tonnellata; obiettivo ${fmtPm(target, 0)} · clic per la scheda`}>
           <Quadrant rows={rows} target={target} median={cp.median} onPick={r => openDrawer('customer', r.id)} />
           <div className="legend" style={{ marginTop: 6 }}>{Object.keys(QUADRANTS).map(q => <span key={q} title={QHINT[q]}><i style={{ background: QCOLOR[q] }} />{q} ({rows.filter(r => r.quadrant === q).length})</span>)}</div>
         </Panel>
@@ -97,12 +98,12 @@ function ClientiView({ d, pr, cp, cur }) {
           { key: 'quadrant', label: 'Azione', render: r => <Chip title={QHINT[r.quadrant]}><i className="dot" style={{ background: QCOLOR[r.quadrant], marginRight: 4 }} />{r.quadrant}</Chip>, csv: r => r.quadrant },
           { key: 'tonnes', label: 't', align: 'r', render: r => nf(r.tonnes), csv: r => r.tonnes },
           { key: 'net', label: 'Netto', align: 'r', render: r => <span className={r.net < 0 ? 'chip crit' : ''}>{kEur(r.net)}</span>, csv: r => r.net },
-          { key: 'netT', label: 'Netto €/t', align: 'r', render: r => t1(r.netT), csv: r => r.netT },
-          { key: 'logT', label: 'Trasporto €/t', align: 'r', render: r => t1(r.logT), csv: r => r.logT },
+          { key: 'netT', label: `Netto ${PM_LABEL}`, align: 'r', render: r => t1(r.netT), csv: r => pm(r.netT) },
+          { key: 'logT', label: `Trasporto ${PM_LABEL}`, align: 'r', render: r => t1(r.logT), csv: r => pm(r.logT) },
           { key: 'km', label: 'km', align: 'r', render: r => nf(r.km), csv: r => r.km },
           { key: 'avgDrop', label: 'Consegna media', align: 'r', render: r => <>{t1(r.avgDrop)} t<span className="sub">min. {t1(r.minDropT)} t</span></>, csv: r => r.avgDrop },
           { key: 'termsDays', label: 'Giorni', align: 'r', render: r => <>{nf(r.termsDays)}<span className="sub">{r.delay > 1 ? `+${nf(r.delay)} ritardo` : 'puntuale'}</span></>, csv: r => r.termsDays },
-          { key: 'priceNeededT', label: <Def text="Aumento di prezzo per tonnellata necessario a portare il margine netto all’obiettivo, a parità di servizio.">Prezzo necessario</Def>, csvLabel: 'Prezzo necessario €/t', align: 'r', render: r => (r.gapT > 0 ? <Chip kind="warn">+{t1(r.gapT)} €/t</Chip> : <span className="muted">—</span>), csv: r => r.gapT },
+          { key: 'priceNeededT', label: <Def text="Aumento di prezzo per tonnellata necessario a portare il margine netto all’obiettivo, a parità di servizio.">Prezzo necessario</Def>, csvLabel: `Prezzo necessario ${PM_LABEL}`, align: 'r', render: r => (r.gapT > 0 ? <Chip kind="warn">+{t1(r.gapT)} {PM_LABEL}</Chip> : <span className="muted">—</span>), csv: r => pm(r.gapT) },
           { key: 'abc', label: 'ABC', sort: r => r.abcRev + r.abcNet, render: r => <span className="row gap-s"><Chip title="Classe sui ricavi">{r.abcRev}</Chip><Chip kind={r.abcNet === 'C' ? 'warn' : 'good'} title="Classe sul margine netto">{r.abcNet}</Chip></span>, csv: r => `${r.abcRev}/${r.abcNet}` },
         ]} />
       </Panel>
@@ -124,7 +125,7 @@ export function CustomerWaterfall({ r }) {
     { key: 'vis', label: 'Visite', value: -per(r.visits), def: `${nf(r.nVisits)} visite al costo standard per visita.` },
     { key: 'net', label: 'Margine netto', value: per(r.net), kind: 'total' },
   ].filter(s => s.kind === 'total' || Math.abs(s.value) >= 0.005);
-  return <HWaterfall steps={steps} fmt={v => nf(v, 2) + ' €/t'} ariaLabel="Cascata del margine netto per tonnellata" />;
+  return <HWaterfall steps={steps} fmt={v => fmtPm(v, 2)} ariaLabel="Cascata del margine netto per tonnellata" />;
 }
 
 /** Matrice tonnellate × margine netto per tonnellata (asse x logaritmico), con obiettivo e mediana. */
@@ -148,18 +149,18 @@ function Quadrant({ rows, target, median, onPick }) {
         {ticksY.map(v => <text key={'y' + v} x={pl - 6} y={Y(v) + 3.5} textAnchor="end">{nf(v)}</text>)}
         {ticksX.map(t => <text key={'x' + t} x={X(t)} y={H - 8} textAnchor="middle">{nf(t)} t</text>)}
         <line x1={pl} x2={W - pr} y1={Y(target)} y2={Y(target)} stroke="var(--maize)" strokeDasharray="4 3" />
-        <text x={W - pr} y={Y(target) - 4} textAnchor="end" className="lbl-ink">obiettivo {nf(target)} €/t</text>
+        <text x={W - pr} y={Y(target) - 4} textAnchor="end" className="lbl-ink">obiettivo {fmtPm(target, 0)}</text>
         {median > 0 && <line x1={X(median)} x2={X(median)} y1={pt} y2={H - pb} stroke="var(--axis)" strokeDasharray="4 3" />}
         <line x1={pl} x2={W - pr} y1={Y(0)} y2={Y(0)} stroke="var(--crit)" strokeOpacity=".5" />
         {rows.map((r, i) => (
           <circle key={r.id} cx={X(r.tonnes)} cy={Y(r.netT)} r={hover === i ? 7 : 5} fill={QCOLOR[r.quadrant]} fillOpacity={r.net < 0 ? 1 : 0.8}
             stroke={r.net < 0 ? 'var(--crit)' : 'var(--surface)'} strokeWidth="1.5" style={{ cursor: 'pointer' }}
             onPointerEnter={() => setHover(i)} onPointerLeave={() => setHover(null)} onClick={() => onPick?.(r)}>
-            <title>{`${r.name}: ${nf(r.tonnes)} t, ${nf(r.netT, 1)} €/t`}</title>
+            <title>{`${r.name}: ${nf(r.tonnes)} t, ${fmtPm(r.netT, 1)}`}</title>
           </circle>
         ))}
       </svg>
-      {h && <div className="tip" style={{ left: Math.min(Math.max(X(h.tonnes), 90), W - 90), top: Y(h.netT) }}><b>{h.name}</b><div className="r"><span>Tonnellate</span><span>{nf(h.tonnes)}</span></div><div className="r"><span>Netto</span><span>{nf(h.netT, 1)} €/t</span></div><div className="r"><span>Azione</span><span>{h.quadrant}</span></div></div>}
+      {h && <div className="tip" style={{ left: Math.min(Math.max(X(h.tonnes), 90), W - 90), top: Y(h.netT) }}><b>{h.name}</b><div className="r"><span>Tonnellate</span><span>{nf(h.tonnes)}</span></div><div className="r"><span>Netto</span><span>{fmtPm(h.netT, 1)}</span></div><div className="r"><span>Azione</span><span>{h.quadrant}</span></div></div>}
     </div>
   );
 }
@@ -173,10 +174,10 @@ function AltView({ d, by, pr }) {
         { key: 'name', label: isA ? 'Agente' : 'Prodotto', render: r => <><b>{r.name}</b><span className="sub">{isA ? `${r.zone || ''} · ${r.customers ?? '—'} clienti` : `${r.code} · ${r.packaging}${r.active === false ? ' · non attivo' : ''}`}</span></>, csv: r => r.name },
         { key: 'tonnes', label: 't', align: 'r', render: r => nf(r.tonnes), csv: r => r.tonnes },
         { key: 'revenue', label: 'Ricavi', align: 'r', render: r => kEur(r.revenue), csv: r => r.revenue },
-        { key: 'mc2T', label: 'MdC II €/t', align: 'r', sort: r => r.tonnes ? r.mc2 / r.tonnes : null, render: r => t1(r.tonnes ? r.mc2 / r.tonnes : null), csv: r => (r.tonnes ? r.mc2 / r.tonnes : null) },
+        { key: 'mc2T', label: `MdC II ${PM_LABEL}`, align: 'r', sort: r => r.tonnes ? r.mc2 / r.tonnes : null, render: r => t1(r.tonnes ? r.mc2 / r.tonnes : null), csv: r => (r.tonnes ? pm(r.mc2 / r.tonnes) : null) },
         { key: 'commission', label: 'Provvigioni', align: 'r', render: r => kEur(r.commission), csv: r => r.commission },
         { key: 'net', label: 'Netto', align: 'r', render: r => <span className={r.net < 0 ? 'chip crit' : ''}>{kEur(r.net)}</span>, csv: r => r.net },
-        { key: 'netT', label: 'Netto €/t', align: 'r', sort: r => r.tonnes ? r.net / r.tonnes : null, render: r => t1(r.tonnes ? r.net / r.tonnes : null), csv: r => (r.tonnes ? r.net / r.tonnes : null) },
+        { key: 'netT', label: `Netto ${PM_LABEL}`, align: 'r', sort: r => r.tonnes ? r.net / r.tonnes : null, render: r => t1(r.tonnes ? r.net / r.tonnes : null), csv: r => (r.tonnes ? pm(r.net / r.tonnes) : null) },
         { key: 'share', label: 'Quota ricavi', align: 'r', sort: r => r.revenue, render: r => pct(r.revenue / (pr.cur.totals?.revenue || 1), 1), csv: r => r.revenue / (pr.cur.totals?.revenue || 1) },
       ]} />
     </Panel>
@@ -216,7 +217,7 @@ function LossPanel({ d, pr, cp }) {
         {L && <div className="kv">
           <dt>Tonnellate perse</dt><dd>{nf(-L.dTonnes)} t ({pct(L.share, 1)} dei ricavi in gioco)</dd>
           <dt>Margine di contribuzione perso</dt><dd>{kEur(L.dMc2)}</dd>
-          <dt>Costi fissi per tonnellata</dt><dd>{nf(L.fixedPerT, 2)} → {nf(L.fixedPerT + L.dFixedPerT, 2)} €/t</dd>
+          <dt>Costi fissi per tonnellata</dt><dd>{fmtPm(L.fixedPerT, 2)} → {fmtPm(L.fixedPerT + L.dFixedPerT, 2)}</dd>
           <dt>EBIT del periodo</dt><dd><b>{eurTxt(L.ebit)} → {eurTxt(L.ebitAfter)}</b> ({nf(L.ebit ? L.dEbit / Math.abs(L.ebit) * 100 : 0, 1)}%)</dd>
         </div>}
       </div>
@@ -252,11 +253,11 @@ export function CustomerProfit({ d, id }) {
     <section className="dsec">
       <span className="eyebrow">Redditività netta · ultimi 12 mesi</span>
       <div className="row gap-s">
-        <Chip kind={r.net < 0 ? 'crit' : 'good'}>{nf(r.netT, 1)} €/t netti</Chip>
+        <Chip kind={r.net < 0 ? 'crit' : 'good'}>{fmtPm(r.netT, 1)} netti</Chip>
         <Chip title={QHINT[r.quadrant]}>{r.quadrant}</Chip>
         <Chip title="Classe ABC sui ricavi">ricavi {r.abcRev}</Chip>
         <Chip title="Classe ABC sul margine netto">margine {r.abcNet}</Chip>
-        {r.gapT > 0 && <Chip kind="warn" title="Aumento di prezzo per arrivare all’obiettivo di margine netto">prezzo +{nf(r.gapT, 1)} €/t</Chip>}
+        {r.gapT > 0 && <Chip kind="warn" title="Aumento di prezzo per arrivare all’obiettivo di margine netto">prezzo +{fmtPm(r.gapT, 1)}</Chip>}
       </div>
       <CustomerWaterfall r={r} />
       <span className="small muted">{nf(r.tonnes)} t in {nf(r.drops)} consegne (media {nf(r.avgDrop, 1)} t, minima conveniente {nf(r.minDropT, 1)} t) · {nf(r.km)} km · pagamento a {nf(r.termsDays)} giorni.</span>

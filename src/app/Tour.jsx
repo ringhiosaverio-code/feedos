@@ -27,7 +27,7 @@ const BASE_STEPS = [
   { to: ['esg', 'indicatori'], sel: '#esg-kpi', title: FULL ? 'I 49 indicatori della tesi, dai dati' : 'I 49 indicatori ESG, dai dati', text: (FULL ? 'Il registro della tesi' : 'Il registro degli indicatori') + ' (ambiente, sociale, economia, governance) è alimentato dai dati di ogni giorno: ogni valore dichiara se viene dai dati, se è stato inserito o se manca. Da qui nascono energia e CO₂, il passaporto di prodotto e la bozza del VSME.' },
   { to: ['esg', 'passaporto'], sel: '#esg-passport', title: 'Il passaporto di prodotto', text: 'Per ogni mangime: impronta stimata dalla culla al cancello, origine delle materie prime, co-prodotti, soia certificata, conformità dei lotti. Uno strumento per parlare di sostenibilità con numeri verificabili.' },
 ];
-/** Passi della presentazione: quelli dell'edizione (FitoOS) o quelli di FeedOS. */
+/** Passi della presentazione: quelli dell'edizione (DifesaOS) o quelli di FeedOS. */
 export const STEPS = TOUR_STEPS || BASE_STEPS;
 
 export function Tour() {

@@ -1,12 +1,12 @@
-/* FitoOS · Motore dell'area Regolatorio (edizione agrofarmaci): registrazioni e usi in etichetta, sostanze attive e rinnovi,
+/* DifesaOS · Motore dell'area Regolatorio (edizione agrofarmaci): registrazioni e usi in etichetta, sostanze attive e rinnovi,
  * schede di sicurezza, Seveso e ADR. Funzioni pure (niente orologio: la data arriva da fuori), mai eccezioni: un archivio
  * senza queste raccolte (FeedOS, archivio vuoto) dà risultati vuoti.
- * Regole e soglie sono riassunti da verificare sui testi ufficiali (Reg. CE 1107/2009 artt. 43, 46, 53; Reg. CE 1907/2006
- * art. 31; Reg. CE 1272/2008 allegato VIII; D.Lgs. 105/2015 allegato 1; ADR 1.1.3.6 e disposizione speciale 375). */
+ * Ogni regola ha riferimento, fonte e data di verifica in data/agro-rules.js; le stime dell'azienda (probabilità, orizzonte,
+ * domanda dopo una revoca, costo di smaltimento) si leggono da settings.agro.rules con rulesOf(d). */
 import { addDays, addMonths, daysBetween, round, sum, byId, dateIt, nf, eur } from '../core/util.js';
 import { makeIndex, costsOf } from './actuals.js';
 
-/* ---------------- pacchetto di regole (valori da verificare) ---------------- */
+/* ---------------- pacchetto di regole (fonti in data/agro-rules.js) ---------------- */
 export const AGRO_RULES = {
   version: '2026.1',
   art43Months: 3,              // domanda di rinnovo del prodotto entro 3 mesi dal rinnovo della sostanza attiva
@@ -31,6 +31,15 @@ export const AGRO_RULES = {
   adrFactor: { 0: 0, 1: 50, 2: 3, 3: 1, 4: 0 }, // ADR 1.1.3.6.4: moltiplicatori per categoria di trasporto
   adrLimit: 1000,
 };
+/** Regole con le stime dell'azienda salvate in settings.agro.rules (solo i parametri di AGRO_ESTIMATES). */
+export function rulesOf(d) {
+  const o = d?.settings?.agro?.rules || {};
+  const num = v => (v != null && v !== '' && Number.isFinite(+v) ? +v : null);
+  const p = {};
+  for (const [k, v] of Object.entries(o.pNonRenewal || {})) if (num(v) != null && k in AGRO_RULES.pNonRenewal) p[k] = Math.min(1, Math.max(0, num(v)));
+  const pick = (k, lo, hi) => (num(o[k]) == null ? AGRO_RULES[k] : Math.min(hi, Math.max(lo, num(o[k]))));
+  return { ...AGRO_RULES, pNonRenewal: { ...AGRO_RULES.pNonRenewal, ...p }, horizonMonths: Math.round(pick('horizonMonths', 6, 120)), graceDemandFactor: pick('graceDemandFactor', 0, 1.5), disposalEurT: pick('disposalEurT', 0, 20000) };
+}
 export const SEVESO_GROUPS = { salute: 'Pericoli per la salute', fisici: 'Pericoli fisici', ambiente: 'Pericoli per l’ambiente' };
 
 const isDate = s => typeof s === 'string' && /^\d{4}-\d{2}-\d{2}/.test(s);
@@ -57,7 +66,7 @@ export function graceDefaults(withdrawalDate, R = AGRO_RULES) {
 }
 
 /** Domande di rinnovo dei prodotti (art. 43): entro 3 mesi dal rinnovo di ogni sostanza attiva dichiarata. */
-export function art43Due(d, today, R = AGRO_RULES) {
+export function art43Due(d, today, R = rulesOf(d)) {
   const as = byId(d.activeSubstances || []);
   const out = [];
   for (const reg of d.registrations || []) {
@@ -102,7 +111,7 @@ export function asRiskClass(a, today, R = AGRO_RULES) {
  * Ricavi a rischio a 36 mesi: per prodotto r = 1 − Π(1 − r(sostanza)); 1 se la registrazione scade nell'orizzonte senza rinnovo.
  * Le probabilità sono stime dell'azienda (AGRO_RULES.pNonRenewal), da presentare come tali.
  */
-export function revenueAtRisk(d, today, R = AGRO_RULES) {
+export function revenueAtRisk(d, today, R = rulesOf(d)) {
   const as = byId(d.activeSubstances || []);
   const rev = productRevenue(d, today);
   const prods = byId(d.products || []);
@@ -147,7 +156,7 @@ export function rawStock(d) {
  * (stesso periodo dell'anno prima per AGRO_RULES.graceDemandFactor), prodotto finito in eccesso, produzione ancora possibile prima della revoca con la
  * sostanza tecnica in magazzino, sostanza tecnica che avanza; accantonamento = eccedenze al costo più lo smaltimento.
  */
-export function disposalPlan(d, today, registrationId, R = AGRO_RULES) {
+export function disposalPlan(d, today, registrationId, R = rulesOf(d)) {
   const reg = (d.registrations || []).find(r => r.id === registrationId);
   if (!reg || !reg.saleUntil) return null;
   const p = (d.products || []).find(x => x.id === reg.productId);
@@ -226,7 +235,7 @@ export function substanceBoard(d, today) {
     const ps = prods.filter(p => (p.actives || []).some(x => x.as === a.id));
     const revenue = sum(ps, p => rev[p.id]?.revenue || 0);
     const days = isDate(a.approvalExpiry) ? daysBetween(today, a.approvalExpiry) : null;
-    return { ...a, products: ps.map(p => ({ id: p.id, code: p.code, name: p.name })), revenue, days, riskClass: asRiskClass(a, today) };
+    return { ...a, products: ps.map(p => ({ id: p.id, code: p.code, name: p.name })), revenue, days, riskClass: asRiskClass(a, today, rulesOf(d)) };
   }).sort((a, b) => (a.days ?? 1e9) - (b.days ?? 1e9));
 }
 
@@ -240,7 +249,7 @@ export const needsUfi = p => (hazardOf(p).h || []).some(h => /^H[23]/.test(h));
  * Invii mancanti della scheda di sicurezza in vigore: ogni cliente servito nei 12 mesi prima della revisione e ogni
  * cliente servito dopo deve avere la versione corrente (REACH art. 31(9)); più i prodotti pericolosi senza UFI o PCN.
  */
-export function sdsGaps(d, today, R = AGRO_RULES) {
+export function sdsGaps(d, today, R = rulesOf(d)) {
   const latest = {};
   for (const s of d.sdsDocs || []) if (!latest[s.productId] || +s.version > +latest[s.productId].version) latest[s.productId] = s;
   const sent = {};
@@ -275,7 +284,7 @@ export function sdsGaps(d, today, R = AGRO_RULES) {
  * Indici di sommatoria Seveso per gruppo (salute, fisici, ambiente) sulle giacenze presenti: Σ q / Q (soglia inferiore e superiore).
  * Le categorie vengono da products[].hazard.seveso e ingredients[].seveso (classificazione indicativa da verificare).
  */
-export function sevesoIndex(d, R = AGRO_RULES, override = null) {
+export function sevesoIndex(d, R = rulesOf(d), override = null) {
   const fin = override?.finished || finishedStock(d), raw = override?.raw || rawStock(d);
   const byCat = {}, items = [];
   for (const p of d.products || []) for (const c of hazardOf(p).seveso || []) if (fin[p.id] > 0 && R.seveso[c]) { byCat[c] = (byCat[c] || 0) + fin[p.id]; items.push({ kind: 'prodotto', id: p.id, name: p.name, cat: c, tonnes: fin[p.id] }); }
@@ -324,7 +333,7 @@ export function adrPoints(items, d, R = AGRO_RULES) {
 }
 
 /** Unità di trasporto degli ultimi giorni (consegne dello stesso giorno allo stesso cliente) con i punti ADR. */
-export function transportUnits(d, today, days = 30, R = AGRO_RULES) {
+export function transportUnits(d, today, days = 30, R = rulesOf(d)) {
   const from = addDays(today, -days);
   const groups = {};
   for (const s of d.shipments || []) if (s.date > from && s.date <= today) (groups[s.date + '|' + s.customerId] ||= []).push(s);
@@ -355,7 +364,7 @@ export function agroSignals(d, ctx) {
     const p = prods[x.productId];
     out.push({ key: `reg:art43:${x.registrationId}:${x.asId}`, area: 'regolatorio', roles: R, severity: x.daysLeft <= 30 ? 'critico' : 'attenzione',
       title: `Rinnovo di ${p?.name || x.productId} da presentare entro il ${dateIt(x.due)}`,
-      why: `La sostanza attiva ${x.asName} è stata rinnovata il ${dateIt(x.renewedOn)}: la domanda di rinnovo del prodotto va presentata entro ${AGRO_RULES.art43Months} mesi (art. 43). Mancano ${plural(x.daysLeft, 'giorno', 'giorni')}; il prodotto vale ${eur(rev[x.productId]?.revenue || 0)} di ricavi in 12 mesi.`,
+      why: `La sostanza attiva ${x.asName} è stata rinnovata il ${dateIt(x.renewedOn)}: la domanda di rinnovo del prodotto va presentata entro ${AGRO_RULES.art43Months} mesi (Reg. CE 1107/2009, art. 43). Mancano ${plural(x.daysLeft, 'giorno', 'giorni')}; il prodotto vale ${eur(rev[x.productId]?.revenue || 0)} di ricavi in 12 mesi.`,
       action: 'Preparare il dossier di rinnovo e registrare la presentazione in Regolatorio › Registrazioni.', impact: (rev[x.productId]?.revenue || 0) + 1e5, link: L('registrazioni', x.registrationId) });
   }
   // revoche in smaltimento
@@ -448,7 +457,7 @@ export function agroReportSection(d, ctx) {
     ],
     narrative: [
       `${plural(k.valid, 'registrazione vendibile', 'registrazioni vendibili')}${k.grace ? `, ${plural(k.grace, 'prodotto', 'prodotti')} in smaltimento scorte dopo la revoca` : ''}.`,
-      `Ricavi a rischio a ${AGRO_RULES.horizonMonths} mesi ${eur(rar.rar)} (${nf((k.rarShare || 0) * 100, 1)}% dei ricavi, stima): ${top || 'nessun prodotto esposto'}.`,
+      `Ricavi a rischio a ${rulesOf(d).horizonMonths} mesi ${eur(rar.rar)} (${nf((k.rarShare || 0) * 100, 1)}% dei ricavi, stima): ${top || 'nessun prodotto esposto'}.`,
       `Schede di sicurezza aggiornate presso il ${nf((k.sdsCoverage ?? 1) * 100)}% dei destinatari degli ultimi 12 mesi.`,
       `Seveso: stabilimento di soglia ${k.sevesoTier}; indice più alto ${nf(k.sevesoHi * 100)}% della soglia superiore.`,
     ],

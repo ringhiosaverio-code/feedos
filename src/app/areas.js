@@ -36,9 +36,9 @@ const DEFS = {
       T('ambiente', 'Registri ambientali'), T('acqua', 'Acqua'), T('rifiuti', 'Rifiuti'), T('persone', 'Persone e sicurezza'), T('governance', 'Governance ed evidenze'),
       T('piano', 'Obiettivi e piano'), T('rischi', 'Rischi climatici'), T('vsme', 'Report e questionari'), T('indicatori', 'Indicatori'), T('questionario', 'Questionario'),
       ...(FULL ? [T('tesi', 'Dalla tesi all’azienda')] : [])] },
-  // edizione agrofarmaci (FitoOS): registrazioni, sostanze attive, schede di sicurezza, Seveso e ADR
+  // edizione agrofarmaci (DifesaOS): registrazioni, sostanze attive, schede di sicurezza, Seveso e ADR
   regolatorio: { icon: LuScale, label: 'Regolatorio', period: false, lead: 'Registrazioni dei prodotti con usi in etichetta e finestre di vendita e uso, sostanze attive e rinnovi, schede di sicurezza e invii ai clienti, Seveso e trasporto ADR.',
-    tabs: [T('registrazioni', 'Registrazioni'), T('sostanze', 'Sostanze attive'), T('sds', 'Schede di sicurezza'), T('seveso', 'Seveso e ADR')] },
+    tabs: [T('registrazioni', 'Registrazioni'), T('sostanze', 'Sostanze attive'), T('sds', 'Schede di sicurezza'), T('seveso', 'Seveso e ADR'), T('fonti', 'Regole e fonti')] },
   dati: { icon: LuDatabase, label: 'Dati', period: false, lead: 'Archivio, salvataggi, importazioni, anagrafiche, qualità dei dati, registro delle modifiche e impostazioni.',
     tabs: [T('archivio', 'Archivio'), T('importa', 'Importa'), T('anagrafiche', 'Anagrafiche'), T('qualita', 'Qualità dei dati'), T('registro', 'Registro modifiche'), T('impostazioni', 'Impostazioni')] },
 };

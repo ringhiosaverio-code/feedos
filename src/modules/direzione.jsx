@@ -8,6 +8,7 @@ import { getPrefs } from '../core/prefs.js';
 import { go } from '../core/router.js';
 import { signals } from '../core/derived.js';
 import { nf, sf, pct, monthLabel, dateIt, addMonths, endOfMonth, monthsIn, daysInMonth, uid, norm } from '../core/util.js';
+import { PM_LABEL, pm, pmDec, fmtPm } from '../core/units.js';
 import { parseCSV, readFile, num } from '../core/io.js';
 import { comparePeriod, makePeriod } from '../core/period.js';
 import { isClosedMonth } from '../core/schema.js';
@@ -87,7 +88,7 @@ function Sintesi() {
     bars: [{ key: 'mdc2', label: 'MdC II', value: m.mdc2 / 1000, color: 'var(--s1)', hatch: m.open }, { key: 'ebit', label: 'EBIT', value: m.ebit / 1000, color: 'var(--s3)', hatch: m.open }],
   }));
   const tip = c => [
-    { label: 'MdC II', value: `${kEur(c.m.mdc2, 0)} · ${perT(c.m.mdc2T)} €/t`, color: 'var(--s1)' },
+    { label: 'MdC II', value: `${kEur(c.m.mdc2, 0)} · ${perT(c.m.mdc2T)} ${PM_LABEL}`, color: 'var(--s1)' },
     { label: 'EBIT', value: kEur(c.m.ebit, 0), color: 'var(--s3)' },
     { label: 'Tonnellate', value: nf(c.m.tonnes) + ' t' },
     { label: `Costi fissi${c.m.estimatedFixed ? ' (stimati)' : ''}`, value: kEur(c.m.fixed, 0) },
@@ -103,8 +104,8 @@ function Sintesi() {
       <div className="kpis">
         <Kpi label="Ricavi netti" {...money(cur.revenueNet)} cmp={kc(dir, cur.revenueNet, cmp?.revenueNet)} foot={`${nf(t)} t`} />
         <Kpi label={<Def text="MdC II per tonnellata: ricavi netti − materie prime, calo, energia, trasformazione variabile, imballi, trasporti e provvigioni, al costo effettivo dei lotti.">Margine di contribuzione</Def>}
-          value={perT(t ? by.mdc2 / t : null)} unit="€/t" cmp={kc(dir, t ? by.mdc2 / t : null, cmp && cmp.tonnes ? cb.mdc2 / cmp.tonnes : null, { kind: 'ratio', unit: '€/t' })} foot={eurTxt(by.mdc2)}
-          {...goal(d, 'mdc-t', t ? by.mdc2 / t : null, v => nf(v, 0) + ' €/t')} />
+          value={perT(t ? by.mdc2 / t : null)} unit={PM_LABEL} cmp={kc(dir, t ? pm(by.mdc2 / t) : null, cmp && cmp.tonnes ? pm(cb.mdc2 / cmp.tonnes) : null, { kind: 'ratio', unit: PM_LABEL })} foot={eurTxt(by.mdc2)}
+          {...goal(d, 'mdc-t', t ? by.mdc2 / t : null, v => fmtPm(v, 0))} />
         <Kpi label={<Def text="EBITDA sui ricavi netti: MdC II meno i costi fissi monetari (ammortamenti esclusi).">EBITDA</Def>} value={ebitdaPct == null ? '—' : nf(ebitdaPct * 100, 1)} unit="%"
           cmp={kc(dir, ebitdaPct, ebitdaPctC, { kind: 'ratio', unit: '%', scale: 100 })} foot={eurTxt(by.ebitda)} {...goal(d, 'ebitda-pct', ebitdaPct, v => nf(v * 100, 1) + '%')} />
         <Kpi label="EBIT" {...money(by.ebit)} cmp={kc(dir, by.ebit, cb?.ebit)} foot={cur.partialFixedMonths?.length ? <Chip kind="warn" title={`Consuntivo dei costi fissi incompleto per ${cur.partialFixedMonths.map(m => monthLabel(m, false)).join(', ')}: i centri senza importo valgono zero`}>fissi parziali</Chip>
@@ -130,7 +131,7 @@ function Sintesi() {
           <Table rows={brief} pageSize={10} cols={[
             { key: 'label', label: 'Voce', nosort: true, render: r => <b>{r.label}</b> },
             { key: 'v', label: '€', align: 'r', nosort: true, render: r => eurTxt(r.v) },
-            { key: 't', label: '€/t', align: 'r', nosort: true, render: r => perT(r.t) },
+            { key: 't', label: PM_LABEL, align: 'r', nosort: true, render: r => perT(r.t) },
             ...(cmp ? [{ key: 'c', label: 'Δ', align: 'r', nosort: true, render: r => <Delta cur={r.v} cmp={r.c} kind="pct" /> }] : []),
           ]} />
         </Panel>
@@ -195,7 +196,7 @@ function Ponte() {
     { key: 'key', label: { productId: 'Prodotto', species: 'Specie', customerId: 'Cliente', agentId: 'Agente' }[labelOf] || 'Chiave', sort: r => basisLabel(d, labelOf, r.key), csv: r => basisLabel(d, labelOf, r.key),
       render: r => <><b>{basisLabel(d, labelOf, r.key)}</b>{r.onlyB ? <span className="sub">solo in B</span> : r.onlyA ? <span className="sub">solo in A</span> : null}</> },
     { key: 'tB', label: 't B', align: 'r', render: r => <>{nf(r.tB)}<span className="sub">A {nf(r.tA)}</span></> },
-    { key: 'mB', label: 'Margine €/t', align: 'r', csv: r => r.mB, render: r => <>{perT(r.mB)}<span className="sub">A {perT(r.mA)}</span></> },
+    { key: 'mB', label: `Margine ${PM_LABEL}`, align: 'r', csv: r => pm(r.mB), render: r => <>{perT(r.mB)}<span className="sub">A {perT(r.mA)}</span></> },
     { key: 'vm', label: 'Volume e mix', align: 'r', sort: r => sumOf(r, ['volume', 'mix']), csv: r => sumOf(r, ['volume', 'mix']), render: r => <Delta cur={sumOf(r, ['volume', 'mix'])} cmp={0} /> },
     { key: 'pr', label: 'Prezzo', align: 'r', sort: r => sumOf(r, ['listino', 'sconti']), csv: r => sumOf(r, ['listino', 'sconti']), render: r => <Delta cur={sumOf(r, ['listino', 'sconti'])} cmp={0} /> },
     { key: 'mp', label: 'Materie prime', align: 'r', sort: r => sumOf(r, ['mpPrezzo', 'mpRicetta']), csv: r => sumOf(r, ['mpPrezzo', 'mpRicetta']), render: r => <Delta cur={sumOf(r, ['mpPrezzo', 'mpRicetta'])} cmp={0} /> },
@@ -237,7 +238,7 @@ function Ponte() {
         <Kpi label="Differenza" value={(res.end - res.start >= 0 ? '+' : '−') + money(Math.abs(res.end - res.start)).value} unit={money(res.end - res.start).unit}
           status={Math.abs(res.end - res.start) < Math.max(mat.abs ?? 5000, (mat.pct ?? 2) / 100 * Math.abs(res.start)) ? 'ok' : res.end > res.start ? 'ok' : 'bad'}
           foot={Math.abs(res.start) >= 0.5 ? sf((res.end - res.start) / Math.abs(res.start) * 100, 1) + '% su A' : '—'} />
-        <Kpi label={<Def text="Margine medio per tonnellata: M / t. La differenza tra B e A si spiega con i passi del ponte.">Margine per t</Def>} value={perT(res.mBarB)} unit="€/t" foot={`A ${perT(res.mBarA)} €/t`} />
+        <Kpi label={<Def text="Margine medio per tonnellata: M / t. La differenza tra B e A si spiega con i passi del ponte.">Margine per t</Def>} value={perT(res.mBarB)} unit={PM_LABEL} foot={`A ${perT(res.mBarA)} ${PM_LABEL}`} />
       </div>
       <div className="split">
         <Panel title="Ponte del margine" sub={`${LEVELS[level]} da ${lbl(PA)} a ${PB.label} · passa sopra un effetto per la formula`}>
@@ -557,7 +558,7 @@ function Chiusura({ sel }) {
   // confronto con il mese prima (numeri congelati se chiuso); mese in corso o parziale: i flussi non sono confrontabili
   const ps = m ? series[addMonths(m, -1)] : null;
   const covM = !s || !ps ? null : s.partial || ps.partial ? 0 : m === tm ? s.days / daysInMonth(m) : 1;
-  const kcm = (cur, prev, flow = true) => (cur == null || prev == null ? undefined : { cur, value: prev, kind: flow ? 'flow' : 'ratio', good: 'up', unit: flow ? '' : '€/t', decimals: flow ? 1 : 2, label: 'mese prima', cov: flow ? covM : (s?.partial || ps?.partial ? 0 : 1) });
+  const kcm = (cur, prev, flow = true) => (cur == null || prev == null ? undefined : { cur: flow ? cur : pm(cur), value: flow ? prev : pm(prev), kind: flow ? 'flow' : 'ratio', good: 'up', unit: flow ? '' : PM_LABEL, decimals: flow ? 1 : pmDec(2), label: 'mese prima', cov: flow ? covM : (s?.partial || ps?.partial ? 0 : 1) });
   const st = isClosed ? STATUS.chiuso : rec?.status === 'riaperto' ? STATUS.riaperto : m === tm ? ['outline', 'in corso'] : ['outline', 'da chiudere'];
   return (
     <div className="split r">
@@ -571,7 +572,7 @@ function Chiusura({ sel }) {
             return (
               <button key={x} aria-pressed={x === m} onClick={() => go('direzione', 'chiusura', x)}>
                 <span className="m">{monthLabel(x, false)}</span><Chip kind={kind}>{lab}</Chip>
-                <span className="s">{kpi ? `MdC ${perT(kpi.mdc2T)} €/t · EBIT ${kEur(kpi.ebit ?? null, 0)}` : '—'}{r?.closedAt && r.status === 'chiuso' ? ` · ${dateIt(r.closedAt.slice(0, 10))}` : ''}</span>
+                <span className="s">{kpi ? `MdC ${perT(kpi.mdc2T)} ${PM_LABEL} · EBIT ${kEur(kpi.ebit ?? null, 0)}` : '—'}{r?.closedAt && r.status === 'chiuso' ? ` · ${dateIt(r.closedAt.slice(0, 10))}` : ''}</span>
               </button>
             );
           })}
@@ -585,7 +586,7 @@ function Chiusura({ sel }) {
           <div className="stack" style={{ gap: 12 }}>
             {s && <div className="kpis">
               <Kpi label="Ricavi netti" {...money(rec?.status === 'chiuso' ? rec.pnl?.revenue : s.revenue)} cmp={kcm(s.revenue, ps?.revenue)} foot={`${nf(rec?.status === 'chiuso' ? rec.pnl?.tonnes : s.tonnes)} t`} />
-              <Kpi label="MdC II" value={perT(rec?.status === 'chiuso' ? rec.kpis?.mdc2T : s.mdc2T)} unit="€/t" cmp={kcm(s.mdc2T, ps?.mdc2T, false)} foot={eurTxt(rec?.status === 'chiuso' ? rec.pnl?.mc2 : s.mdc2)} />
+              <Kpi label="MdC II" value={perT(rec?.status === 'chiuso' ? rec.kpis?.mdc2T : s.mdc2T)} unit={PM_LABEL} cmp={kcm(s.mdc2T, ps?.mdc2T, false)} foot={eurTxt(rec?.status === 'chiuso' ? rec.pnl?.mc2 : s.mdc2)} />
               <Kpi label="EBIT" {...money(rec?.status === 'chiuso' ? rec.kpis?.ebit : s.ebit)} cmp={kcm(s.ebit, ps?.ebit)} foot={s.estimatedFixed && !isClosed ? <Chip kind="maize">fissi stimati</Chip> : isClosed ? 'congelato' : 'dal vivo'} />
             </div>}
             {(rec?.note || rec?.forced || rec?.reopenNote || rec?.history?.length) && <Kv items={[

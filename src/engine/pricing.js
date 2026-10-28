@@ -2,6 +2,7 @@
  * Funzioni pure: leggono l'archivio d e il contesto dei motori ctx = {today, ix, costs, facts, volumes}
  * (derived.ctxOf nell'interfaccia, actuals.makeCtx nei test). Nessuna scrittura: le modifiche escono come ops per store.batch. */
 import { addDays, sum, byId, round, nf, dateIt, pct as pctTxt } from '../core/util.js';
+import { fmtUp, pm, pmDec, PM_LABEL } from '../core/units.js';
 import { listAt, aggregateFacts } from './actuals.js';
 
 const n0 = v => (v == null || v === '' || !Number.isFinite(+v) ? 0 : +v);
@@ -432,7 +433,7 @@ export function commercialSignals(d, ctx) {
     if (o.validUntil < today) {
       out.push({ key: `offer-exp:${o.id}:${o.validUntil}`, area: 'commerciale', roles: ROLES, severity: 'attenzione',
         title: `Offerta ${o.code} scaduta senza esito`,
-        why: `${c?.name || 'Cliente'} · ${nf(o.tonnes)} t di ${p?.name || 'prodotto'} a ${nf(o.price)} €/t, valida fino al ${dateIt(o.validUntil, 'dm')}: risulta ancora «${o.status}».`,
+        why: `${c?.name || 'Cliente'} · ${nf(o.tonnes)} t di ${p?.name || 'prodotto'} a ${fmtUp(o.price, p)}, valida fino al ${dateIt(o.validUntil, 'dm')}: risulta ancora «${o.status}».`,
         action: 'Rinnovare la validità con un nuovo prezzo o chiuderla come persa indicando il motivo.',
         impact: 2e4 + offerValue(o) / 100, link: { area: 'commerciale', tab: 'offerte', id: o.id }, agentId: ag });
     } else if (o.validUntil <= addDays(today, 7)) {
@@ -488,7 +489,7 @@ export function commercialSignals(d, ctx) {
     const eur = sum(gaps, g => g.r.gap * (1 - g.r.discountPct) * n0(ctx.volumes?.[g.p.id]));
     out.push({ key: `list-gap:${gaps.map(g => g.p.id + Math.round(g.r.required)).join(',')}`, area: 'commerciale', roles: ['commerciale', 'direzione'], severity: 'attenzione',
       title: gaps.length === 1 ? `Listino di ${gaps[0].p.name} sotto il necessario` : `${gaps.length} listini sotto il prezzo necessario per il margine obiettivo`,
-      why: `${gaps.slice(0, 4).map(g => `${g.p.name} ${nf(g.r.current)} → ${nf(g.r.required)} €/t (+${nf(g.r.gapPct * 100, 1)}%)`).join(' · ')}${gaps.length > 4 ? ` e altri ${gaps.length - 4}` : ''}. Necessario = prezzo obiettivo ai costi di oggi / (1 − sconto medio degli ultimi 90 giorni).`,
+      why: `${gaps.slice(0, 4).map(g => `${g.p.name} ${fmtUp(g.r.current, g.p)} → ${fmtUp(g.r.required, g.p)} (+${nf(g.r.gapPct * 100, 1)}%)`).join(' · ')}${gaps.length > 4 ? ` e altri ${gaps.length - 4}` : ''}. Necessario = prezzo obiettivo ai costi di oggi / (1 − sconto medio degli ultimi 90 giorni).`,
       action: 'Preparare un nuovo listino con decorrenza e simularne l’effetto su margini, clienti e offerte aperte.', impact: eur,
       link: { area: 'commerciale', tab: 'listino', id: gaps[0].p.id } });
   }
@@ -521,7 +522,7 @@ export function commercialReportSection(d, ctx, P, C) {
     id: 'commerciale', title: 'Commerciale', order: 45,
     kpis: [
       { label: 'Realizzazione sul listino', value: R.list > 0 ? R.net / R.list * 100 : null, unit: '%', decimals: 1, cmp: RC?.list > 0 ? { value: RC.net / RC.list * 100, kind: 'ratio', good: 'up', unit: 'pt' } : undefined },
-      { label: 'Prezzo netto medio', value: R.netT, unit: '€/t', decimals: 1, cmp: RC?.netT != null ? { value: RC.netT, kind: 'ratio', good: 'up', unit: '€/t' } : undefined },
+      { label: 'Prezzo netto medio', value: pm(R.netT), unit: PM_LABEL, decimals: pmDec(1), cmp: RC?.netT != null ? { value: pm(RC.netT), kind: 'ratio', good: 'up', unit: PM_LABEL } : undefined },
       { label: 'Pass-through materie prime', value: pt != null ? pt * 100 : null, unit: '%', decimals: 0 },
       { label: 'Pipeline pesata', value: pipe.weighted, unit: '€', decimals: 0 },
       { label: 'Successo a valore', value: W.rate != null ? W.rate * 100 : null, unit: '%', decimals: 0, cmp: WC?.rate != null ? { value: WC.rate * 100, kind: 'ratio', good: 'up', unit: 'pt' } : undefined },

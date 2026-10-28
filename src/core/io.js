@@ -3,18 +3,24 @@ import { toast } from './store.js';
 import { META as EDITION } from '../editions/meta.js';
 
 /** Scarica un contenuto come file (funziona offline, senza server). Dentro una pagina ospite che offre il salvataggio
- * (visualizzatore di claude.ai, permesso «downloads») il file passa da lì, con la conferma di chi guarda. */
-export function download(filename, content, mime = 'text/plain;charset=utf-8') {
+ * (visualizzatore di claude.ai, permesso «downloads») il file passa da lì, con la conferma di chi guarda.
+ * → Promise<boolean>: vero se il file è stato consegnato (dal browser, o accettato da chi guarda).
+ * opts.notify = false: nessun avviso di riuscita (chi chiama ne mostra uno suo). */
+export function download(filename, content, mime = 'text/plain;charset=utf-8', opts = {}) {
   const blob = content instanceof Blob ? content : new Blob([content], { type: mime });
   const host = typeof window !== 'undefined' ? window.claude : null;
-  if (!host?.use) { saveByLink(filename, blob); return; }
-  host.use('downloads').then(dl => {
-    if (!dl) { saveByLink(filename, blob); return; }
-    return dl.save({ filename, data: blob }).catch(e => {
-      if (e?.code === 'declined' || e?.code === 'rate_limited') return;
-      toast(`Questa vista non permette di scaricare file: apri ${EDITION.product} dal file HTML per esportare`, 'err');
+  if (!host?.use) { saveByLink(filename, blob); return Promise.resolve(true); }
+  return host.use('downloads').then(dl => {
+    if (!dl) { toast(`Questa vista non permette di scaricare file: apri ${EDITION.product} dal file HTML per esportare`, 'err'); return false; }
+    return dl.save({ filename, data: blob }).then(() => { if (opts.notify !== false) toast(`File pronto: ${filename}`); return true; }, e => {
+      const code = e?.code || 'unavailable';
+      if (code === 'declined') return false; // chi guarda ha detto no: niente da fare
+      if (code === 'rate_limited') toast('C’è già una richiesta di salvataggio aperta: conferma o chiudi quella, poi riprova', 'err');
+      else if (code === 'rejected_extension' || code === 'extension_not_enabled') toast(`Il formato di ${filename} non si può scaricare da questa vista`, 'err');
+      else toast(`Questa vista non permette di scaricare file: apri ${EDITION.product} dal file HTML per esportare`, 'err');
+      return false;
     });
-  }, () => saveByLink(filename, blob));
+  }, () => { saveByLink(filename, blob); return true; });
 }
 function saveByLink(filename, blob) {
   const url = URL.createObjectURL(blob);

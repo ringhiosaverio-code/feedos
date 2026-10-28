@@ -1,4 +1,4 @@
-/* FitoOS · Estensori del demo dell'azienda di agrofarmaci inventata «Arvale Dimostrativa S.p.A.».
+/* DifesaOS · Estensori del demo dell'azienda di agrofarmaci inventata «Arvale Dimostrativa S.p.A.».
  * Stessi estensori di FeedOS dove il dominio è comune (costi, commerciale, acquisti, produzione, finanza, redditività,
  * direzione, obiettivi, ESG), con la configurazione dell'edizione; gli estensori propri (regolatorio, campagne, programmi
  * di difesa) aggiungono le raccolte dell'edizione. Contratto e regola «solo aggiunte» come in data/demo/extend.js. */
@@ -122,7 +122,7 @@ const AGRO_FINANZA = {
 const AGRO_DIREZIONE = {
   sintesi: mese => `In ${mese}, fuori stagione, il margine per tonnellata scende: il rame tecnico costa il 15% più dello standard e il rincaro non è passato sui listini dei rameici; gli incassi dei rivenditori arrivano con i pagamenti a data fissa. Proposta: listino rameici aggiornato per la nuova campagna, ordini anticipati entro il 30 novembre e coperture sul rame tecnico per il primo semestre.`,
   budget: 'La stima di chiusura è in linea con il budget sui ricavi; pesano lo smaltimento delle giacenze di Flufendo dopo la revoca e il costo dei rinnovi del rame.',
-  product: 'FitoOS',
+  product: 'DifesaOS',
 };
 const AGRO_REDDITIVITA = {
   company: { lat: 44.71, lon: 11.95 },

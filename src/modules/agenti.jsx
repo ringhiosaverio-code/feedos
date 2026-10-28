@@ -7,6 +7,7 @@ import { store, toast, openDrawer, closeDrawer } from '../core/store.js';
 import { go } from '../core/router.js';
 import { ctxOf, appToday } from '../core/derived.js';
 import { nf, dateIt } from '../core/util.js';
+import { PM_LABEL, nfPm } from '../core/units.js';
 import { resolvePeriod } from '../core/period.js';
 import { agentPerformance, schemeOf, statementHistory } from '../engine/commissions.js';
 import { Drawer, Kv, Btn, Chip, Field, NumInput, Select, Seg, Table } from '../ui/ui.jsx';
@@ -27,7 +28,7 @@ export function AgentD({ d, id }) {
       actions={<Btn kind="primary" icon={LuFileText} onClick={toStatements}>Estratti conto e stampa</Btn>}>
       {perf && <div className="kpis">
         <div className="kpi"><span className="lbl">Ricavi (12 mesi)</span><span className="val">{eurK(perf.revenue)}</span><span className="foot">{nf(perf.tonnes)} t · {perf.customers} clienti</span></div>
-        <div className="kpi"><span className="lbl">MdC II per tonnellata</span><span className="val">{perf.mc2T != null ? nf(perf.mc2T, 1) : '—'}<small>€/t</small></span><span className="foot">dopo la provvigione dello schema</span></div>
+        <div className="kpi"><span className="lbl">MdC II per tonnellata</span><span className="val">{perf.mc2T != null ? nfPm(perf.mc2T, 1) : '—'}<small>{PM_LABEL}</small></span><span className="foot">dopo la provvigione dello schema</span></div>
         <div className="kpi"><span className="lbl">Prezzo realizzato</span><span className="val">{perf.realization != null ? nf(perf.realization * 100, 1) : '—'}<small>% del listino</small></span><span className="foot">{perf.shareBelowMinT != null ? `${nf(perf.shareBelowMinT * 100, 1)}% delle t sotto il minimo` : ''}</span></div>
         <div className="kpi"><span className="lbl">Offerte vinte (valore)</span><span className="val">{perf.winRateValue != null ? nf(perf.winRateValue * 100) : '—'}<small>%</small></span><span className="foot">{perf.visits} visite · {perf.idleCustomers} clienti fermi da 30 giorni</span></div>
         <div className="kpi"><span className="lbl">Provvigioni dello schema</span><span className="val">{eurK(perf.commission)}</span><span className="foot">maturate {eurK(perf.accrued)}</span></div>

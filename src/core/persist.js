@@ -4,7 +4,7 @@
 import { META as EDITION } from '../editions/meta.js';
 import { setPrefs } from './prefs.js';
 
-// nomi dall'edizione (FeedOS: 'feedos16', invariato per gli archivi già salvati; FitoOS: archivio separato)
+// nomi dall'edizione (FeedOS: 'feedos16', invariato per gli archivi già salvati; DifesaOS: archivio separato)
 const KEYP = EDITION.storageKey || 'feedos16';
 const DB = KEYP, DB_VERSION = 2, STORE = 'kv', SNAP = 'snap', META = 'snapmeta', LS_KEY = KEYP + '.data', MAX_AUTO = 10;
 let dbp = null;

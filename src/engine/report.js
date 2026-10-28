@@ -3,6 +3,7 @@
  * registrate in providers.js (REPORT_SECTIONS), in ordine; una sezione nulla si salta. Esportazione in Markdown e CSV.
  * Section = {id, title, order, kpis: [{label, value, unit, decimals, cmp?, status?}], table?: {cols, rows}, narrative: [testo]}. */
 import { nf, sf, dateIt, monthsIn, endOfMonth, todayLocal, addMonths } from '../core/util.js';
+import { pm, pmDec, PM_LABEL, fmtPm } from '../core/units.js';
 import { toCSV } from '../core/io.js';
 import { REPORT_SECTIONS, SIGNAL_PROVIDERS } from './providers.js';
 import { pnlFor, compareLines, effectiveCoverage } from './pnl.js';
@@ -66,7 +67,7 @@ function sintesi(d, ctx, P, C, cur, cmp, signals) {
   const year = +P.to.slice(0, 4);
   const kpis = [
     k('Ricavi netti', by.ricaviNetti, '€', 0, cb?.ricaviNetti),
-    k('Margine di contribuzione', cur.tonnes > 0 ? by.mdc2 / cur.tonnes : null, '€/t', 2, cmp && cmp.tonnes > 0 ? cb.mdc2 / cmp.tonnes : null, 'ratio'),
+    k('Margine di contribuzione', cur.tonnes > 0 ? pm(by.mdc2 / cur.tonnes) : null, PM_LABEL, pmDec(2), cmp && cmp.tonnes > 0 ? pm(cb.mdc2 / cmp.tonnes) : null, 'ratio'),
     k('EBITDA', cur.revenueNet ? by.ebitda / cur.revenueNet : null, '%', 1, cmp?.revenueNet ? cb.ebitda / cmp.revenueNet : null, 'ratio', 'up', 100),
     k('EBIT', by.ebit, '€', 0, cb?.ebit),
   ];
@@ -90,10 +91,10 @@ function sintesi(d, ctx, P, C, cur, cmp, signals) {
 }
 
 function conto(d, ctx, P, C, cur, cmp) {
-  const rows = compareLines(cur, cmp).map(l => ({ voce: l.label, total: l.total, value: l.value, perT: l.perT, pctRev: l.pctRev, cmp: l.cmp, delta: l.delta, deltaPct: l.deltaPct }));
-  const cols = [{ key: 'voce', label: 'Voce', fmt: 'text' }, { key: 'value', label: '€', align: 'r', fmt: 'eur' }, { key: 'perT', label: '€/t', align: 'r', fmt: 'num2' }, { key: 'pctRev', label: '% ricavi', align: 'r', fmt: 'pct' }];
+  const rows = compareLines(cur, cmp).map(l => ({ voce: l.label, total: l.total, value: l.value, perT: pm(l.perT), pctRev: l.pctRev, cmp: l.cmp, delta: l.delta, deltaPct: l.deltaPct }));
+  const cols = [{ key: 'voce', label: 'Voce', fmt: 'text' }, { key: 'value', label: '€', align: 'r', fmt: 'eur' }, { key: 'perT', label: PM_LABEL, align: 'r', fmt: 'num2' }, { key: 'pctRev', label: '% ricavi', align: 'r', fmt: 'pct' }];
   if (cmp) cols.push({ key: 'cmp', label: C?.budget ? 'Budget' : 'Confronto', align: 'r', fmt: 'eur' }, { key: 'delta', label: 'Δ', align: 'r', fmt: 'eurs' }, { key: 'deltaPct', label: 'Δ%', align: 'r', fmt: 'pcts' });
-  const narr = [`Volumi ${nf(cur.tonnes)} t · ricavi netti ${nf(cur.revenueNet / 1e6, 2)} M€ · MdC II ${nf(cur.tonnes ? cur.by.mdc2 / cur.tonnes : null, 1)} €/t · EBIT ${nf(cur.by.ebit / 1000, 1)} k€.`];
+  const narr = [`Volumi ${nf(cur.tonnes)} t · ricavi netti ${nf(cur.revenueNet / 1e6, 2)} M€ · MdC II ${fmtPm(cur.tonnes ? cur.by.mdc2 / cur.tonnes : null, 1)} · EBIT ${nf(cur.by.ebit / 1000, 1)} k€.`];
   if (cur.estimatedMonths?.length) narr.push(`Costi fissi stimati (budget o media) per ${cur.estimatedMonths.join(', ')}.`);
   if (cur.frozen) narr.push('Numeri congelati alla chiusura del mese.');
   return { id: 'conto', title: SECTION_TITLES.conto, order: 20, kpis: [], table: { cols, rows }, narrative: narr };

@@ -4,6 +4,7 @@
 import React, { useMemo } from 'react';
 import { ctxOf } from '../core/derived.js';
 import { nf, pct, monthLabel } from '../core/util.js';
+import { PM_LABEL, pm, pmDec } from '../core/units.js';
 import { usePeriod } from '../ui/period.jsx';
 import { costStructure, bepSeries, bepCurve, absorption } from '../engine/breakeven.js';
 import { effectiveCoverage } from '../engine/pnl.js';
@@ -34,14 +35,14 @@ export function Pareggio({ d }) {
   return (
     <>
       <div className="kpis">
-        <Kpi label={<Def text="Tonnellate per coprire i costi fissi del periodo con il margine di contribuzione II medio per tonnellata: costi fissi ÷ MdC II €/t.">Punto di pareggio</Def>}
+        <Kpi label={<Def text="Tonnellate per coprire i costi fissi del periodo con il margine di contribuzione II medio per tonnellata: costi fissi ÷ MdC II per tonnellata.">Punto di pareggio</Def>}
           value={nf(cs.bepT)} unit="t" foot={`${money(cs.bepEur).value} ${money(cs.bepEur).unit} di ricavi`} cmp={cmpOf(cs.bepT, csC?.bepT, { good: 'down', decimals: 0, unit: 't', kind: 'flow' })} />
         <Kpi label={<Def text="Quota delle tonnellate vendute oltre il punto di pareggio: (t − pareggio) ÷ t. Dice di quanto possono calare i volumi prima di andare in perdita.">Margine di sicurezza</Def>}
           value={nf(cs.mos * 100, 1)} unit="%" status={cs.mos < 0.1 ? 'bad' : cs.mos < 0.2 ? 'warn' : 'ok'} foot={`${nf(cs.mosT)} t sopra il pareggio`} cmp={cmpOf(cs.mos * 100, csC ? csC.mos * 100 : null, { unit: 'punti' })} />
         <Kpi label={<Def text="Leva operativa: MdC II ÷ EBIT. Con leva 5 un calo dei volumi dell’1% riduce l’EBIT di circa il 5%.">Leva operativa</Def>}
           value={cs.dol != null && Number.isFinite(cs.dol) && cs.ebit > 0 ? nf(cs.dol, 1) : '—'} foot={cs.ebit > 0 ? `EBIT ${kEur(cs.ebit)}` : 'EBIT negativo nel periodo'} />
-        <Kpi label="Costi fissi per tonnellata" value={nf(cs.fixedT, 2)} unit="€/t" foot={`${kEur(cs.cf)} nel periodo, di cui ${kEur(cs.cfNonCash)} ammortamenti`} cmp={cmpOf(cs.fixedT, csC?.fixedT, { good: 'down', unit: '€/t' })} />
-        <Kpi label="MdC II per tonnellata" value={nf(cs.mcT, 2)} unit="€/t" foot={`${pct(cs.mcPct, 1)} dei ricavi`} cmp={cmpOf(cs.mcT, csC?.mcT, { unit: '€/t' })} />
+        <Kpi label="Costi fissi per tonnellata" value={nf(pm(cs.fixedT), pmDec(2))} unit={PM_LABEL} foot={`${kEur(cs.cf)} nel periodo, di cui ${kEur(cs.cfNonCash)} ammortamenti`} cmp={cmpOf(pm(cs.fixedT), pm(csC?.fixedT), { good: 'down', unit: PM_LABEL })} />
+        <Kpi label="MdC II per tonnellata" value={nf(pm(cs.mcT), pmDec(2))} unit={PM_LABEL} foot={`${pct(cs.mcPct, 1)} dei ricavi`} cmp={cmpOf(pm(cs.mcT), pm(csC?.mcT), { unit: PM_LABEL })} />
       </div>
       <div className="split">
         <Panel title="Diagramma di redditività" sub={`Ricavi e costi totali (variabili + fissi) al variare delle tonnellate, con i prezzi e i costi medi del periodo; pareggio a ${nf(cs.bepT)} t, volume attuale ${nf(cs.tonnes)} t`}>
@@ -72,7 +73,7 @@ export function Pareggio({ d }) {
           { key: 'actual', label: 'Fissi della linea', align: 'r', render: r => kEur(r.actual), csv: r => r.actual },
           { key: 'absorbed', label: 'Assorbiti', align: 'r', render: r => kEur(r.absorbed), csv: r => r.absorbed },
           { key: 'underOver', label: <Def text="Assorbiti − effettivi: negativo = capacità pagata e non usata, positivo = linea sopra la capacità utile.">Sotto/sovra</Def>, csvLabel: 'Sotto/sovra assorbimento', align: 'r', render: r => <span className={r.underOver < 0 ? 'chip warn' : 'chip good'}>{kEur(r.underOver)}</span>, csv: r => r.underOver },
-          { key: 'perT', label: 'Fissi €/t', align: 'r', sort: r => (r.tonnes ? r.actual / r.tonnes : null), render: r => nf(r.tonnes ? r.actual / r.tonnes : null, 2), csv: r => (r.tonnes ? r.actual / r.tonnes : null) },
+          { key: 'perT', label: `Fissi ${PM_LABEL}`, align: 'r', sort: r => (r.tonnes ? r.actual / r.tonnes : null), render: r => nf(r.tonnes ? pm(r.actual / r.tonnes) : null, pmDec(2)), csv: r => (r.tonnes ? pm(r.actual / r.tonnes) : null) },
         ]} />
       </Panel>
     </>

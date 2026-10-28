@@ -8,6 +8,7 @@ import { go } from '../core/router.js';
 import { idx, mrp, appToday, signals, ctxOf } from '../core/derived.js';
 import { nextCode } from '../core/codes.js';
 import { nf, sf, sum, dateIt, addDays, daysBetween, relDays, mondayOf, round, mean } from '../core/util.js';
+import { PM_LABEL, pm, pmIn, pmDec, nfPm, fmtPm, colPm } from '../core/units.js';
 import { download, toCSV, stamp } from '../core/io.js';
 import { receivePurchaseOps } from '../engine/operations.js';
 import { coverage, openQty, preferredSupplier } from '../engine/mrp.js';
@@ -278,7 +279,7 @@ function Ordini({ d, sel }) {
             { key: 'code', label: 'Ordine', render: p => <><span className="code">{p.code}</span>{p.contract && <span className="sub">{p.contract}</span>}</> },
             { key: 'ing', label: 'Materia prima', sort: p => I.ing[p.ingId]?.name, render: p => <><b>{I.ing[p.ingId]?.name}</b><span className="sub">{p.supplierId ? <a href="#" onClick={e => { e.preventDefault(); e.stopPropagation(); openDrawer('supplier', p.supplierId); }}>{p.supplier}</a> : p.supplier}{p.mode ? ' · ' + p.mode : ''}</span></> },
             { key: 'tonnes', label: 't', align: 'r', render: p => <>{nf(p.tonnes, p.tonnes < 10 ? 1 : 0)}{p.status === 'parziale' && <span className="sub">ricevute {nf(p.receivedT, 1)}</span>}</> },
-            { key: 'price', label: '€/t', align: 'r', render: p => nf(p.price) },
+            { key: 'price', label: PM_LABEL, align: 'r', render: p => nfPm(p.price, 0), csv: p => pm(p.price) },
             { key: 'deliveryDate', label: 'Consegna', render: p => <>{dateIt(p.deliveryDate, 'dm')}{p.status !== 'ricevuto' && p.status !== 'annullato' && p.deliveryDate < today ? <span className="sub"><Chip kind="crit">in ritardo di {daysBetween(p.deliveryDate, today)} gg</Chip></span> : <span className="sub">{p.status === 'ricevuto' ? 'ricevuto ' + dateIt(p.receivedAt, 'dm') : relDays(p.deliveryDate, today)}</span>}</> },
             { key: 'status', label: 'Stato', render: p => p.status === 'ricevuto' || p.status === 'annullato' || p.status === 'parziale' ? <Chip kind={p.status === 'ricevuto' ? 'good' : p.status === 'parziale' ? 'warn' : ''}>{p.status === 'parziale' ? `parziale · mancano ${nf(openQty(p), 1)} t` : p.status}</Chip> :
               <select className="select" style={{ height: 30, width: 128 }} value={p.status} onChange={e => setStatus(p, e.target.value)} aria-label="Stato dell’ordine">{['emesso', 'confermato', 'annullato'].map(s => <option key={s}>{s}</option>)}</select> },
@@ -317,7 +318,7 @@ function NuovoOrdine({ d }) {
         {sups.length > 0 && <Field label="Fornitore" hint={sup?.minOrderT ? `ordine minimo ${nf(sup.minOrderT)} t` : ''}><Select value={sup?.id || ''} onChange={setSupId} options={sups.map(x => ({ id: x.id, label: `${x.name}${score[x.id]?.cls ? ` · classe ${score[x.id].cls}` : ''}${x.approval && x.approval !== 'qualificato' ? ` · ${x.approval}` : ''}` }))} id="po-sup" /></Field>}
         <div className="form">
           <Field label="Quantità (t)"><NumInput value={t} onChange={setT} decimals={1} id="po-t" /></Field>
-          <Field label="Prezzo €/t" hint={`oggi ${nf(i?.price)} €/t`}><NumInput value={price ?? i?.price} onChange={setPrice} decimals={1} id="po-price" /></Field>
+          <Field label={`Prezzo ${PM_LABEL}`} hint={`oggi ${fmtPm(i?.price, 0)}`}><NumInput value={pm(price ?? i?.price)} onChange={v => setPrice(pmIn(v))} decimals={pmDec(1)} id="po-price" /></Field>
         </div>
         <Field label="Consegna prevista" hint={`tempo di consegna tipico ${i?.leadDays ?? '—'} giorni${sc?.ltMean ? `, reale ${nf(sc.ltMean, 1)} ± ${nf(sc.ltSd || 0, 1)}` : ''}`}><input type="date" className="input" value={date} min={today} onChange={e => setDate(e.target.value)} id="po-date" /></Field>
         <Kv items={[['Fornitore', sup ? <>{sup.name}{sc?.cls && <> <Chip kind={sc.cls === 'A' ? 'good' : sc.cls === 'B' ? 'warn' : 'crit'}>{nf(sc.score)} · {sc.cls}</Chip></>}{sup.approval && sup.approval !== 'qualificato' && <> <Chip kind={APPROVAL[sup.approval]?.kind}>{sup.approval}</Chip></>}</> : i?.supplier],
@@ -396,7 +397,7 @@ function Mercati({ d, sel }) {
       <Panel title="Quotazioni" sub="Ultima quotazione, variazione a 4 settimane e previsione a 4 settimane · clic per il grafico" flush>
         <Table rows={list} selected={cur.id} onRow={c => go('acquisti', 'mercati', c.id)} pageSize={20} cols={[
           { key: 'label', label: 'Prodotto', render: c => <b>{c.label}</b> },
-          { key: 'last', label: 'Ultima €/t', align: 'r', render: c => nf(c.last) },
+          { key: 'last', label: colPm('Ultima'), align: 'r', render: c => nfPm(c.last, 0) },
           { key: 'ch4', label: '4 settimane', align: 'r', render: c => <span className={Math.abs(c.ch4) >= 5 ? 'chip warn' : ''}>{sf(c.ch4, 1)}%</span> },
           { key: 'rng', label: 'Min–max 52 sett.', align: 'r', nosort: true, render: c => `${nf(c.min52)}–${nf(c.max52)}` },
           { key: 'fc', label: 'Previsione a 4 sett.', align: 'r', sort: c => c.fc.points[3].value, render: c => <>{nf(c.fc.points[3].value)}<span className="sub">{nf(c.fc.points[3].lo)}–{nf(c.fc.points[3].hi)}</span></> },
@@ -415,7 +416,7 @@ function Mercati({ d, sel }) {
             <Kv items={[['Errore medio (MAPE)', `${nf(cur.bt.mape * 100, 1)}%`], ['Metodo ingenuo («come oggi»)', `${nf(cur.naive * 100, 1)}%`], ['Distorsione media', `${cur.bt.bias > 0 ? '+' : ''}${nf(cur.bt.bias, 1)} €/t`], ['Valori reali dentro la banda', `${nf(cur.bt.coverage * 100)}% (atteso ≈ 80%)`], ['Prove', `${cur.bt.n} previsioni verificate`]]} />
             <div className={`note ${beats ? 'good' : 'maize'}`}>{beats ? 'Il modello ha sbagliato meno del metodo ingenuo: la tendenza stimata aggiunge informazione.' : 'Il modello non batte il metodo ingenuo: per questa materia prima conviene leggere la previsione come «prezzo stabile» con la sua banda di incertezza.'}</div>
             <p className="small muted">Metodo: livellamento esponenziale con tendenza (Holt), parametri scelti sui dati. Non è un consiglio d’acquisto: serve a dare un ordine di grandezza del rischio di prezzo.</p>
-            {buys.length > 0 && <Kv items={[['Nostri acquisti (lotti)', `${buys.length} · prezzo medio ${nf(sum(buys, l => l.price * l.tonnes) / Math.max(1, sum(buys, l => l.tonnes)))} €/t`]]} />}
+            {buys.length > 0 && <Kv items={[['Nostri acquisti (lotti)', `${buys.length} · prezzo medio ${fmtPm(sum(buys, l => l.price * l.tonnes) / Math.max(1, sum(buys, l => l.tonnes)), 0)}`]]} />}
           </div>
         </Panel>
       </div>

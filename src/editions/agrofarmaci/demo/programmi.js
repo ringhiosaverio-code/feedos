@@ -1,4 +1,4 @@
-/* FitoOS · Estensore del demo: programmi di difesa consigliati per olivo, vite e melo, ciascuno con un'alternativa a minore
+/* DifesaOS · Estensore del demo: programmi di difesa consigliati per olivo, vite e melo, ciascuno con un'alternativa a minore
  * CO₂ e meno rame (ESG › CO₂ dei programmi di difesa). Rese, dosi, passaggi e consumi di gasolio sono dati dimostrativi
  * plausibili, da sostituire con i protocolli dei tecnici; gli assorbimenti del suolo sono intervalli indicativi. */
 

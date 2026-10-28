@@ -5,6 +5,7 @@
  * Ogni costo del cliente si ripartisce sulle sue consegne, così le viste per cliente, prodotto e agente sommano allo stesso totale.
  * Concentrazione: curva della balena, HHI, quote dei primi clienti, N80; rischio di abbandono; «E se perdiamo…». */
 import { addDays, byId, median, nf, eur, pct, sum } from '../core/util.js';
+import { fmtPm } from '../core/units.js';
 import { aggregateFacts, fixedFor } from './actuals.js';
 import { productCost } from './costing.js';
 import { creditSummary } from './credit.js';
@@ -422,7 +423,7 @@ export function profitSignals(d, ctx) {
     if (!(r.net < 0 && r.tonnes > 100)) continue;
     out.push({ key: `profit:neg:${r.id}:${Math.round(r.netT)}`, area: 'economia', roles: ['direzione', 'commerciale'], severity: 'attenzione',
       title: `${r.name}: margine netto negativo dopo il costo di servizio`,
-      why: `Negli ultimi 12 mesi ${nf(r.tonnes)} t a ${nf(r.price)} €/t: margine netto ${nf(r.netT, 1)} €/t (${eur(r.net)}) dopo logistica ${nf(r.logT, 1)} €/t, provvigioni, dilazione di ${nf(r.termsDays)} giorni, reclami e visite. Per arrivare all’obiettivo di ${nf(tgt)} €/t servono ${nf(r.priceNeededT, 1)} €/t in più sul prezzo.`,
+      why: `Negli ultimi 12 mesi ${nf(r.tonnes)} t a ${fmtPm(r.price, 0)}: margine netto ${fmtPm(r.netT, 1)} (${eur(r.net)}) dopo logistica ${fmtPm(r.logT, 1)}, provvigioni, dilazione di ${nf(r.termsDays)} giorni, reclami e visite. Per arrivare all’obiettivo di ${fmtPm(tgt, 0)} servono ${fmtPm(r.priceNeededT, 1)} in più sul prezzo.`,
       action: r.avgDrop != null && r.minDropT != null && r.avgDrop < r.minDropT ? `Rinegoziare il prezzo e portare la consegna media da ${nf(r.avgDrop, 1)} t ad almeno ${nf(r.minDropT, 1)} t.` : 'Rinegoziare prezzo o condizioni di servizio (consegne più grandi, pagamenti più brevi).',
       impact: -r.net, link: { area: 'economia', tab: 'redditivita', id: r.id }, agentId: r.agentId });
   }
@@ -461,7 +462,7 @@ export function profitReportSection(d, ctx, P, C) {
   const row = (r, g) => ({ group: g, name: r.name, tonnes: r.tonnes, netT: r.netT, net: r.net, logT: r.logT, abc: `${r.abcRev}/${r.abcNet}` });
   const neg = cp.rows.filter(r => r.net < 0);
   const narrative = [
-    `Margine netto dopo il costo di servizio ${eur(cp.totals.net)} (${nf(cp.totals.netT, 1)} €/t) su ${nf(cp.totals.tonnes)} t e ${cp.rows.length} clienti; logistica ${cp.cts.mode === 'distanza' ? 'modellata sulla distanza e sulla dimensione delle consegne' : 'standard dei prodotti'}.`,
+    `Margine netto dopo il costo di servizio ${eur(cp.totals.net)} (${fmtPm(cp.totals.netT, 1)}) su ${nf(cp.totals.tonnes)} t e ${cp.rows.length} clienti; logistica ${cp.cts.mode === 'distanza' ? 'modellata sulla distanza e sulla dimensione delle consegne' : 'standard dei prodotti'}.`,
     cp.peakPct != null ? `Curva della balena: i clienti redditizi arrivano al ${pct(cp.peakPct, 0)} del margine netto totale; ${neg.length ? `${neg.length} clienti in perdita ne consumano ${eur(-sum(neg, r => r.net))}.` : 'nessun cliente in perdita.'}` : 'Margine netto totale non positivo: la curva della balena non è significativa.',
     `Concentrazione dei ricavi: HHI ${nf(cp.hhi)} (attenzione sopra ${nf(K.hhiWarn)}), primi 10 clienti ${pct(cp.top10, 1)}, ${cp.n80} clienti fanno l’80% dei ricavi.`,
   ];

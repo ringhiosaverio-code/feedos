@@ -6,6 +6,7 @@ import { LuSave, LuScale } from 'react-icons/lu';
 import { store, toast, openDrawer } from '../core/store.js';
 import { ctxOf, appToday } from '../core/derived.js';
 import { nf, sf, addDays, byId, monthLabel, sum } from '../core/util.js';
+import { PM_LABEL, pm, pmIn, pmDec, nfPm, colPm } from '../core/units.js';
 import { usePeriod } from '../ui/period.jsx';
 import { ppv, materialVariance, marketPremium, timing, stdPrices, productActualVsStd } from '../engine/purchaseVariance.js';
 import { Panel, Kpi, Table, Chip, Btn, Select, NumInput, Empty, SearchBox, filterRows } from '../ui/ui.jsx';
@@ -52,7 +53,7 @@ export function Varianze({ d, sel }) {
           cmp={pvC && pvC.spend > 0.5 * pv.spend ? { cur: pv.total / 1000, value: pvC.total / 1000, kind: 'ratio', good: 'down', unit: 'k€', decimals: 0, label: per.C.short, cov: per.cov } : undefined} />
         <Kpi label="PPV da inizio anno" value={sEur(pvY.total)} foot={spc(pvY.pct) + ' sugli standard'} />
         <Kpi label={<Def text="Costo effettivo delle materie prime dei lotti prodotti meno il loro costo standard (formule usate, prezzi standard), per tonnellata prodotta.">Varianza di materiale</Def>}
-          value={T.varT != null ? sf(T.varT, 2) : '—'} unit="€/t" foot={`${sEur(T.actual - T.std)} su ${nf(T.tonnes)} t`} status={T.varT == null ? undefined : T.varT <= 0 ? 'ok' : T.varT < 5 ? 'warn' : 'bad'} />
+          value={T.varT != null ? sf(pm(T.varT), pmDec(2)) : '—'} unit={PM_LABEL} foot={`${sEur(T.actual - T.std)} su ${nf(T.tonnes)} t`} status={T.varT == null ? undefined : T.varT <= 0 ? 'ok' : T.varT < 5 ? 'warn' : 'bad'} />
         <Kpi label={<Def text="Prezzo del lotto ÷ quotazione della stessa settimana − 1: mediana delle materie prime quotate.">Premio sul mercato</Def>} value={spc(mp.median)} foot={`${nf(mp.lots.length)} lotti con quotazione`} />
         <Kpi label={<Def text="Σ t × (media delle quotazioni delle 13 settimane prima dell’arrivo − quotazione all’arrivo). Positivo = si è comprato sotto la media recente.">Tempi d’acquisto</Def>} value={sEur(tm.total)} foot={tm.total >= 0 ? 'comprato sotto la media del trimestre' : 'comprato sopra la media del trimestre'} />
       </div>
@@ -71,9 +72,9 @@ export function Varianze({ d, sel }) {
         <Table rows={mv.byProduct.map(r => ({ ...r, id: r.productId }))} onRow={r => openDrawer('product', r.productId)} initialSort={{ key: 'var', dir: 'desc' }} exportName="varianze-prodotti" cols={[
           { key: 'name', label: 'Prodotto', sort: r => prod[r.productId]?.name, render: r => <span><b>{prod[r.productId]?.name || r.productId}</b><span className="sub">{prod[r.productId]?.code}</span></span>, csv: r => prod[r.productId]?.name },
           { key: 'tonnes', label: 't', align: 'r', render: r => nf(r.tonnes) },
-          { key: 'actualT', label: 'Effettivo €/t', align: 'r', render: r => nf(r.actualT, 2) },
-          { key: 'stdT', label: 'Standard €/t', align: 'r', render: r => nf(r.stdT, 2) },
-          { key: 'varT', label: 'Varianza €/t', align: 'r', render: r => <Chip kind={signKind(r.varT)}>{sf(r.varT, 2)}</Chip>, csv: r => r.varT },
+          { key: 'actualT', label: colPm('Effettivo'), align: 'r', render: r => nfPm(r.actualT, 2), csv: r => pm(r.actualT) },
+          { key: 'stdT', label: colPm('Standard'), align: 'r', render: r => nfPm(r.stdT, 2), csv: r => pm(r.stdT) },
+          { key: 'varT', label: colPm('Varianza'), align: 'r', render: r => <Chip kind={signKind(r.varT)}>{sf(pm(r.varT), pmDec(2))}</Chip>, csv: r => pm(r.varT) },
           { key: 'price', label: 'Prezzo', align: 'r', render: r => skEur(r.price, 1) },
           { key: 'quantity', label: 'Quantità', align: 'r', render: r => skEur(r.quantity, 1) },
           { key: 'formula', label: 'Formula', align: 'r', render: r => skEur(r.formula, 1) },
@@ -128,7 +129,7 @@ function Standards({ d, today }) {
       actions={<>{years.length > 1 && <Select value={String(year)} onChange={v => { setYear(+v); setDraft({}); }} options={years.map(y => ({ id: String(y), label: String(y) }))} ariaLabel="Anno degli standard" />}<Btn small kind="primary" icon={LuSave} disabled={!changed.length} onClick={save}>Salva {changed.length ? `(${changed.length})` : ''}</Btn></>}>
       <Table rows={rows} pageSize={12} initialSort={{ key: 'name', dir: 'asc' }} cols={[
         { key: 'name', label: 'Materia prima', render: r => <b>{r.name}</b> },
-        { key: 'std', label: 'Standard €/t', align: 'r', render: r => <NumInput slim value={draft[r.id] ?? r.std} onChange={v => setDraft(x => ({ ...x, [r.id]: v }))} decimals={1} ariaLabel={`Standard di ${r.name}`} /> },
+        { key: 'std', label: colPm('Standard'), align: 'r', render: r => <NumInput slim value={pm(draft[r.id] ?? r.std)} onChange={v => setDraft(x => ({ ...x, [r.id]: pmIn(v) }))} decimals={pmDec(1)} ariaLabel={`Standard di ${r.name}`} /> },
         { key: 'saved', label: 'Origine', render: r => (r.saved ? <Chip kind="good">salvato</Chip> : <Chip kind="outline">dai primi arrivi</Chip>), csv: r => (r.saved ? 'salvato' : 'calcolato') },
         { key: 'price', label: 'Prezzo di oggi', align: 'r', render: r => (r.price != null ? nf(r.price, 1) : '—') },
         { key: 'gap', label: 'Oggi vs standard', align: 'r', sort: r => (r.std ? r.price / r.std - 1 : null), render: r => (r.std && r.price ? <Chip kind={r.price > r.std * 1.05 ? 'crit' : r.price < r.std * 0.95 ? 'good' : ''}>{spc(r.price / r.std - 1)}</Chip> : '—') },
@@ -145,9 +146,9 @@ export function ProductActualVsStd({ d, id }) {
   if (!rows.length) return null;
   const last = rows[rows.length - 1];
   return (
-    <div className="dsec"><div className="eyebrow">Materie prime: effettivo e standard · {last.varT != null ? `${sf(last.varT, 2)} €/t nell’ultimo mese` : ''}</div>
-      <LineChart labels={rows.map(r => monthLabel(r.month))} height={150} unit="€/t" decimals={1} area={false} markLast={false}
-        series={[{ key: 'a', label: 'Effettivo', color: 'var(--s1)', values: rows.map(r => r.actualT) }, { key: 's', label: 'Standard', color: 'var(--s2)', dashed: true, values: rows.map(r => r.stdT) }]} ariaLabel="Costo delle materie prime effettivo e standard" />
+    <div className="dsec"><div className="eyebrow">Materie prime: effettivo e standard · {last.varT != null ? `${sf(pm(last.varT), pmDec(2))} ${PM_LABEL} nell’ultimo mese` : ''}</div>
+      <LineChart labels={rows.map(r => monthLabel(r.month))} height={150} unit={PM_LABEL} decimals={pmDec(1)} area={false} markLast={false}
+        series={[{ key: 'a', label: 'Effettivo', color: 'var(--s1)', values: rows.map(r => pm(r.actualT)) }, { key: 's', label: 'Standard', color: 'var(--s2)', dashed: true, values: rows.map(r => pm(r.stdT)) }]} ariaLabel="Costo delle materie prime effettivo e standard" />
       <Legend items={[{ label: 'Effettivo (lotti consumati)', color: 'var(--s1)', line: true }, { label: 'Standard dell’anno', color: 'var(--s2)', line: true }]} />
     </div>
   );

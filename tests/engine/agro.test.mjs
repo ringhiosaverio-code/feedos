@@ -1,4 +1,4 @@
-/* FitoOS · Edizione agrofarmaci: regole regolatorie (art. 43 e 46, ricavi a rischio, vendibilità), tolleranze del titolo,
+/* DifesaOS · Edizione agrofarmaci: regole regolatorie (art. 43 e 46, ricavi a rischio, vendibilità), tolleranze del titolo,
  * ADR 1.1.3.6 e DS 375, indici Seveso, invii delle schede di sicurezza, campagne e premi, CO₂ dei programmi, demo dell'edizione
  * (estensori senza violazioni, segnali attesi, nessun nome reale) e archivi senza dati agro. */
 import test from 'node:test';
@@ -11,6 +11,7 @@ import { asToleranceRange, checkAnalysis } from '../../src/engine/quality.js';
 import { computeSignals } from '../../src/engine/signals.js';
 import { demoData as agroDemo, starterData as agroStarter } from '../../src/editions/agrofarmaci/demo/index.js';
 import { demoData as feedDemo } from '../../src/data/demo/index.js';
+import { AGRO_RULE_SOURCES, AGRO_ESTIMATES } from '../../src/data/agro-rules.js';
 
 const T = '2026-10-28';
 const near = (a, b, eps = 1e-9) => assert.ok(Math.abs(a - b) <= eps, `${a} ≠ ${b}`);
@@ -146,7 +147,7 @@ test('archivi senza dati agro: nessun segnale né sezione, FeedOS invariato', ()
   assert.equal(st.lines.length, 3);
 });
 
-test('demo FitoOS: estensori senza violazioni, segnali attesi, nessun nome reale', () => {
+test('demo DifesaOS: estensori senza violazioni, segnali attesi, nessun nome reale', () => {
   const warn = console.warn, seen = [];
   console.warn = (...a) => seen.push(a.map(String).join(' '));
   let d;
@@ -162,4 +163,25 @@ test('demo FitoOS: estensori senza violazioni, segnali attesi, nessun nome reale
   assert.ok(!/mangimificio|aflatossin/i.test(json.replace(/"(questionnaires|materiality)":\[.*?\]\]/g, '')), 'testi del mangimificio fuori posto');
   // stessi dati alla stessa data
   assert.equal(JSON.stringify(agroDemo(T).registrations), JSON.stringify(d.registrations));
+});
+
+test('regole: ogni regola ha riferimento, stato e fonti; le stime dell’azienda cambiano i calcoli entro i limiti', () => {
+  const ids = new Set();
+  for (const r of AGRO_RULE_SOURCES) {
+    assert.ok(r.id && !ids.has(r.id), r.id); ids.add(r.id);
+    assert.ok(['verificato', 'parziale', 'stima'].includes(r.status), r.id);
+    assert.ok(r.law && r.rule && r.value, r.id);
+    for (const u of r.sources) assert.match(u, /^https:\/\//, r.id);
+    if (r.id !== 'volumi') assert.ok(r.sources.length > 0, `${r.id}: senza fonte`); // i volumi d'acqua sono un'indicazione tecnica
+  }
+  for (const k of ['art43', 'art46', 'art53', 'rame', 'reach319', 'clp-ufi', 'seveso', 'adr1136', 'ds375', 'fao-tol']) assert.ok(ids.has(k), k);
+  assert.equal(REG.AGRO_RULES.art43Months, 3); assert.equal(REG.AGRO_RULES.art46SaleMonths, 6); assert.equal(REG.AGRO_RULES.art46UseMonths, 12); assert.equal(REG.AGRO_RULES.art53Days, 120);
+  assert.equal(REG.AGRO_RULES.adrLimit, 1000); assert.deepEqual(REG.AGRO_RULES.seveso.E1.q, [100, 200]); assert.deepEqual(REG.AGRO_RULES.seveso.E2.q, [200, 500]);
+  const base = emptyData();
+  assert.deepEqual(REG.rulesOf(base).pNonRenewal, REG.AGRO_RULES.pNonRenewal);
+  const d = { ...base, settings: { ...base.settings, agro: { rules: { pNonRenewal: { cfs: 0.5, ignota: 1 }, horizonMonths: 999, graceDemandFactor: 'x', disposalEurT: 2500 } } } };
+  const R = REG.rulesOf(d);
+  assert.equal(R.pNonRenewal.cfs, 0.5); assert.ok(!('ignota' in R.pNonRenewal)); assert.equal(R.horizonMonths, 120); assert.equal(R.graceDemandFactor, REG.AGRO_RULES.graceDemandFactor); assert.equal(R.disposalEurT, 2500);
+  assert.equal(R.art43Months, 3, 'le regole di legge non si cambiano dalle stime');
+  assert.ok(AGRO_ESTIMATES.every(e => e.key.startsWith('pNonRenewal.') ? e.key.slice(12) in REG.AGRO_RULES.pNonRenewal : e.key in REG.AGRO_RULES));
 });

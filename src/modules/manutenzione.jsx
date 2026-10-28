@@ -7,6 +7,7 @@ import { LuWrench, LuCalendarClock, LuCheck, LuPlus } from 'react-icons/lu';
 import { store, toast, openDrawer } from '../core/store.js';
 import { appToday } from '../core/derived.js';
 import { nf, dateIt, addDays, daysBetween, relDays, sum, byId } from '../core/util.js';
+import { PM_LABEL, pm, nfPm, fmtPm } from '../core/units.js';
 import { assetStatus, reliability, maintenanceCost, dieReplacement, workOrderOps, completeWorkOrderOps, maintenanceSummary, isOpenWo, ASSET_KINDS } from '../engine/maintenance.js';
 import { Panel, Kpi, Table, Chip, Btn, Field, Select, NumInput, Empty, Drawer, Kv } from '../ui/ui.jsx';
 import { Def, eurTxt } from './direzione-conto.jsx';
@@ -46,7 +47,7 @@ export function Manutenzione({ d }) {
           foot={due30.length ? due30.slice(0, 2).map(r => `${r.code || r.name} ${relDays(r.st.dueDate, today)}`).join(' · ') : 'Nessuna scadenza vicina'} />
         <Kpi label="Guasti in 12 mesi" value={nf(plant.failures)} foot={`${nf(plant.downH)} ore di fermo`} />
         <Kpi label={<Def text="Mean time between failures: ore di marcia delle linee negli ultimi 12 mesi ÷ numero di guasti.">MTBF dello stabilimento</Def>} value={plant.mtbf != null ? nf(plant.mtbf) : '—'} unit="h" foot="ore di marcia fra due guasti" />
-        <Kpi label="Costo di manutenzione" value={eurTxt(plant.cost)} foot={plant.perT != null ? `${nf(plant.perT, 2)} €/t · ${plant.prev} preventivi, ${plant.corr} correttivi` : '12 mesi'} />
+        <Kpi label="Costo di manutenzione" value={eurTxt(plant.cost)} foot={plant.perT != null ? `${fmtPm(plant.perT, 2)} · ${plant.prev} preventivi, ${plant.corr} correttivi` : '12 mesi'} />
         <Kpi label="Ordini di lavoro aperti" value={nf(open.length)} foot={open.length ? `il primo ${relDays(open[0].due, today)}` : 'Nessuno'} />
       </div>
 
@@ -72,7 +73,7 @@ export function Manutenzione({ d }) {
           { key: 'fail', label: 'Guasti 12 m', align: 'r', sort: r => r.rel.failures, render: r => nf(r.rel.failures), csv: r => r.rel.failures },
           { key: 'mtbf', label: 'MTBF h', align: 'r', sort: r => r.rel.mtbf, render: r => (r.rel.mtbf != null ? nf(r.rel.mtbf) : '—'), csv: r => r.rel.mtbf },
           { key: 'mttr', label: 'MTTR min', align: 'r', sort: r => r.rel.mttr, render: r => (r.rel.mttr != null ? nf(r.rel.mttr) : '—'), csv: r => r.rel.mttr },
-          { key: 'perT', label: '€/t', align: 'r', sort: r => r.mc.perT, render: r => (r.mc.perT != null ? nf(r.mc.perT, 2) : '—'), csv: r => r.mc.perT },
+          { key: 'perT', label: PM_LABEL, align: 'r', sort: r => r.mc.perT, render: r => (r.mc.perT != null ? nfPm(r.mc.perT, 2) : '—'), csv: r => pm(r.mc.perT) },
           { key: 'open', label: '', nosort: true, csv: false, render: r => (r.open.length ? <Chip kind="accent">{r.open.length} aperti</Chip> : null) },
         ]} />
       </Panel>
@@ -119,7 +120,7 @@ function AssetBody({ d, a }) {
       )}
       <div className="dsec"><div className="eyebrow">Affidabilità e costo · 12 mesi</div>
         <Kv items={[['Guasti', `${nf(rel.failures)} · ${nf(rel.downH, 1)} ore di fermo`], ['MTBF', rel.mtbf != null ? `${nf(rel.mtbf)} ore di marcia fra due guasti` : '—'], ['MTTR', rel.mttr != null ? `${nf(rel.mttr)} minuti per riparazione` : '—'],
-          ['Costo degli interventi', `${eurTxt(mc.cost)} in ${nf(mc.n)} interventi${mc.perT != null ? ` · ${nf(mc.perT, 2)} €/t` : ''}`]]} />
+          ['Costo degli interventi', `${eurTxt(mc.cost)} in ${nf(mc.n)} interventi${mc.perT != null ? ` · ${fmtPm(mc.perT, 2)}` : ''}`]]} />
       </div>
       {die && die.months != null && (
         <div className="dsec"><div className="eyebrow">Rientro della sostituzione</div>

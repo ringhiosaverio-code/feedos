@@ -4,6 +4,7 @@
 import React, { useId, useMemo, useRef, useState } from 'react';
 import { LuInfo, LuChevronRight, LuSnowflake, LuTriangleAlert } from 'react-icons/lu';
 import { nf, sf, pct, monthLabel } from '../core/util.js';
+import { PM_LABEL, pm, pmDec, fmtPm } from '../core/units.js';
 import { ctxOf } from '../core/derived.js';
 import { usePeriod } from '../ui/period.jsx';
 import { pnlFor, aggregate, PNL_LINES, VAR_LINE, FIXED_LINE, compareLines, stockEffect, effectiveCoverage, keyLabel } from '../engine/pnl.js';
@@ -26,7 +27,7 @@ export const eurTxt = v => { const m = money(v); return m.unit ? `${m.value} ${m
 export const kEur = (v, d = 1) => (v == null || !Number.isFinite(+v) ? '—' : nf(v / 1000, d) + ' k€');
 export const skEur = (v, d = 1) => (v == null || !Number.isFinite(+v) ? '—' : sf(v / 1000, d) + ' k€');
 export const eur0 = v => (v == null || !Number.isFinite(+v) ? '—' : nf(v, 0));
-export const perT = v => (v == null || !Number.isFinite(+v) ? '—' : nf(v, 2));
+export const perT = v => (v == null || !Number.isFinite(+v) ? '—' : nf(pm(v), pmDec(2))); // € per tonnellata, o per kg nell'edizione agrofarmaci
 
 /** Definizione al passaggio del mouse (o al tocco: il riquadro prende il fuoco). */
 export function Def({ text, children, label }) {
@@ -197,7 +198,7 @@ const MAX_CHILD = 8;
 /** Cascata dai ricavi netti all'EBIT (passi del conto). */
 export function pnlSteps(p) {
   const by = p.by, t = p.tonnes;
-  const sub = v => (t > 0 ? `${nf(v / t, 1)} €/t` : undefined);
+  const sub = v => (t > 0 ? fmtPm(v / t, 1) : undefined);
   const st = (id, label, kind) => ({ key: id, label: label || PNL_LINES.find(l => l.id === id).short, value: by[id], kind: kind || 'step', def: PNL_LINES.find(l => l.id === id).def, sub: kind === 'total' ? sub(by[id]) : undefined });
   return [
     st('ricaviNetti', 'Ricavi netti', 'total'), st('materiePrime'), st('calo'), st('energia'), st('trasformazioneVar'), st('imballi'), st('mdc1', 'MdC I', 'total'),
@@ -257,7 +258,7 @@ export function Conto({ d }) {
         <span className={`dz-exp ${r.expandable ? '' : 'none'} ${r.open ? 'on' : ''}`} aria-hidden="true"><LuChevronRight /></span>{lbl}</span>;
     } },
     { key: 'value', label: '€', align: 'r', nosort: true, csv: r => Math.round(r.value * 100) / 100, render: r => eur0(r.value) },
-    { key: 'perT', label: '€/t', align: 'r', nosort: true, csv: r => r.perT, render: r => perT(r.perT), className: '' },
+    { key: 'perT', label: PM_LABEL, align: 'r', nosort: true, csv: r => r.perT, render: r => perT(r.perT), className: '' },
     { key: 'pctRev', label: '% ricavi', align: 'r', nosort: true, csv: r => r.pctRev, render: r => <span className="dz-pct">{r.pctRev == null ? '—' : pct(r.pctRev, 1)}</span> },
     ...(cmp ? [
       { key: 'cmp', label: C?.budget ? 'Budget' : `Confronto`, csvLabel: 'Confronto', align: 'r', nosort: true, csv: r => r.cmp, render: r => eur0(r.cmp) },
@@ -271,9 +272,9 @@ export function Conto({ d }) {
     <>
       <div className="kpis">
         <Kpi label="Ricavi netti" {...money(ct.ricaviNetti)} cmp={kc(dir, ct.ricaviNetti, cmp?.by.ricaviNetti)} foot={`${nf(t)} t`} />
-        <Kpi label="MdC I" value={perT(t ? ct.mdc1 / t : null)} unit="€/t" cmp={kc(dir, t ? ct.mdc1 / t : null, cmp && cmp.tonnes ? cmp.by.mdc1 / cmp.tonnes : null, { kind: 'ratio', unit: '€/t' })} foot={eurTxt(ct.mdc1)} />
-        <Kpi label="MdC II" value={perT(t ? ct.mdc2 / t : null)} unit="€/t" cmp={kc(dir, t ? ct.mdc2 / t : null, cmp && cmp.tonnes ? cmp.by.mdc2 / cmp.tonnes : null, { kind: 'ratio', unit: '€/t' })} foot={eurTxt(ct.mdc2)}
-          {...goal(d, 'mdc-t', t ? ct.mdc2 / t : null, v => nf(v, 0) + ' €/t')} />
+        <Kpi label="MdC I" value={perT(t ? ct.mdc1 / t : null)} unit={PM_LABEL} cmp={kc(dir, t ? pm(ct.mdc1 / t) : null, cmp && cmp.tonnes ? pm(cmp.by.mdc1 / cmp.tonnes) : null, { kind: 'ratio', unit: PM_LABEL })} foot={eurTxt(ct.mdc1)} />
+        <Kpi label="MdC II" value={perT(t ? ct.mdc2 / t : null)} unit={PM_LABEL} cmp={kc(dir, t ? pm(ct.mdc2 / t) : null, cmp && cmp.tonnes ? pm(cmp.by.mdc2 / cmp.tonnes) : null, { kind: 'ratio', unit: PM_LABEL })} foot={eurTxt(ct.mdc2)}
+          {...goal(d, 'mdc-t', t ? ct.mdc2 / t : null, v => fmtPm(v, 0))} />
         <Kpi label="EBIT" {...money(ct.ebit)} cmp={kc(dir, ct.ebit, cmp?.by.ebit)} foot={cur.revenueNet ? `${pct(ct.ebit / cur.revenueNet, 1)} dei ricavi` : null} />
       </div>
       <Panel title="Conto economico a costi diretti" flush className="dz-pnl"
@@ -295,7 +296,7 @@ export function Conto({ d }) {
         <Panel title="Effetto scorte" sub="Margine al costo effettivo dei lotti e «ai costi di oggi»">
           <div className="dz-read">
             <p><b>{se >= 0 ? '+' : '−'}{eurTxt(Math.abs(se))}</b> ({cur.revenueNet ? pct(se / cur.revenueNet, 1) : '—'} dei ricavi): il costo variabile effettivo dei lotti venduti è {eurTxt(varCost)}; agli stessi volumi, con i prezzi di oggi delle materie prime e dell’energia, sarebbe {eurTxt(cur.sums.replVar)}.</p>
-            <p>A costi di oggi il MdC I sarebbe {eurTxt(ct.mdc1 - se)} ({perT(t ? (ct.mdc1 - se) / t : null)} €/t) invece di {eurTxt(ct.mdc1)} ({perT(t ? ct.mdc1 / t : null)} €/t). {se > 0 ? 'Le scorte comprate prima dei rincari hanno sostenuto il margine: senza interventi su listini o ricette, i prossimi mesi renderanno meno.' : se < 0 ? 'Le scorte comprate a prezzi più alti hanno pesato sul margine: ai prezzi di oggi il margine migliora.' : 'Costi effettivi e costi di oggi coincidono.'}</p>
+            <p>A costi di oggi il MdC I sarebbe {eurTxt(ct.mdc1 - se)} ({perT(t ? (ct.mdc1 - se) / t : null)} {PM_LABEL}) invece di {eurTxt(ct.mdc1)} ({perT(t ? ct.mdc1 / t : null)} {PM_LABEL}). {se > 0 ? 'Le scorte comprate prima dei rincari hanno sostenuto il margine: senza interventi su listini o ricette, i prossimi mesi renderanno meno.' : se < 0 ? 'Le scorte comprate a prezzi più alti hanno pesato sul margine: ai prezzi di oggi il margine migliora.' : 'Costi effettivi e costi di oggi coincidono.'}</p>
             <p className="small muted">Mesi dallo storico mensile: nessun effetto scorte (manca il costo di sostituzione).</p>
           </div>
         </Panel>

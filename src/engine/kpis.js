@@ -6,6 +6,7 @@
  * proporzionato ai mesi del periodo, i rapporti la media dei mesi pesata sulle tonnellate.
  * Contratto della fondazione: KPIS, kpiValues(d, ctx, P), statusFor(d, kpiId, value), kpiSignals(d, ctx), kpiReportSection(d, ctx, P, C). */
 import { sum, median, addDays, daysBetween, monthsIn, monthFraction, nf, byId, mondayOf } from '../core/util.js';
+import { SMALL_UNITS } from '../core/units.js';
 import { aggregateFacts, fixedFor } from './actuals.js';
 import { pnlFor } from './pnl.js';
 import { creditSummary } from './credit.js';
@@ -57,17 +58,19 @@ const cust = (d, ctx, P) => cached('cp|' + key(P), [d, ctx?.facts], () => custom
 const oeeOf = (d, ctx, P) => cached('oee|' + key(P), [d, ctx?.facts], () => oeeSummary(d, ctx, P));
 const esg = (d, P) => cached('esg|' + key(P), [d], () => computeKpis(d, P));
 
+// valori per massa: €/t nel mangimificio, €/kg negli agrofarmaci (stesso valore grezzo in €/t, obiettivi in €/t)
+const PER_T = SMALL_UNITS ? { unit: '€/kg', scale: 0.001, decimals: 2 } : {};
 /** KPI di base. value in unità grezze (frazioni per le percentuali); scale e decimals servono a mostrarli. */
 const CORE_KPIS = [
   { id: 'ricavi-netti', label: 'Ricavi netti', unit: '€', kind: 'flow', dir: 'up', area: 'direzione', link: { area: 'direzione', tab: 'conto' }, decimals: 0, hist: true,
     def: 'Σ tonnellate consegnate × prezzo netto (listino meno sconti), come nel conto economico.', compute: (d, ctx, P) => pnl(d, ctx, P)?.revenueNet ?? null },
   { id: 'volume-t', label: 'Volumi consegnati', unit: 't', kind: 'flow', dir: 'up', area: 'commerciale', link: { area: 'commerciale', tab: 'clienti' }, decimals: 0, hist: true,
     def: 'Σ tonnellate consegnate nel periodo.', compute: (d, ctx, P) => pnl(d, ctx, P)?.tonnes ?? null },
-  { id: 'prezzo-netto-t', label: 'Prezzo netto medio', unit: '€/t', kind: 'ratio', dir: 'up', area: 'commerciale', link: { area: 'commerciale', tab: 'listini' }, decimals: 1, hist: true,
+  { id: 'prezzo-netto-t', label: 'Prezzo netto medio', unit: '€/t', kind: 'ratio', dir: 'up', area: 'commerciale', link: { area: 'commerciale', tab: 'listini' }, decimals: 1, hist: true, ...PER_T,
     def: 'Ricavi netti ÷ tonnellate consegnate.', compute: (d, ctx, P) => { const p = pnl(d, ctx, P); return p ? div(p.revenueNet, p.tonnes) : null; } },
-  { id: 'mdc-t', label: 'Margine di contribuzione II', unit: '€/t', kind: 'ratio', dir: 'up', area: 'economia', link: { area: 'economia', tab: 'margini' }, decimals: 1, hist: true,
+  { id: 'mdc-t', label: 'Margine di contribuzione II', unit: '€/t', kind: 'ratio', dir: 'up', area: 'economia', link: { area: 'economia', tab: 'margini' }, decimals: 1, hist: true, ...PER_T,
     def: 'MdC II (ricavi netti − costi variabili al costo effettivo dei lotti − trasporti − provvigioni) ÷ tonnellate.', compute: (d, ctx, P) => { const p = pnl(d, ctx, P); return p ? div(p.by.mdc2, p.tonnes) : null; } },
-  { id: 'margine-pieno-t', label: 'Margine sul costo pieno', unit: '€/t', kind: 'ratio', dir: 'up', area: 'economia', link: { area: 'economia', tab: 'redditivita' }, decimals: 1, hist: true,
+  { id: 'margine-pieno-t', label: 'Margine sul costo pieno', unit: '€/t', kind: 'ratio', dir: 'up', area: 'economia', link: { area: 'economia', tab: 'redditivita' }, decimals: 1, hist: true, ...PER_T,
     def: 'Σ (prezzo − costo pieno effettivo del lotto consegnato) ÷ tonnellate.', compute: (d, ctx, P) => { const a = facts(d, ctx, P); return div(a.marginFull, a.tonnes); } },
   { id: 'quota-mp', label: 'Incidenza delle materie prime', unit: '%', scale: 100, kind: 'ratio', dir: 'down', area: 'economia', link: { area: 'direzione', tab: 'conto' }, decimals: 1, hist: true,
     def: 'Costo delle materie prime dei lotti consegnati ÷ ricavi netti.', compute: (d, ctx, P) => { const p = pnl(d, ctx, P); return p ? div(-p.by.materiePrime, p.revenueNet) : null; } },

@@ -1,7 +1,8 @@
 /* FeedOS 17 · Pagine di stampa A4: anteprima a schermo come un foglio, stampa sempre in tema chiaro (styles/print.css).
  * Ogni PrintPage è una pagina: intestazione con azienda, periodo, data di emissione e (facoltativo) punteggio della qualità dei dati. */
 import React from 'react';
-import { useData } from '../core/store.js';
+import { useData, toast } from '../core/store.js';
+import { META as EDITION } from '../editions/meta.js';
 import { appToday } from '../core/derived.js';
 import { dateIt, nf } from '../core/util.js';
 
@@ -31,4 +32,11 @@ export function PrintPage({ title, period, dq, issued, children, className = '',
 }
 
 /** Apre la stampa del browser (da lì anche «Salva come PDF»). */
-export function printNow() { window.print(); }
+/** Stampa (o «Salva come PDF» del browser). Dentro il visualizzatore di claude.ai la stampa non è permessa: si spiega cosa fare. */
+export function printNow() {
+  if (typeof window !== 'undefined' && window.claude?.use) {
+    toast(`In questa vista la stampa non è disponibile: apri il file HTML di ${EDITION.product} nel browser per stampare o salvare in PDF`, 'err');
+    return;
+  }
+  window.print();
+}

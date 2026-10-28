@@ -2,6 +2,7 @@
  * Ogni segnale spiega il perché con i numeri e suggerisce il passo successivo; nessuna azione è automatica.
  * Dopo le regole incorporate girano i fornitori dei pacchetti (providers.js), ciascuno isolato dagli errori degli altri. */
 import { makeCtx } from './actuals.js';
+import { fmtUp } from '../core/units.js';
 import { SIGNAL_PROVIDERS } from './providers.js';
 import { optimize, formulaCost, afb1Check } from './formulation.js';
 import { productCost } from './costing.js';
@@ -102,7 +103,7 @@ export function computeSignals(d, today, x = {}) {
       const mPct = (net - c.total) / net;
       add({ key: `margin:${p.id}:${Math.round(c.total)}`, area: 'economia', roles: ['direzione', 'commerciale'], severity: 'attenzione',
         title: `Prezzo netto di ${p.name} sotto il margine minimo`,
-        why: `${realized ? `Prezzo netto realizzato negli ultimi 90 giorni ${nf(net)} €/t (${nf(n.t)} t consegnate, listino ${nf(p.listPrice)} €/t)` : `Nessuna consegna negli ultimi 90 giorni: listino ${nf(net)} €/t`} contro costo pieno di oggi ${nf(c.total, 2)} €/t: margine ${nf(mPct * 100, 1)}% (minimo ${nf(p.minMarginPct)}%). Prezzo minimo ${nf(c.minPrice)} €/t.`,
+        why: `${realized ? `Prezzo netto realizzato negli ultimi 90 giorni ${fmtUp(net, p)} (${nf(n.t)} t consegnate, listino ${fmtUp(p.listPrice, p)})` : `Nessuna consegna negli ultimi 90 giorni: listino ${fmtUp(net, p)}`} contro costo pieno di oggi ${fmtUp(c.total, p, 2)}: margine ${nf(mPct * 100, 1)}% (minimo ${nf(p.minMarginPct)}%). Prezzo minimo ${fmtUp(c.minPrice, p)}.`,
         action: 'Valutare revisione del listino e degli sconti, o ri-ottimizzazione della formula.', impact: (c.minPrice - net) * (volumes[p.id] || 0),
         link: { area: 'economia', tab: 'margini', id: p.id } });
     }
@@ -117,7 +118,7 @@ export function computeSignals(d, today, x = {}) {
     if (o.price < c.minPrice - 0.5) {
       add({ key: `offer:${o.id}:${o.price}`, area: 'commerciale', roles: ['commerciale', 'agente', 'direzione'], severity: o.status === 'bozza' ? 'attenzione' : 'critico',
         title: `Offerta ${o.code} a ${custById[o.customerId]?.name} sotto il prezzo minimo`,
-        why: `${nf(o.tonnes)} t di ${p.name} a ${nf(o.price)} €/t; prezzo minimo per il margine del ${nf(p.minMarginPct)}%: ${nf(c.minPrice)} €/t (differenza ${nf(c.minPrice - o.price)} €/t).`,
+        why: `${nf(o.tonnes)} t di ${p.name} a ${fmtUp(o.price, p)}; prezzo minimo per il margine del ${nf(p.minMarginPct)}%: ${fmtUp(c.minPrice, p)} (differenza ${fmtUp(c.minPrice - o.price, p)}).`,
         action: o.status === 'bozza' ? 'Correggere il prezzo prima dell’invio o chiedere approvazione alla direzione.' : 'Offerta già inviata: valutare con la direzione.',
         impact: (c.minPrice - o.price) * o.tonnes, link: { area: 'commerciale', tab: 'offerte', id: o.id }, agentId: o.agentId ?? custById[o.customerId]?.agentId ?? null });
     }

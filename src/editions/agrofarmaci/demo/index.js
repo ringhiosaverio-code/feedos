@@ -1,4 +1,4 @@
-/* FitoOS · archivi di partenza dell'edizione agrofarmaci: azienda dimostrativa inventata «Arvale Dimostrativa S.p.A.»
+/* DifesaOS · archivi di partenza dell'edizione agrofarmaci: azienda dimostrativa inventata «Arvale Dimostrativa S.p.A.»
  * (generatore più estensori dell'edizione) e archivio vuoto con il settore e le linee tipiche. */
 import { generateAgroDemo, AGRO_DEMO_VERSION } from './generator.js';
 import { AGRO_EXTENDERS } from './extenders.js';

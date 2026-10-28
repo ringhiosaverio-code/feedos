@@ -1,4 +1,4 @@
-/* FitoOS · Motore delle campagne commerciali (edizione agrofarmaci): ordini anticipati con sconto a scaglioni di data,
+/* DifesaOS · Motore delle campagne commerciali (edizione agrofarmaci): ordini anticipati con sconto a scaglioni di data,
  * premi di fine campagna sugli obiettivi dei clienti, resi con tetto. Funzioni pure, mai eccezioni, date da fuori. */
 import { addDays, daysBetween, sum, byId, dateIt, nf, eur } from '../core/util.js';
 

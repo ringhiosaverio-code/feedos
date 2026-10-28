@@ -13,6 +13,7 @@ import { PageHead, Panel, Kpi, Btn, Table, Field, Select, Chip, Empty, Tabs, Sev
 import { SignalList } from './shared.jsx';
 import { TwinMini } from './gemello.jsx';
 import { NAV } from '../app/nav.js';
+import { PM_LABEL, nfPm } from '../core/units.js';
 import { checkAnalysis } from '../engine/quality.js';
 import { profile } from '../engine/nutrients.js';
 
@@ -51,7 +52,7 @@ function Decisioni({ d, today, mine, role }) {
     <>
       <div className="kpis" id="oggi-kpi">
         <Kpi label="Produzione ultimi 7 giorni" value={nf(K.prod7)} unit="t" spark={K.prodSpark} delta={K.prodDelta} foot="vs media 4 settimane" onClick={() => go('produzione', 'registro')} />
-        <Kpi label="Margine sul costo effettivo (30 giorni)" value={nf(K.margin, 1)} unit="€/t" spark={K.marginSpark} sparkColor="var(--s3)" foot={`${nf(K.ship30)} t consegnate`} onClick={() => go('economia', 'margini')} title="Prezzo di vendita meno costo pieno ai prezzi di oggi" />
+        <Kpi label="Margine sul costo effettivo (30 giorni)" value={nfPm(K.margin, 1)} unit={PM_LABEL} spark={K.marginSpark} sparkColor="var(--s3)" foot={`${nf(K.ship30)} t consegnate`} onClick={() => go('economia', 'margini')} title="Prezzo di vendita meno costo pieno ai prezzi di oggi" />
         <Kpi label="Elettricità per tonnellata (4 sett.)" value={nf(K.kwhT, 1)} unit="kWh/t" spark={K.kwhSpark} sparkColor="var(--s4)" delta={K.kwhDelta} deltaGood={K.kwhDelta != null ? K.kwhDelta <= 0 : null} foot="vs 12 settimane" onClick={() => go('produzione', 'energia')} />
         <Kpi label="CO₂ dei vettori energetici (12 mesi)" value={nf(K.co2T, 2)} unit="kg/t" foot={`FV ${nf(K.fv * 100, 1)}% dell’elettricità`} onClick={() => go('esg', 'energia')} />
         <Kpi label="Lotti conformi all’etichetta (90 giorni)" value={K.conf == null ? '—' : nf(K.conf * 100, 1)} unit="%" foot={`${K.analyzed} lotti analizzati`} onClick={() => go('qualita', 'lotti')} />
