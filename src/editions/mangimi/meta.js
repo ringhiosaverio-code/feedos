@@ -11,6 +11,6 @@ export const META = {
   hiddenTabs: {},                // { area: [tabId…] } schede da non mostrare in questa edizione
   extraTabs: {},                 // { area: [{id, label, after}] } schede in più (pagine in editions/<id>/app.js · TAB_PAGES)
   areaOverrides: {},             // { area: {label?, lead?} }
-  labels: { species: 'Specie', unitT: 't' },
+  labels: { species: 'Specie', unitT: 't', demoCompany: 'Mangimificio di fantasia', search: 'Cerca una formula, un lotto, un cliente o un comando…', palette: '«margine suino», «scorte mais», «richiamo M01», «e se mais +10%»', paletteEmpty: '«scorte mais»' },
   roles: null,                   // null = i ruoli di base (core/roles.js)
 };

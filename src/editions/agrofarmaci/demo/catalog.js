@@ -87,11 +87,11 @@ export const HAZARD_AGRO = {
   CU35WP: { h: ['H302', 'H332', 'H410'], pict: ['GHS07', 'GHS09'], seveso: ['E1'], adr: { un: 'UN3077', cls: '9', pg: 'III', cat: 3 } },
   CU24SC: { h: ['H302', 'H410'], pict: ['GHS07', 'GHS09'], seveso: ['E1'], adr: { un: 'UN3082', cls: '9', pg: 'III', cat: 3 } },
   ZO80WG: { h: ['H315'], pict: ['GHS07'], seveso: [], adr: null },
-  ZODP: { h: ['H228', 'H315'], pict: ['GHS02', 'GHS07'], seveso: ['P7'], adr: { un: 'UN1350', cls: '4.1', pg: 'III', cat: 3 } },
+  ZODP: { h: ['H228', 'H315'], pict: ['GHS02', 'GHS07'], seveso: [], adr: { un: 'UN1350', cls: '4.1', pg: 'III', cat: 3 } },
   TE100EC: { h: ['H226', 'H304', 'H361d', 'H411'], pict: ['GHS02', 'GHS08', 'GHS09'], seveso: ['P5c', 'E2'], adr: { un: 'UN1993', cls: '3', pg: 'III', cat: 3 } },
   FO80WG: { h: ['H318'], pict: ['GHS05'], seveso: [], adr: null },
   AC20SL: { h: ['H302', 'H412'], pict: ['GHS07'], seveso: [], adr: null },
-  DE25EC: { h: ['H226', 'H301', 'H304', 'H400', 'H410'], pict: ['GHS02', 'GHS06', 'GHS08', 'GHS09'], seveso: ['P5c', 'H2', 'E1'], adr: { un: 'UN1992', cls: '3', pg: 'III', cat: 3 } },
+  DE25EC: { h: ['H226', 'H301', 'H304', 'H400', 'H410'], pict: ['GHS02', 'GHS06', 'GHS08', 'GHS09'], seveso: ['P5c', 'E1'], adr: { un: 'UN1992', cls: '3', pg: 'III', cat: 3 } },
   PE33EC: { h: ['H226', 'H304', 'H317', 'H410'], pict: ['GHS02', 'GHS07', 'GHS08', 'GHS09'], seveso: ['P5c', 'E1'], adr: { un: 'UN1993', cls: '3', pg: 'III', cat: 3 } },
   FL50SC: { h: ['H302', 'H373', 'H410'], pict: ['GHS07', 'GHS08', 'GHS09'], seveso: ['E1'], adr: { un: 'UN3082', cls: '9', pg: 'III', cat: 3 } },
   BA25WG: { h: [], pict: [], seveso: [], adr: null },
@@ -101,7 +101,7 @@ export const HAZARD_AGRO = {
   ZO80WG5: { h: ['H315'], pict: ['GHS07'], seveso: [], adr: null },
 };
 /* Materie prime con categorie Seveso (stoccate in stabilimento). */
-export const RM_SEVESO = { cuoh: ['E1'], cuocl: ['E1'], delta: ['H2', 'E1'], pendi: ['E1'], flufen: ['E1'], tetra: ['E2'], acetam: ['E2'], solvente: ['P5c'], zolfo: ['P7'] };
+export const RM_SEVESO = { cuoh: ['E1'], cuocl: ['E1'], delta: ['H2', 'E1'], pendi: ['E1'], flufen: ['E1'], tetra: ['E2'], acetam: ['E2'], solvente: ['P5c'] };
 
 export const AGENTS_AGRO = [
   { id: 'ag-1', name: 'Luca Benedetti', zone: 'Nord-Est (Veneto, Trentino, Friuli)', commissionPct: 2.2 },

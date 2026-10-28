@@ -28,7 +28,7 @@ export const META = {
     economia: { lead: 'Margini al costo effettivo, redditività per cliente, prodotto e agente, punto di pareggio e previsioni verificate sul passato.' },
     esg: { lead: 'Clima, CO₂ dei programmi di difesa consigliati ai clienti, registri ambientali, persone, governance, obiettivi, rischi e report VSME, con il punto C8 per il codice NACE 20.20.' },
   },
-  labels: { species: 'Categoria', unitT: 't eq.' },
+  labels: { species: 'Categoria', unitT: 't eq.', demoCompany: 'Azienda di fantasia', search: 'Cerca un prodotto, un lotto, un cliente o un comando…', palette: '«margine cuprarvo», «scorte rame», «richiamo CU30», «dove è finito CU30»', paletteEmpty: '«scorte rame»' },
   roles: [
     { id: 'direzione', label: 'Direzione', short: 'Direzione', top: 3, areas: ['oggi', 'direzione', 'finanza', 'economia', 'commerciale', 'regolatorio', 'acquisti', 'produzione', 'qualita', 'esg', 'dati'] },
     { id: 'formulazione', label: 'Regolatorio e tecnico', short: 'Regolatorio', areas: ['oggi', 'regolatorio', 'qualita', 'produzione', 'esg', 'acquisti', 'commerciale', 'economia', 'direzione', 'finanza', 'dati'] },

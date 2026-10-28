@@ -54,7 +54,16 @@ function currentValues(d2, P) {
 }
 const scale = (x, f, dec = 0) => (x == null ? undefined : round(x * f, dec));
 
-export function demoReport(d, { today } = {}) {
+/* Testi e questionario del cliente del mangimificio; l'edizione agrofarmaci passa i suoi. */
+export const FEED_REPORT = {
+  balanceSheet: 11840000,
+  strategy: sv => `Ridurre l’impronta per tonnellata di prodotto e documentarla ai clienti con dati chiusi ogni anno. ${sv['em-target-desc'] || ''} Più coprodotti locali nelle formule, soia certificata e un piano di efficienza su vapore e aria compressa (dato dimostrativo).`,
+  circular: sv => `${sv['wt-reduce-desc'] || 'Recupero delle spazzature di linea.'} Coprodotti agroindustriali nelle formule (crusca, polpe, farine di estrazione) e pallet a rendere con i fornitori principali (dato dimostrativo).`,
+  customerQ: { id: 'q-caseificio-sila', title: 'Questionario di sostenibilità dei fornitori 2026', requester: 'Caseificio Sila (demo)', items: Q_CASEIFICIO },
+};
+export function demoReport(d, opts = {}) { return reportDemo(d, opts, FEED_REPORT); }
+/** Estensore del report con i testi e il questionario del cliente dell'azienda (cfg, vedi FEED_REPORT). */
+export function reportDemo(d, { today } = {}, cfg = FEED_REPORT) {
   if (!d || !today) return {};
   for (const c of ['esgAnswers', 'esgClosings', 'esgHistory', 'questionnaires', 'materiality']) if (Array.isArray(d[c]) && d[c].length) return {};
   const P = currentPeriod({ ...d, settings: { ...d.settings, demoAnchor: today, dataset: 'demo' } });
@@ -63,9 +72,9 @@ export function demoReport(d, { today } = {}) {
   const at = addDays(today, -6);
   const ans = (dpId, value, extra = {}) => ({ id: `${P.key}:${dpId}`, periodKey: P.key, dpId, value, unit: null, quality: 'dichiarato', note: '', evidenceIds: [], override: false, omission: null, omissionNote: '', status: 'rivisto', by: 'qualita', at, ...extra });
   const esgAnswers = [
-    ans('B1.balance-sheet', 11840000, { unit: '€', method: 'Totale attivo dello stato patrimoniale del bilancio 2025 approvato (dato dimostrativo).' }),
-    ans('C1.strategy', `Ridurre l’impronta per tonnellata di prodotto e documentarla ai clienti con dati chiusi ogni anno. ${sv['em-target-desc'] || ''} Più coprodotti locali nelle formule, soia certificata e un piano di efficienza su vapore e aria compressa (dato dimostrativo).`.replace(/\s+/g, ' ').trim()),
-    ans('B7.circular', `${sv['wt-reduce-desc'] || 'Recupero delle spazzature di linea.'} Coprodotti agroindustriali nelle formule (crusca, polpe, farine di estrazione) e pallet a rendere con i fornitori principali (dato dimostrativo).`.replace(/\s+/g, ' ').trim()),
+    ans('B1.balance-sheet', cfg.balanceSheet, { unit: '€', method: 'Totale attivo dello stato patrimoniale del bilancio 2025 approvato (dato dimostrativo).' }),
+    ans('C1.strategy', cfg.strategy(sv).replace(/\s+/g, ' ').trim()),
+    ans('B7.circular', cfg.circular(sv).replace(/\s+/g, ' ').trim()),
   ];
   const settings = { ...SETTINGS };
   const d2 = { ...d, esgAnswers, settings: { ...d.settings, esg18: { ...(d.settings?.esg18 || {}), report: settings } } };
@@ -89,7 +98,7 @@ export function demoReport(d, { today } = {}) {
     status: 'in compilazione', note: '', items: items.map(it => ({ override: null, evidenceIds: [], ...it })), ...extra });
   const questionnaires = [
     q('q-banca-alfa', 'pmi-banche', 'Questionario ESG per il rinnovo del fido (Documento PMI-Banche)', 'Banca Alfa (fantasia)', -9, 5, templateItems(d2, 'pmi-banche'), { note: 'La banca usa la struttura del Documento PMI-Banche: voci da trascrivere dalla tavola pubblica.' }),
-    q('q-caseificio-sila', 'cliente', 'Questionario di sostenibilità dei fornitori 2026', 'Caseificio Sila (demo)', -14, 12, Q_CASEIFICIO.map(([qid, text, dpIds, override]) => ({ qid, text, section: '', unit: '', dpIds, beyondVs: !dpIds.length, override: override || null }))),
+    q(cfg.customerQ.id, 'cliente', cfg.customerQ.title, cfg.customerQ.requester, -14, 12, cfg.customerQ.items.map(([qid, text, dpIds, override]) => ({ qid, text, section: '', unit: '', dpIds, beyondVs: !dpIds.length, override: override || null }))),
     q('q-rating-banca-beta', 'synesgy', 'Autovalutazione ESG su piattaforma di rating (per temi)', 'Banca Beta (fantasia)', -3, 26, templateItems(d2, 'synesgy')),
   ];
   const materiality = seedMateriality(d2, P.key, null, settings.threshold).map(r => ({ ...r, assessedAt: at, by: 'direzione' }));

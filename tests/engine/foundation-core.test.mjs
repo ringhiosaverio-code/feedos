@@ -81,7 +81,7 @@ test('toCSV neutralizza le celle che sembrano formule', () => {
 /* ---------------- schema 17 ---------------- */
 test('schema 17: raccolte, impostazioni di base, archivio vuoto', () => {
   assert.equal(SCHEMA_VERSION, 17);
-  assert.equal(COLLECTIONS.length, 100, '23 di base + 14 dello schema 17 + 63 della fondazione 18');
+  assert.equal(COLLECTIONS.length, 110, '23 di base + 14 dello schema 17 + 63 della fondazione 18 + 10 dell’edizione agrofarmaci');
   for (const c of ['costCenters', 'fixedCosts', 'budget', 'closings', 'salesHistory', 'invoices', 'payments', 'suppliers', 'priceLists', 'stops', 'assets', 'stockCounts', 'adjustments', 'standards']) assert.ok(COLLECTIONS.includes(c), c);
   const e = emptyData();
   assert.equal(e.settings.schema, 17);

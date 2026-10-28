@@ -12,6 +12,7 @@ import { addDays, dateIt, nf, sum, mondayOf, daysBetween, relDays } from '../cor
 import { PageHead, Panel, Kpi, Btn, Table, Field, Select, Chip, Empty, Tabs, Sev } from '../ui/ui.jsx';
 import { SignalList } from './shared.jsx';
 import { TwinMini } from './gemello.jsx';
+import { NAV } from '../app/nav.js';
 import { checkAnalysis } from '../engine/quality.js';
 import { profile } from '../engine/nutrients.js';
 
@@ -32,7 +33,7 @@ export function Oggi({ route }) {
   return (
     <>
       <PageHead title="Oggi" lead={<>{greeting()}. {cap(dateIt(today, 'day'))} · vista {role.label.toLowerCase()}. {mine.length ? <><b>{mine.length}</b> decisioni aperte{crit ? <>, <b>{crit}</b> critiche</> : ''}. Ogni segnale spiega il perché con i numeri: nessuna azione parte da sola.</> : 'Nessuna decisione aperta.'}</>}
-        actions={<><Btn icon={LuSparkles} onClick={() => go('economia', 'scenari')}>E se…</Btn><Btn kind="primary" icon={LuPresentation} onClick={() => uiStore.set({ tour: 0 })}>Presentazione guidata</Btn></>}
+        actions={<>{NAV.economia?.tabs.some(t => t.id === 'scenari') && <Btn icon={LuSparkles} onClick={() => go('economia', 'scenari')}>E se…</Btn>}<Btn kind="primary" icon={LuPresentation} onClick={() => uiStore.set({ tour: 0 })}>Presentazione guidata</Btn></>}
         tabs={[{ id: 'decisioni', label: 'Decisioni', n: mine.length }, { id: 'cruscotto', label: 'Cruscotto' }, { id: 'attivita', label: 'Attività', n: openTasks.length }, { id: 'registro', label: 'Ultime modifiche' }]} tab={tab} onTab={t => go('oggi', t)} />
       {tab === 'decisioni' && <Decisioni d={d} today={today} mine={mine} role={role} />}
       {tab === 'cruscotto' && <Cruscotto d={d} />}
@@ -61,7 +62,7 @@ function Decisioni({ d, today, mine, role }) {
           <SignalList items={list} limit={7} />
         </Panel>
         <div className="stack">
-          <Panel title="Lo stabilimento adesso" sub="Ultimi 30 giorni · clicca per il gemello digitale" id="oggi-twin" actions={<Btn small icon={LuFactory} onClick={() => go('gemello')}>Apri</Btn>}>
+          <Panel title="Lo stabilimento adesso" sub={NAV.gemello ? 'Ultimi 30 giorni · clicca per il gemello digitale' : 'Ultimi 30 giorni: materie prime, linee e clienti'} id="oggi-twin" actions={NAV.gemello ? <Btn small icon={LuFactory} onClick={() => go('gemello')}>Apri</Btn> : null}>
             <TwinMini />
           </Panel>
           <Settimana d={d} today={today} />
@@ -98,6 +99,8 @@ function useKpis(d, today) {
     let ok = 0, n = 0;
     for (const l of d.lots) {
       if (l.date < addDays(today, -90) || !l.analyses?.length) continue;
+      const v = l.analyses[0].values || {};
+      if (v.titolo != null) { n++; if (checkAnalysis('titolo', v.titolo, v.dichiarato, I.prod[l.productId]?.form).status === 'ok') ok++; continue; } // agrofarmaci
       const f = I.form[I.prod[l.productId]?.formulaId]; if (!f) continue;
       const run = I.run[l.runId];
       const lines = (f.history || []).find(h => h.version === run?.formulaVersion)?.lines || f.lines;

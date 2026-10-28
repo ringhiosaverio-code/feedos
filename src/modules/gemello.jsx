@@ -2,6 +2,7 @@
 import React, { useMemo, useState } from 'react';
 import { useData, openDrawer } from '../core/store.js';
 import { go } from '../core/router.js';
+import { NAV } from '../app/nav.js';
 import { appToday, costs, idx, kpis } from '../core/derived.js';
 import { addDays, nf, sum, monthLabel, dateIt } from '../core/util.js';
 import { formulaCO2, formulaCost } from '../engine/formulation.js';
@@ -92,7 +93,7 @@ export function TwinMini() {
   const d = useData();
   const T = useTwin(d, '30');
   return (
-    <button className="twin" style={{ width: '100%', padding: 0, cursor: 'pointer', display: 'block', textAlign: 'left' }} onClick={() => go('gemello')} aria-label="Apri il gemello digitale">
+    <button className="twin" style={{ width: '100%', padding: 0, cursor: 'pointer', display: 'block', textAlign: 'left' }} onClick={() => { if (NAV.gemello) go('gemello'); }} aria-label={NAV.gemello ? 'Apri il gemello digitale' : 'Schema dello stabilimento'}>
       <TwinSvg T={T} mode="materia" compact />
     </button>
   );

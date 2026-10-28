@@ -10,7 +10,18 @@ import { customerTerms, dueDateFor, ledger } from '../../engine/cash.js';
 const r2 = v => Math.round(v * 100) / 100;
 const pad = n => String(n).padStart(3, '0');
 
-export function demoFinanza(d, { today, R } = {}) {
+/* Cassa, linee di credito e mutui del mangimificio; l'edizione agrofarmaci passa i suoi. */
+export const FEED_FINANZA = {
+  cash: 620000,
+  creditLines: [
+    { id: 'cl-1', bank: 'Banca Alfa (fantasia)', type: 'fido di cassa', limit: 800000 },
+    { id: 'cl-2', bank: 'Banca Beta (fantasia)', type: 'anticipo fatture', limit: 700000 },
+  ],
+  loans: [{ id: 'ln-1', name: 'Mutuo impianto pellet', instalment: 18500, day: 30 }],
+};
+export function demoFinanza(d, opts = {}) { return finanzaDemo(d, opts, FEED_FINANZA); }
+/** Estensore della finanza con la configurazione dell'azienda (cfg, vedi FEED_FINANZA). */
+export function finanzaDemo(d, { today, R } = {}, cfg = FEED_FINANZA) {
   if (!today || !d?.shipments?.length || !d?.customers?.length) return {};
   R = R || rng(16 + 301);
   const vat = d.settings?.finance?.vatPct ?? 10;
@@ -137,12 +148,9 @@ export function demoFinanza(d, { today, R } = {}) {
     settings: {
       counters: counterSet,
       finance: {
-        cash: { date: today, balance: 620000 },
-        creditLines: [
-          { id: 'cl-1', bank: 'Banca Alfa (fantasia)', type: 'fido di cassa', limit: 800000 },
-          { id: 'cl-2', bank: 'Banca Beta (fantasia)', type: 'anticipo fatture', limit: 700000 },
-        ],
-        loans: [{ id: 'ln-1', name: 'Mutuo impianto pellet', instalment: 18500, day: 30 }],
+        cash: { date: today, balance: cfg.cash },
+        creditLines: cfg.creditLines.map(c => ({ ...c })),
+        loans: cfg.loans.map(l => ({ ...l })),
       },
     },
   };

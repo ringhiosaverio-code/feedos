@@ -75,7 +75,10 @@ export function App() {
   const blocked = role.id === 'agente' && AGENT_HIDDEN.includes(route.area);
   // scheda in più dell'edizione dentro un'area esistente (es. Commerciale › Campagne in FitoOS): testata dell'area + pagina della scheda
   const TabPage = TAB_PAGES[`${route.area}.${route.tab}`];
-  const Page = TabPage ? EditionTab : PAGES[route.area] || Oggi;
+  const Page = TabPage ? EditionTab : (NAV[route.area] && PAGES[route.area]) || Oggi; // aree di un'altra edizione: Oggi
+  // una scheda nascosta in questa edizione (indirizzo vecchio o scritto a mano) apre la prima scheda dell'area
+  const tabs = NAV[route.area]?.tabs || [];
+  const page = route.tab && !TabPage && tabs.length && (META.hiddenTabs?.[route.area] || []).includes(route.tab) ? { ...route, tab: tabs[0].id, id: null } : route;
   return (
     <div className="app">
       <SkipLink />
@@ -84,7 +87,7 @@ export function App() {
         <Topbar d={d} route={route} role={role} theme={theme} />
         <Banners />
         <main className="content" id="contenuto" tabIndex={-1}>
-          <Guard key={route.area + '.' + (route.tab || '') + '.' + (route.id || '')}>{blocked ? <NotForRole area={route.area} /> : <Page route={route} />}</Guard>
+          <Guard key={route.area + '.' + (route.tab || '') + '.' + (route.id || '')}>{blocked ? <NotForRole area={route.area} /> : <Page route={page} />}</Guard>
         </main>
       </div>
       <MobileNav d={d} route={route} role={role} />
@@ -196,7 +199,7 @@ function Sidebar({ d, route, role }) {
       </button>
       {demo ? (
         <div className="dataset demo" title="I dati sono inventati e generati dall’app: non rappresentano un’impresa reale.">
-          <b>Dati dimostrativi</b><span>Mangimificio di fantasia · al {dateIt(d.settings.demoAnchor)}</span>
+          <b>Dati dimostrativi</b><span>{META.labels?.demoCompany || 'Azienda di fantasia'} · al {dateIt(d.settings.demoAnchor)}</span>
         </div>
       ) : d.settings?.dataset === 'vuoto' ? (
         <div className="dataset"><b>Archivio vuoto</b><span>Inserisci i tuoi dati o carica la demo da «Dati».</span></div>
@@ -252,7 +255,7 @@ function Topbar({ d, route, role, theme }) {
       <header className="top">
         <div className="crumbs"><span className="area-only">{d.settings?.company?.short || META.product}</span><span className="area-only" aria-hidden="true">/</span><b>{N?.label}</b>{tabLabel && <><span className="area-only" aria-hidden="true">/</span><span className="area-only">{tabLabel}</span></>}</div>
         <button className="cmd" onClick={() => uiStore.set({ palette: true })} aria-label="Cerca o apri un comando">
-          <LuSearch aria-hidden="true" /><span className="hide-m">Cerca una formula, un lotto, un cliente o un comando…</span><span className="show-m">Cerca o chiedi…</span><kbd>Ctrl K</kbd>
+          <LuSearch aria-hidden="true" /><span className="hide-m">{META.labels?.search || 'Cerca un lotto, un cliente o un comando…'}</span><span className="show-m">Cerca o chiedi…</span><kbd>Ctrl K</kbd>
         </button>
         <div className="tb">
           <select className="select hide-m" style={{ width: 150, height: 34 }} value={role.id} aria-label="Vista per ruolo"
