@@ -122,7 +122,7 @@ export function LottoDettaglio({ d, today, id }) {
   return (
     <>
       <div className="row gap-s"><Btn small kind="ghost" icon={LuArrowLeft} onClick={() => go('esg', 'filiera', 'lotti')}>Tutti i lotti</Btn></div>
-      <Panel title={`Lotto ${r.code} · ${r.ing?.name}`} sub={`${dateIt(r.date)} · ${tTxt(r.t)} t · ${nf(r.price, 1)} €/t · NC ${r.hs || '—'} · DDT ${r.ddt || '—'}`} actions={<><StateChip state={s.state} /><Flags s={s} /></>}>
+      <Panel title={`Lotto ${r.code} · ${r.ing?.name}`} sub={`${dateIt(r.date)} · ${tTxt(r.t)} t · ${nf(r.price, 1)} €/t · NC ${r.hs || '—'} · ${r.ddt || 'DDT non indicato'}`} actions={<><StateChip state={s.state} /><Flags s={s} /></>}>
         <Kv items={[['Fornitore', <button type="button" className="linkish" onClick={() => r.supplierId && openDrawer('supplier', r.supplierId)}>{r.supplierName}</button>], ['Ruolo per il lotto', s.effRole === 'operatore' ? 'operatore (importazione diretta)' : reg.role.label],
           ['Paese di produzione', r.country ? <span>{r.countryName} {r.e?.region ? `· ${r.e.region}` : ''} <TierChip tier={r.tier} /></span> : 'non indicato'], ['Fonte della classificazione del paese', `${r.tierInfo.source || '—'}`],
           ['Evidenze', <EvidenceCount d={d} type="eudrLots" refId={r.e?.id || r.id} />], r.e?.note ? ['Nota', r.e.note] : null]} />
@@ -149,7 +149,7 @@ export function LottoDettaglio({ d, today, id }) {
           <div className="tw"><table className="t"><thead><tr><th>Componente</th><th className="r">Peso</th><th className="r">Fattore</th><th className="r">Punti</th></tr></thead>
             <tbody>{r.risk.components.map(c => <tr key={c.key}><td>{c.label}<span className="sub">{c.why}</span></td><td className="r">{c.weight}</td><td className="r">{nf(c.factor, 2)}</td><td className="r">{nf(c.points, 1)}</td></tr>)}
               <tr className="efl-tot"><td>Totale</td><td /><td /><td className="r">{r.risk.score}</td></tr></tbody></table></div>
-          <p className="xs muted">Fasce: sotto 25 trascurabile, sotto 50 basso, sotto 75 medio, altrimenti alto. I pesi si cambiano nelle impostazioni del pacchetto.</p>
+          <p className="xs muted">Fasce: sotto 25 trascurabile, sotto 50 basso, sotto 75 medio, altrimenti alto. I pesi si cambiano in «Ruolo e scadenze».</p>
         </Panel>
       </div>
       <Geo key={'g' + r.id} d={d} r={r} today={today} />

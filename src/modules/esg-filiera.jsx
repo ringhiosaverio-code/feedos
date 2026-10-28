@@ -12,7 +12,7 @@ import { nf, dateIt, addDays, addMonths, daysBetween } from '../core/util.js';
 import { readFile } from '../core/io.js';
 import { currentPeriod, sectorOf } from '../engine/esg-years.js';
 import { applyPackOps } from '../engine/esg-packs.js';
-import { filieraSummary, filieraSignals, filieraSettings, filieraPack, companyRole, eudrRole, eudrDeadlines, classification, packList, supplierEsgScore, EUDR_ROLES, FILIERA_METHOD, FILIERA_TAB } from '../engine/esg-filiera.js';
+import { DEFAULT_RISK_WEIGHTS, filieraSummary, filieraSignals, filieraSettings, filieraPack, companyRole, eudrRole, eudrDeadlines, classification, packList, supplierEsgScore, EUDR_ROLES, FILIERA_METHOD, FILIERA_TAB } from '../engine/esg-filiera.js';
 import { PACK_FILIERA, COUNTRY_NAMES } from '../data/pack-filiera.js';
 import { EUDR_COMMODITY_OPTIONS } from '../data/fields-filiera.js';
 import { Panel, Kpi, Table, Btn, Chip, Field, Select, Seg, Empty, Kv, NumInput, SearchBox, filterRows } from '../ui/ui.jsx';
@@ -170,7 +170,7 @@ function Ruolo({ d, today }) {
           actions={<Btn small kind="primary" icon={LuShieldCheck} onClick={confirm}>Conferma il ruolo</Btn>}>
           <p className="small">{prop.desc}</p>
           <ol className="efl-path">{prop.path.map(x => <li key={x}>{x}</li>)}</ol>
-          {cur.confirmed && <p className="small muted">Ruolo confermato oggi in archivio: <b>{cur.label}</b>{cur.confirmedAt ? ` (dal ${dateIt(cur.confirmedAt)})` : ''}{cur.role !== prop.role ? ' · diverso dalla proposta attuale' : ''}.</p>}
+          {cur.confirmed && <p className="small muted">Ruolo confermato in archivio: <b>{cur.label}</b>{cur.confirmedAt ? ` (dal ${dateIt(cur.confirmedAt)})` : ''}{cur.role !== prop.role ? ' · diverso dalla proposta attuale' : ''}.</p>}
           <h3 className="efl-h3">Obblighi</h3>
           <ul className="efl-duties">
             {prop.duties.map(x => <li key={x.id}><span>{x.text}</span><span className="xs muted">{x.law}{x.practice ? ' · buona pratica' : ''}</span> {x.status === 'da verificare' && <StatusChip status="da verificare" />}</li>)}
@@ -190,6 +190,7 @@ function Ruolo({ d, today }) {
         <PaesiPanel d={d} />
       </div>
       <PackPanel d={d} />
+      <PesiPanel d={d} />
     </>
   );
 }
@@ -233,6 +234,24 @@ function PackPanel({ d }) {
           <div className="row gap-s efl-mt"><Btn small kind="primary" icon={LuSave} onClick={apply}>Usa questo pacchetto</Btn><Btn small kind="ghost" onClick={() => setRes(null)}>Annulla</Btn></div>
         </div>
       )}
+    </Panel>
+  );
+}
+
+const W_LABEL = { country: 'Rischio paese', commodity: 'Materia prima in ambito', coc: 'Catena di custodia', cert: 'Certificazione', missing: 'Dati mancanti' };
+function PesiPanel({ d }) {
+  const cur = filieraSettings(d).riskWeights || DEFAULT_RISK_WEIGHTS;
+  const [w, setW] = useState({ ...DEFAULT_RISK_WEIGHTS, ...cur });
+  const tot = Object.values(w).reduce((a, x) => a + (+x || 0), 0);
+  const save = v => { setEsgSettings('filiera', st => ({ ...st, riskWeights: v }), 'EUDR: pesi del punteggio di rischio'); undoToast('Pesi salvati'); };
+  return (
+    <Panel title="Pesi del punteggio di rischio interno" sub="Il punteggio resta su 100 qualunque sia la somma dei pesi · di base 40, 20, 15, 15, 10">
+      <div className="form">{Object.keys(DEFAULT_RISK_WEIGHTS).map(k => <Field key={k} label={W_LABEL[k]}><NumInput value={w[k]} onChange={x => setW(o => ({ ...o, [k]: x ?? 0 }))} decimals={0} min={0} max={100} /></Field>)}</div>
+      <div className="row gap-s efl-mt">
+        <Btn small kind="primary" icon={LuSave} disabled={!(tot > 0)} onClick={() => save(w)}>Salva i pesi</Btn>
+        <Btn small kind="ghost" onClick={() => { setW({ ...DEFAULT_RISK_WEIGHTS }); save({ ...DEFAULT_RISK_WEIGHTS }); }}>Valori di base</Btn>
+        <span className="small muted">Somma attuale {nf(tot)}</span>
+      </div>
     </Panel>
   );
 }

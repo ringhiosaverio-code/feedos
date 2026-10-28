@@ -254,7 +254,7 @@ export function plotMapModel(features, { width = 640, height = 360, pad = 30 } =
       const mPerPx = (EARTH_R * Math.PI / 180) / s;
       const rM = f.areaHa > 0 ? Math.sqrt((f.areaHa * 10000) / Math.PI) : 0;
       const r = Math.max(5, Math.min(40, rM / mPerPx));
-      pts.forEach((p, j) => { const [cx, cy] = P(p); shapes.push({ kind: 'punto', cx: r1(cx), cy: r1(cy), r: r1(r), label, lx: r1(cx), ly: r1(cy - r - 6), valid, i, key: `${i}-${j}` }); });
+      pts.forEach((p, j) => { const [cx, cy] = P(p); const above = cy - r - 6; shapes.push({ kind: 'punto', cx: r1(cx), cy: r1(cy), r: r1(r), label, lx: r1(cx), ly: r1(above >= 14 ? above : cy + r + 14), valid, i, key: `${i}-${j}` }); });
     } else {
       const polys = f.geom === 'Polygon' ? [f.coords] : f.coords;
       const d = polys.map(rs => rs.map(ringD).join('')).join('');
