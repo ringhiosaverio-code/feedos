@@ -185,3 +185,17 @@ test('regole: ogni regola ha riferimento, stato e fonti; le stime dell’azienda
   assert.equal(R.art43Months, 3, 'le regole di legge non si cambiano dalle stime');
   assert.ok(AGRO_ESTIMATES.every(e => e.key.startsWith('pNonRenewal.') ? e.key.slice(12) in REG.AGRO_RULES.pNonRenewal : e.key in REG.AGRO_RULES));
 });
+
+test('archivio importato senza date di approvazione: rischio non stimato, solo il rinnovo in corso conta', () => {
+  const today = '2026-10-28';
+  const base = { id: 'x', name: 'X', status: 'da verificare', approvalExpiry: null, cfs: true, lowRisk: false };
+  assert.equal(REG.asRiskClass(base, today), null, 'senza scadenza la probabilità di mancato rinnovo non si applica');
+  assert.equal(REG.asRiskClass({ ...base, status: 'in rinnovo' }, today), 'in rinnovo');
+  assert.equal(REG.asRiskClass({ ...base, status: 'non rinnovata' }, today), 'non rinnovata');
+  assert.equal(REG.asRiskClass({ ...base, approvalExpiry: '2027-06-30' }, today), 'cfs');
+  const d = emptyData();
+  d.products = [{ id: 'p1', code: 'P1', name: 'P1', actives: [{ as: 'x', g: 100, unit: 'g/L' }], uom: 'L', density: 1 }];
+  d.activeSubstances = [base];
+  d.registrations = [{ id: 'r1', productId: 'p1', status: 'valida', kind: 'autorizzazione', expiryDate: null }];
+  assert.equal(REG.revenueAtRisk(d, today).rows.find(r => r.registrationId === 'r1')?.r ?? 0, 0);
+});

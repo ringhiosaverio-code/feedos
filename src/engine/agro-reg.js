@@ -100,7 +100,9 @@ export function asRiskClass(a, today, R = AGRO_RULES) {
   if (!a) return null;
   if (a.status === 'non rinnovata' || a.status === 'revocata') return a.status;
   const exp = a.approvalExpiry;
-  if (isDate(exp) && exp > addMonths(today, R.horizonMonths)) return null;
+  // senza la data di scadenza dell'approvazione (archivio importato da completare) il rischio non si stima
+  if (!isDate(exp)) return a.status === 'in rinnovo' ? 'in rinnovo' : null;
+  if (exp > addMonths(today, R.horizonMonths)) return null;
   if (a.lowRisk) return 'basso rischio';
   if (a.cfs) return 'cfs';
   if (a.status === 'in rinnovo') return 'in rinnovo';

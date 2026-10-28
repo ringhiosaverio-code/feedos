@@ -1,5 +1,6 @@
 """Collaudo di tutte le pagine e di tutte le schede laterali: errori della console, pagine o sezioni che non si aprono (Guard),
-sbordi orizzontali, tempi. Esce con codice 1 se ci sono errori.  python3 tests/e2e/smoke.py [larghezza] [tema] [file] [starter]"""
+sbordi orizzontali, tempi. Esce con codice 1 se ci sono errori.  python3 tests/e2e/smoke.py [larghezza] [tema] [file] [starter] [backup=archivio.json]
+Con backup=… ripristina prima quell'archivio da Dati › Archivio (per collaudare dati importati) e segnala anche «NaN» e «undefined» nelle pagine."""
 import asyncio, sys, time, os
 from pathlib import Path
 from playwright.async_api import async_playwright
@@ -8,6 +9,7 @@ theme = sys.argv[2] if len(sys.argv) > 2 else 'light'
 FILE = sys.argv[3] if len(sys.argv) > 3 and sys.argv[3].endswith('.html') else 'FeedOS-16.html'
 BASE = (Path(__file__).resolve().parents[2] / 'dist' / FILE).as_uri()
 STARTER = 'starter' in sys.argv
+BACKUP = next((a.split('=', 1)[1] for a in sys.argv if a.startswith('backup=')), None)
 AGRO = FILE.startswith('DifesaOS')  # edizione agrofarmaci: aree e schede proprie, niente parti del mangimificio
 ROUTES = ['oggi', 'oggi.cruscotto', 'oggi.attivita', 'oggi.registro',
   'direzione', 'direzione.sintesi', 'direzione.conto', 'direzione.ponte', 'direzione.budget', 'direzione.costi', 'direzione.chiusura', 'direzione.report',
@@ -61,6 +63,11 @@ async def main():
             await pg.get_by_text('Inizia con i dati della tua azienda', exact=True).click(); await pg.wait_for_timeout(200)
             await pg.locator('.modal .btn.danger, .modal .btn.primary').last.click(); await pg.wait_for_timeout(1200)
             print('archivio aziendale vuoto:', await pg.evaluate("() => document.querySelector('.dataset')?.innerText || 'nessun riquadro demo'"))
+        if BACKUP:
+            await pg.evaluate("location.hash = '#dati.archivio'"); await pg.wait_for_timeout(500)
+            await pg.locator('input[type=file][accept*="json"]').first.set_input_files(BACKUP); await pg.wait_for_timeout(600)
+            await pg.locator('.modal .btn.primary, .modal .btn.danger').last.click(); await pg.wait_for_timeout(1500)
+            print('archivio ripristinato:', await pg.evaluate("() => document.querySelector('.tb')?.innerText.split('\\n')[0] || ''"))
         if await pg.evaluate("() => !!document.querySelector('.banner')"):
             errs.append('avviso d’archivio inatteso: ' + await pg.evaluate("() => document.querySelector('.banner').innerText"))
         over = []; slow = []
@@ -75,6 +82,9 @@ async def main():
             area = r.split('~')[0].split('.')[0]
             if m['pbar'] != (area in PERIOD_AREAS): errs.append(f'barra del periodo {"assente" if area in PERIOD_AREAS else "inattesa"} in {r}')
             for g in await pg.evaluate(GUARD_JS): guard.append(f'{r}: {g[:120]}')
+            if BACKUP:
+                bad = await pg.evaluate(r"() => (document.querySelector('.content')?.innerText.match(/.{0,30}\b(NaN|undefined|Infinity)\b.{0,20}/g) || []).slice(0, 2)")
+                for x in bad: errs.append(f'{r}: valore non valido «{x.strip()}»')
         # il periodo nell'indirizzo arriva alla barra
         await pg.evaluate("location.hash = '#direzione.conto~ytd~ap'"); await pg.wait_for_timeout(300)
         lbl = await pg.evaluate("() => document.querySelector('.pbar .p-cmp select')?.value")
@@ -89,7 +99,7 @@ async def main():
             got = await pg.evaluate("() => document.querySelector('.pal li .g')?.innerText || ''")
             if got != want:
                 await pg.keyboard.press('Escape')
-                if kind not in OPTIONAL and not STARTER: errs.append(f'nessuna voce «{want}» per la scheda {kind} (primo risultato: {got or "nessuno"})')
+                if kind not in OPTIONAL and not STARTER and not BACKUP: errs.append(f'nessuna voce «{want}» per la scheda {kind} (primo risultato: {got or "nessuno"})')
                 continue
             await pg.keyboard.press('Enter'); await pg.wait_for_timeout(400)
             ok = await pg.evaluate("() => !!document.querySelector('.drawer')")

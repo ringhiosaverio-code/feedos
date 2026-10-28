@@ -19,8 +19,18 @@ import { AGRO_RULE_SOURCES, AGRO_ESTIMATES, RULES_CHECKED_AT } from '../../data/
 const SALE_KIND = { vendibile: 'good', 'vendibile-smaltimento': 'warn', 'solo-impiego': 'warn', 'non-vendibile': 'crit', 'non-registrato': 'outline' };
 const KIND_LABEL = { autorizzazione: 'Autorizzazione', 'CE-fertilizzante': 'Fertilizzante CE', 'commercio-parallelo': 'Commercio parallelo', 'emergenza-art53': 'Emergenza (art. 53)' };
 const EV_LABEL = { 'rinnovo-art43': 'Rinnovo del prodotto (art. 43)', revoca: 'Revoca', 'modifica-etichetta': 'Modifica di etichetta', 'rinnovo-sostanza': 'Rinnovo della sostanza', 'estensione-uso': 'Estensione d’uso', 'domanda-autorizzazione': 'Nuova autorizzazione', 'adeguamento-clp': 'Adeguamento CLP' };
-const CROPS = [['vite', 'Vite'], ['olivo', 'Olivo'], ['frutta', 'Melo e pero'], ['orticole', 'Pomodoro'], ['cereali', 'Frumento e orzo']];
-const doseTxt = (lo, hi) => (lo == null ? '—' : lo === hi || hi == null ? nf(lo, lo < 1 ? 2 : 1) : `${nf(lo, lo < 1 ? 2 : 1)}–${nf(hi, hi < 1 ? 2 : 1)}`);
+// colture degli usi in etichetta, in ordine di numero di usi (un archivio importato può averne decine)
+const cropsOf = d => {
+  const n = {}, name = {};
+  for (const u of d.regUses || []) if (u.crop) { n[u.crop] = (n[u.crop] || 0) + 1; name[u.crop] = name[u.crop] || u.cropGroup || u.cropName || u.crop; }
+  return Object.keys(n).sort((a, b) => n[b] - n[a] || (name[a] < name[b] ? -1 : 1)).map(id => ({ id, label: name[id], n: n[id] }));
+};
+const doseNf = v => nf(v, Number.isInteger(v) ? 0 : v < 1 ? 2 : 1);
+const doseTxt = (lo, hi) => (lo == null ? '—' : lo === hi || hi == null ? doseNf(lo) : `${doseNf(lo)}–${doseNf(hi)}`);
+// uso in etichetta: dose per ettolitro (anche intervallo), per ettaro, carenza (in giorni, o testo dell'etichetta)
+const perHlTxt = u => (u.dosePerHl == null ? '—' : `${doseTxt(u.dosePerHl, u.dosePerHlMax ?? u.dosePerHl)} ${u.perHlUnit}`);
+const perHaTxt = u => (u.doseMin == null ? '—' : `${doseTxt(u.doseMin, u.doseMax)} ${u.doseUnit}`);
+const phiTxt = u => (u.phiText ? u.phiText : u.phiDays == null ? 'fioritura' : `${nf(u.phiDays)} gg`);
 
 export function Regolatorio({ route }) {
   const d = useData();
@@ -47,7 +57,9 @@ function Registrazioni({ d, today, route, sig }) {
   const rev = useMemo(() => productRevenue(d, today), [d, today]);
   const rar = useMemo(() => revenueAtRisk(d, today), [d, today]);
   const rByReg = Object.fromEntries(rar.rows.map(r => [r.registrationId, r]));
-  const [crop, setCrop] = useState('vite');
+  const crops = useMemo(() => cropsOf(d), [d]);
+  const [cropSel, setCrop] = useState(null);
+  const crop = crops.some(c => c.id === cropSel) ? cropSel : crops[0]?.id || null;
   const rows = (d.registrations || []).map(r => ({ ...r, product: prods[r.productId], sale: saleStatus(r, today), revenue: rev[r.productId]?.revenue || 0, risk: rByReg[r.id]?.r ?? 0 }));
   const sel = rows.find(r => r.id === route.id);
   const valid = rows.filter(r => r.sale === 'vendibile').length;
@@ -86,32 +98,34 @@ function Registrazioni({ d, today, route, sig }) {
           { key: 'sale', label: 'Stato', render: r => <Chip kind={SALE_KIND[r.sale]}>{SALE_LABEL[r.sale]}{r.status === 'in-rinnovo' ? ' · in rinnovo' : r.status === 'in-revoca' ? ' · in revoca' : ''}</Chip> },
           { key: 'expiryDate', label: 'Scadenza', render: r => (r.expiryDate ? dateIt(r.expiryDate) : '—') },
           { key: 'organic', label: 'Bio', render: r => (r.organic ? <Chip kind="good" icon={LuLeaf}>bio</Chip> : '') },
-          { key: 'labelVersion', label: 'Etichetta', align: 'r', render: r => `v${r.labelVersion}` },
+          { key: 'labelVersion', label: 'Etichetta', align: 'r', render: r => (r.labelVersion ? `v${r.labelVersion}` : '—') },
           { key: 'revenue', label: 'Ricavi 12 mesi', align: 'r', render: r => eur(r.revenue) },
           { key: 'risk', label: 'Rischio', align: 'r', render: r => (r.risk ? pct(r.risk, 0) : '—') },
         ]} />
       </Panel>
-      <div className="split">
-        <Panel title="Usi autorizzati per coltura" sub="Dose per ettolitro e per ettaro, trattamenti all’anno, carenza (dati di etichetta dimostrativi)" id="reg-uses"
-          actions={<Seg options={CROPS.map(([id, label]) => ({ id, label }))} value={crop} onChange={setCrop} label="Coltura" />}>
+      <div className={(d.regEvents || []).length ? 'split' : 'stack'}>
+        <Panel title="Usi autorizzati per coltura" sub={`Dose per ettolitro e per ettaro, trattamenti all’anno, carenza (${d.settings?.dataset === 'demo' ? 'dati di etichetta dimostrativi' : 'dall’archivio: vale sempre l’etichetta autorizzata'})`} id="reg-uses"
+          actions={crops.length > 6 ? <Select value={crop || ''} onChange={setCrop} options={crops.map(c => ({ id: c.id, label: `${c.label} (${nf(c.n)})` }))} ariaLabel="Coltura" />
+            : crops.length > 1 ? <Seg options={crops.map(({ id, label }) => ({ id, label }))} value={crop} onChange={setCrop} label="Coltura" /> : null}>
           <Table rows={uses} pageSize={30} exportName={`usi-${crop}`} cols={[
+            ...(crops.find(c => c.id === crop)?.label !== uses[0]?.cropName || uses.some(u => u.cropName !== uses[0].cropName) ? [{ key: 'cropName', label: 'Coltura' }] : []),
             { key: 'pest', label: 'Avversità' },
             { key: 'product', label: 'Prodotto', render: r => <span>{r.product}{r.organic && <> <Chip kind="good">bio</Chip></>}{r.sale && r.sale !== 'vendibile' && <> <Chip kind="warn">{SALE_LABEL[r.sale]}</Chip></>}</span> },
-            { key: 'dosePerHl', label: 'Dose/hl', align: 'r', render: r => (r.dosePerHl == null ? '—' : `${nf(r.dosePerHl)} ${r.perHlUnit}`) },
-            { key: 'doseMin', label: 'Dose/ha', align: 'r', render: r => `${doseTxt(r.doseMin, r.doseMax)} ${r.doseUnit}` },
+            { key: 'dosePerHl', label: 'Dose/hl', align: 'r', render: perHlTxt },
+            { key: 'doseMin', label: 'Dose/ha', align: 'r', render: perHaTxt },
             { key: 'maxApplications', label: 'Tratt./anno', align: 'r' },
-            { key: 'phiDays', label: 'Carenza', align: 'r', render: r => (r.phiDays == null ? 'fioritura' : `${nf(r.phiDays)} gg`) },
+            { key: 'phiDays', label: 'Carenza', align: 'r', render: phiTxt },
           ]} />
           <p className="small muted">Se l’etichetta indica solo la dose per ettolitro, la dose per ettaro si ottiene con un volume standard: circa 15 hl/ha per fruttiferi e vite a forme espanse, 10 hl/ha per erbacee e vite a forme ridotte. Prima dell’uso vale sempre l’etichetta del prodotto.</p>
         </Panel>
-        <Panel title="Procedimenti" sub="Domande, rinnovi, modifiche e revoche" flush>
+        {(d.regEvents || []).length > 0 && <Panel title="Procedimenti" sub="Domande, rinnovi, modifiche e revoche" flush>
           <Table rows={(d.regEvents || []).map(e => ({ ...e, product: prods[d.registrations.find(r => r.id === e.registrationId)?.productId]?.name || 'Nuovo prodotto' }))} initialSort={{ key: 'when', dir: 'desc' }} pageSize={12} cols={[
             { key: 'kind', label: 'Procedimento', render: e => <span>{EV_LABEL[e.kind] || e.kind}<div className="muted small">{e.product}</div></span> },
             { key: 'when', label: 'Data', sort: e => e.decisionDate || e.submittedDate || e.dueDate, render: e => (e.decisionDate ? `decisione ${dateIt(e.decisionDate)}` : e.submittedDate ? `presentato ${dateIt(e.submittedDate)}` : e.dueDate ? <b>entro {dateIt(e.dueDate)}</b> : '—') },
             { key: 'outcome', label: 'Esito', render: e => <Chip kind={e.outcome === 'accolta' ? 'good' : e.outcome === 'respinta' ? 'crit' : e.dueDate && !e.submittedDate ? 'warn' : 'outline'}>{e.dueDate && !e.submittedDate ? 'da presentare' : e.outcome}</Chip> },
             { key: 'fee', label: 'Costo', align: 'r', render: e => (e.fee ? eur(e.fee) : '—') },
           ]} />
-        </Panel>
+        </Panel>}
       </div>
       {sel && <RegDrawer d={d} today={today} reg={sel} />}
     </>
@@ -147,10 +161,10 @@ function RegDrawer({ d, today, reg }) {
       <div className="stack">
         <Kv items={[
           ['Stato', <Chip kind={SALE_KIND[reg.sale]}>{SALE_LABEL[reg.sale]}</Chip>], ['Tipo', KIND_LABEL[reg.kind] || reg.kind], ['Titolare', reg.holderName],
-          ['Data di registrazione', dateIt(reg.regDate)], ['Scadenza', reg.expiryDate ? dateIt(reg.expiryDate) : 'nessuna'],
+          ['Data di registrazione', reg.regDate ? dateIt(reg.regDate) : '—'], ['Scadenza', reg.expiryDate ? dateIt(reg.expiryDate) : reg.kind === 'autorizzazione' ? 'non inserita' : 'nessuna'],
           reg.saleUntil && ['Vendita fino al', `${dateIt(reg.saleUntil)}${reg.graceBasis !== 'decreto' ? ' (stima)' : ''}`], reg.useUntil && ['Impiego fino al', dateIt(reg.useUntil)],
           ['Uso', reg.professionalOnly ? 'solo professionale (con abilitazione)' : 'anche non professionale'], ['Agricoltura biologica', reg.organic ? 'impiegabile' : 'no'],
-          ['Etichetta', `versione ${reg.labelVersion} del ${dateIt(reg.labelDate)}${reg.relabelDeadline ? ` · da applicare entro il ${dateIt(reg.relabelDeadline)} (${nf(reg.oldLabelUnits)} confezioni con la precedente)` : ''}`],
+          ['Etichetta', `${reg.labelVersion ? `versione ${reg.labelVersion}` : 'versione non inserita'}${reg.labelDate ? ` del ${dateIt(reg.labelDate)}` : ''}${reg.relabelDeadline ? ` · da applicare entro il ${dateIt(reg.relabelDeadline)} (${nf(reg.oldLabelUnits)} confezioni con la precedente)` : ''}`],
           reg.dataProtectionUntil && ['Protezione dei dati', `fino al ${dateIt(reg.dataProtectionUntil)}`],
           ['Composizione dichiarata', (reg.declared || []).map(x => `${as[x.asId]?.name || x.asId} ${nf(x.content)} ${x.unit}`).join(' + ') || '—'],
           ['Gruppo di resistenza', p?.moa || '—'],
@@ -159,8 +173,8 @@ function RegDrawer({ d, today, reg }) {
         {plan && <DisposalPlan plan={plan} R={rulesOf(d)} />}
         {uses.length > 0 && <Table rows={uses} pageSize={20} cols={[
           { key: 'cropName', label: 'Coltura' }, { key: 'pest', label: 'Avversità' },
-          { key: 'doseMin', label: 'Dose/ha', align: 'r', render: u => `${doseTxt(u.doseMin, u.doseMax)} ${u.doseUnit}` },
-          { key: 'maxApplications', label: 'Tratt.', align: 'r' }, { key: 'phiDays', label: 'Carenza', align: 'r', render: u => (u.phiDays == null ? 'fioritura' : `${u.phiDays} gg`) },
+          { key: 'doseMin', label: 'Dose/ha', align: 'r', render: u => (u.doseMin == null ? perHlTxt(u) : perHaTxt(u)) },
+          { key: 'maxApplications', label: 'Tratt.', align: 'r' }, { key: 'phiDays', label: 'Carenza', align: 'r', render: phiTxt },
         ]} />}
         {evs.length > 0 && <ul className="list">{evs.map(e => <li key={e.id}><b>{EV_LABEL[e.kind] || e.kind}</b> · {e.decisionDate ? `deciso il ${dateIt(e.decisionDate)}` : e.submittedDate ? `presentato il ${dateIt(e.submittedDate)}` : e.dueDate ? `da presentare entro il ${dateIt(e.dueDate)}` : ''} · {e.outcome}{e.note ? ` — ${e.note}` : ''}</li>)}</ul>}
       </div>
@@ -198,28 +212,28 @@ function Sostanze({ d, today, route }) {
         <Kpi label="In rinnovo" value={nf(rows.filter(a => a.status === 'in rinnovo').length)} foot="approvazione prorogata in attesa della decisione" />
         <Kpi label="Non rinnovate" value={nf(rows.filter(a => a.status === 'non rinnovata').length)} foot="prodotti in revoca" status={rows.some(a => a.status === 'non rinnovata') ? 'bad' : 'ok'} />
       </div>
-      <Panel title="Scadenze delle approvazioni" sub="Da oggi a 6 anni; la barra arriva alla scadenza dell’approvazione europea (date dimostrative)" id="as-timeline">
+      <Panel title="Scadenze delle approvazioni" sub={`Da oggi a 6 anni; la barra arriva alla scadenza dell’approvazione europea${d.settings?.dataset === 'demo' ? ' (date dimostrative)' : ''}`} id="as-timeline">
         <div className="stack" style={{ gap: 6 }}>
           {rows.map(a => {
             const w = a.days == null ? 100 : Math.max(0, Math.min(100, (a.days / maxDays) * 100));
-            const kind = a.days != null && a.days < 0 ? 'crit' : a.status === 'in rinnovo' ? 'warn' : a.cfs ? 'maize' : 'good';
+            const kind = a.days == null ? 'none' : a.days < 0 ? 'crit' : a.status === 'in rinnovo' ? 'warn' : a.cfs ? 'maize' : 'good';
             return (
               <button key={a.id} className="linkish" style={{ display: 'grid', gridTemplateColumns: 'minmax(110px, 30%) 1fr', gap: 8, alignItems: 'center', textAlign: 'left', width: '100%' }} onClick={() => go('regolatorio', 'sostanze', a.id)}>
                 <span className="small" style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}><b>{a.name}</b> <span className="muted">{a.moa}</span></span>
-                <span style={{ position: 'relative', height: 14, background: 'var(--line)', borderRadius: 7, overflow: 'hidden' }} title={`${dateIt(a.approvalExpiry)} · ${a.status}`}>
-                  <span style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: `${a.days != null && a.days < 0 ? 100 : w}%`, background: `var(--${kind === 'crit' ? 's2' : kind === 'warn' ? 's5' : kind === 'maize' ? 's4' : 's3'})`, opacity: a.days != null && a.days < 0 ? 0.35 : 0.85 }} />
+                <span style={{ position: 'relative', height: 14, background: 'var(--line)', borderRadius: 7, overflow: 'hidden' }} title={a.approvalExpiry ? `${dateIt(a.approvalExpiry)} · ${a.status}` : `scadenza non inserita · ${a.status}`}>
+                  <span style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: `${a.days != null && a.days < 0 ? 100 : w}%`, background: kind === 'none' ? 'repeating-linear-gradient(45deg, var(--line), var(--line) 4px, transparent 4px, transparent 8px)' : `var(--${kind === 'crit' ? 's2' : kind === 'warn' ? 's5' : kind === 'maize' ? 's4' : 's3'})`, opacity: a.days != null && a.days < 0 ? 0.35 : 0.85 }} />
                 </span>
               </button>);
           })}
         </div>
-        <p className="small muted">Verde approvata, giallo candidata alla sostituzione, arancio in rinnovo, rosso scaduta o non rinnovata. Dopo il rinnovo di una sostanza le registrazioni dei prodotti vanno rinnovate entro {AGRO_RULES.art43Months} mesi (art. 43).</p>
+        <p className="small muted">Verde approvata, giallo candidata alla sostituzione, arancio in rinnovo, rosso scaduta o non rinnovata, tratteggio scadenza non inserita. Dopo il rinnovo di una sostanza le registrazioni dei prodotti vanno rinnovate entro {AGRO_RULES.art43Months} mesi (art. 43).</p>
       </Panel>
       <Panel title="Sostanze attive" flush>
         <Table rows={rows} selected={sel?.id} onRow={a => go('regolatorio', 'sostanze', a.id)} exportName="sostanze-attive" cols={[
           { key: 'name', label: 'Sostanza', render: a => <b>{a.name}</b> },
           { key: 'moa', label: 'Gruppo di resistenza' },
-          { key: 'status', label: 'Stato', render: a => <Chip kind={a.status === 'approvata' ? 'good' : a.status === 'in rinnovo' ? 'warn' : 'crit'}>{a.status}</Chip> },
-          { key: 'approvalExpiry', label: 'Scadenza', render: a => dateIt(a.approvalExpiry) },
+          { key: 'status', label: 'Stato', render: a => <Chip kind={a.status === 'approvata' ? 'good' : a.status === 'in rinnovo' ? 'warn' : ['non rinnovata', 'revocata'].includes(a.status) ? 'crit' : 'outline'}>{a.status}</Chip> },
+          { key: 'approvalExpiry', label: 'Scadenza', render: a => (a.approvalExpiry ? dateIt(a.approvalExpiry) : '—') },
           { key: 'flags', label: 'Profilo', render: a => <span className="row gap-s">{a.cfs && <Chip kind="maize">sostituzione</Chip>}{a.lowRisk && <Chip kind="good">basso rischio</Chip>}</span>, csv: false },
           { key: 'nprod', label: 'Prodotti', align: 'r', sort: a => a.products.length, render: a => nf(a.products.length) },
           { key: 'revenue', label: 'Ricavi 12 mesi', align: 'r', render: a => eur(a.revenue) },
@@ -234,9 +248,9 @@ function Sostanze({ d, today, route }) {
       </div>
       {sel && (
         <Drawer title={sel.name} sub="Sostanza attiva" onClose={() => go('regolatorio', 'sostanze')} icon={<LuFlaskConical />}>
-          <Kv items={[['Stato', sel.status], ['Scadenza dell’approvazione', `${dateIt(sel.approvalExpiry)}${sel.days != null ? ` (${sel.days < 0 ? `${nf(-sel.days)} giorni fa` : `tra ${nf(sel.days)} giorni`})` : ''}`],
+          <Kv items={[['Stato', sel.status], ['Scadenza dell’approvazione', `${sel.approvalExpiry ? dateIt(sel.approvalExpiry) : 'non inserita'}${sel.days != null ? ` (${sel.days < 0 ? `${nf(-sel.days)} giorni fa` : `tra ${nf(sel.days)} giorni`})` : ''}`],
             sel.renewedOn && ['Rinnovata il', `${dateIt(sel.renewedOn)} · rinnovo dei prodotti entro il ${dateIt(addMonths(sel.renewedOn, AGRO_RULES.art43Months))}`],
-            ['Gruppo di resistenza', sel.moa], ['Candidata alla sostituzione', sel.cfs ? 'sì' : 'no'], ['Basso rischio', sel.lowRisk ? 'sì' : 'no'], ['Classe di rischio', sel.riskClass ? RISK_LABEL[sel.riskClass] : 'scadenza oltre l’orizzonte'],
+            ['Gruppo di resistenza', sel.moa], ['Candidata alla sostituzione', sel.cfs ? 'sì' : 'no'], ['Basso rischio', sel.lowRisk ? 'sì' : 'no'], ['Classe di rischio', sel.riskClass ? RISK_LABEL[sel.riskClass] : sel.approvalExpiry ? 'scadenza oltre l’orizzonte' : 'non stimata: scadenza non inserita'],
             sel.conditions && ['Condizioni d’uso', sel.conditions], sel.mrlReview && ['Limiti di residuo', sel.mrlReview], sel.taskForce && ['Dossier', sel.taskForce],
             ['Prodotti', sel.products.map(p => p.name).join(', ') || '—'], ['Ricavi 12 mesi', eur(sel.revenue)]]} />
           {sel.note && <div className="note">{sel.note}</div>}

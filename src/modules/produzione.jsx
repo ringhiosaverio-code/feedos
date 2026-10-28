@@ -288,6 +288,7 @@ function Energia({ d, sel, sigs }) {
   const S = useMemo(() => lineStats(d, today), [d.runs, d.lines, d.settings?.energy, today]);
   const en = d.settings?.energy || {};
   const cur = S[sel] || Object.values(S).sort((a, b) => (b.drift || 0) - (a.drift || 0))[0];
+  if (!cur) return <Empty title="Nessuna linea di produzione">Le linee con capacità e consumi si inseriscono in Dati › Anagrafiche; i consumi arrivano dal registro di produzione.</Empty>;
   const l = cur.line;
   const annualCost = cur.costYear ?? (cur.drift > 0 ? (cur.cur - cur.base) * cur.tYear * (+en.kwhPrice || 0) : 0);
   const compl = d.complaints.filter(c => c.date > addDays(today, -45) && I.run[I.lot[c.lotId]?.runId]?.lineId === l.id);
