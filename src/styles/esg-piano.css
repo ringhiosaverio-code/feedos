@@ -1,2 +1,85 @@
-/* FeedOS 18 · Obiettivi e piano (pacchetto WP7): stile del pacchetto, solo classi con il prefisso proprio e token del tema (var(--…)).
- * Il file viene incluso da build.mjs senza import. */
+/* FeedOS 18 · Obiettivi e piano (pacchetto WP7): stile del pacchetto, solo classi con il prefisso epi- e token del tema (var(--…)).
+ * Il file viene incluso da build.mjs senza import. Spaziature in multipli di 8 px, pesi 400 e 600, nessun gradiente né alone,
+ * grafici sottili con i colori delle serie; chiaro e scuro, da 390 a 1440 px senza sbordi. */
+.epi { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; min-width: 0; }
+.epi > * { min-width: 0; }
+.epi .split > *, .epi .stack > * { min-width: 0; }
+.epi-strong { font-weight: 600; color: var(--ink); }
+.epi-wrap { display: inline-block; white-space: normal; min-width: 160px; max-width: 48ch; overflow-wrap: anywhere; }
+.epi-mt { margin-top: 8px; }
+.epi-pad { padding: 16px; border-bottom: 1px solid var(--line); }
+.epi-pad-b { border-bottom: 0; }
+.epi-btns { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.epi-lead { margin: 0 0 8px; font-size: 14px; line-height: 1.5; color: var(--ink); max-width: 90ch; }
+.epi-h3 { margin: 0 0 8px; font-size: 13px; font-weight: 600; color: var(--ink-2); }
+.epi-row-act { display: inline-flex; gap: 0; }
+.epi-card-sig { margin: 0; font-size: 12px; color: var(--warn-ink); overflow-wrap: anywhere; }
+.epi-list { margin: 0; padding: 0 0 0 16px; font-size: 13px; color: var(--ink-2); }
+.epi-list li { margin: 0 0 8px; }
+.epi-list li .btn { vertical-align: middle; }
+
+/* proposte di riferimento e libreria delle misure */
+.epi-refs { display: grid; gap: 8px; }
+.epi-ref { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; padding: 8px 0; border-bottom: 1px solid var(--line); }
+.epi-ref:last-child { border-bottom: 0; }
+.epi-ref .small { flex: 1 1 280px; min-width: 0; color: var(--ink-2); }
+.epi-lib { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; }
+.epi-lib-it { display: flex; flex-direction: column; gap: 8px; min-width: 0; padding: 16px; border: 1px solid var(--line); border-radius: var(--r); background: var(--surface); overflow-wrap: anywhere; }
+.epi-lib-it .chip { vertical-align: middle; }
+.epi-lib-go { margin-top: auto; }
+
+/* barra di avanzamento */
+.epi-prog { display: inline-flex; align-items: center; gap: 8px; min-width: 104px; }
+.epi-prog-t { position: relative; flex: 1 1 64px; height: 4px; border-radius: 2px; background: var(--surface-3); overflow: hidden; }
+.epi-prog-f { position: absolute; inset: 0 auto 0 0; background: var(--s1); border-radius: 2px; }
+.epi-prog-l { font-size: 12px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+
+/* curva dei costi di abbattimento */
+.epi-slider { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; margin: 0 0 16px; }
+.epi-slider input[type="range"] { flex: 1 1 200px; min-width: 0; max-width: 480px; accent-color: var(--accent); }
+.epi-macc { position: relative; }
+.epi-macc svg text.epi-ax { font-size: 12px; fill: var(--ink-2); }
+.epi-bar-ok { fill: var(--s1); fill-opacity: .72; }
+.epi-bar-ko { fill: var(--line-2); }
+.epi-legend { display: flex; flex-wrap: wrap; gap: 8px 16px; margin-top: 8px; font-size: 12px; color: var(--ink-2); }
+.epi-legend span { display: inline-flex; align-items: center; gap: 8px; }
+.epi-sw { display: inline-block; width: 10px; height: 10px; border-radius: 2px; }
+.epi-sw.epi-bar-ok { background: var(--s1); opacity: .72; }
+.epi-sw.epi-bar-ko { background: var(--line-2); }
+.epi-sw-l { display: inline-block; width: 16px; height: 0; border-top: 1.5px dashed var(--crit); }
+.epi-zero { stroke: var(--ink-2); stroke-width: 1; opacity: .6; }
+.epi-price { stroke: var(--crit); stroke-width: 1.5; stroke-dasharray: 6 4; }
+.epi-cut { stroke: var(--ink-2); stroke-width: 1.5; stroke-dasharray: 2 2; }
+.epi-macc g[tabindex]:focus-visible { outline: none; }
+.epi-macc g[tabindex]:focus-visible rect { stroke: var(--accent); stroke-width: 1.5; }
+
+/* finanziamenti */
+.epi-charts { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
+.epi-chart { display: grid; gap: 8px; min-width: 0; }
+.epi-edit { margin-top: 16px; font-size: 13px; }
+.epi-edit > summary { cursor: pointer; color: var(--accent); font-weight: 600; }
+.epi-edit-b { display: grid; gap: 8px; margin-top: 8px; }
+.epi-check-l { gap: 8px; min-height: 32px; }
+.epi-inline { align-items: flex-end; }
+.epi-inline .field { flex: 0 1 240px; min-width: 0; }
+.t td.epi-nw { white-space: nowrap; }
+.epi-late { color: var(--warn-ink); }
+
+/* completezza e piano stampabile */
+.epi-check { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; font-size: 14px; }
+.epi-check li { padding: 0 0 0 16px; border-left: 2px solid var(--line-2); }
+.epi-check li.epi-ok { border-left-color: var(--good); color: var(--ink); }
+.epi-check li.epi-ko { border-left-color: var(--warn); color: var(--ink-2); }
+.epi-sheet .pp-bd, .epi-print { min-width: 0; max-width: 100%; }
+.epi-print section { margin: 0 0 16px; }
+.epi-print h3 { margin: 0 0 8px; font-size: 14px; font-weight: 600; color: var(--ink); }
+.epi-print ul { margin: 0; padding: 0 0 0 16px; }
+.epi-print li { margin: 0 0 8px; font-size: 13px; line-height: 1.5; overflow-wrap: anywhere; }
+
+@media (max-width: 720px) {
+  .epi-wrap { min-width: 128px; }
+  .epi-lib { grid-template-columns: minmax(0, 1fr); }
+  .epi-charts { grid-template-columns: minmax(0, 1fr); }
+  .epi-print li { font-size: 12px; }
+}
+@media print { .epi-slider, .epi-btns, .epi-edit { display: none !important; } }

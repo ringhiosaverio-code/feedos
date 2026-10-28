@@ -1,1 +1,9 @@
 # FeedOS 18 · Obiettivi e piano: percorsi in più per tests/e2e/smoke.py, uno per riga (es. esg.piano.sezione). Le righe con # sono commenti.
+esg.piano.obiettivi
+esg.piano.misure
+esg.piano.macc
+esg.piano.roadmap
+esg.piano.incentivi
+esg.piano.finanziamenti
+esg.piano.ets2
+esg.piano.piano
