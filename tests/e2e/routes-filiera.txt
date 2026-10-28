@@ -1,1 +1,11 @@
 # FeedOS 18 · EUDR e fornitori: percorsi in più per tests/e2e/smoke.py, uno per riga (es. esg.filiera.sezione). Le righe con # sono commenti.
+esg.filiera.panoramica
+esg.filiera.ruolo
+esg.filiera.materie
+esg.filiera.lotti
+esg.filiera.lotto.il-522
+esg.filiera.soia
+esg.filiera.bilancio-dcf
+esg.filiera.fornitori
+esg.filiera.moduli
+esg.filiera.clienti
