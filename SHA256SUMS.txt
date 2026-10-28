@@ -2,9 +2,9 @@
 bc5afd74709cf5363f53fd6336c3ce30b96a5cf5879b3e9802f00b8133902e82  ./CHANGELOG_16.0.md
 bafa077e485cda4a6b26a43c534fc2d556b0572b25dafd03921673480c061373  ./CHANGELOG_16.1.md
 0751dfcd4a87873e709756daef1cc53441833ec88664fe913821ecbb22d180cb  ./CHANGELOG_17.0.md
-7745adb9b02e8dc45d0e9ca2f1d97230d8ae909562f24a9661d8b272273044a4  ./DifesaOS-demo.html
+c82674bcb3699c7229da2f00095627e1aa2a470bb81950b418b4c2cc5f87b301  ./DifesaOS-demo.html
 ec0d23dc877d328dbfad71d55095bd7a77d3e75346b4894bd7b9cec6f1297e7f  ./FeedOS-16-completa-RISERVATA.html
-8f4a87ecd89348f600c035f9034b5c1bae2eaa6d8250f9b4e5f746bd147b9bea  ./FeedOS-16-demo.html
+e3523a974d2d66200850fd00bf144f3602b7cbbbf84ebd3700afa3ffe7ac75e1  ./FeedOS-16-demo.html
 7b282072c3b9d30e30de39586973441306ab3e8503bfdc46272bcaea558df725  ./LEGGIMI.md
 2b9eb9012ae34eef79307933998e33dfd533a6f62987a8cae054051ebea6ecdc  ./LEGGIMI.txt
 d8b41546781b929ddfdafc56f82ae81772b4403782ca8bb0585708c72d60bcb8  ./README.md
@@ -17,7 +17,7 @@ ec733354b8ee5a8b66a7a57ec439013146ebf9952d8e352f085b9104720e69fa  ./fonts/mono-4
 dd92c0677e81b151c7ae43ae2e6138831321f7cc50be570a27b8a0f42ab4423b  ./fonts/sans-400.woff
 886bec12ec89a752c5600bee9cf8e9bf05316d0009781e1c5cfeaa6025b76447  ./fonts/sans-400i.woff
 78be11935c8bcf0acd7b81ead02e405da6eb493337cbb6b280d2e8dee2a27446  ./fonts/sans-700.woff
-8f4a87ecd89348f600c035f9034b5c1bae2eaa6d8250f9b4e5f746bd147b9bea  ./index.html
+e3523a974d2d66200850fd00bf144f3602b7cbbbf84ebd3700afa3ffe7ac75e1  ./index.html
 7521726a7719afb32c109acea3fe1d2dd388b9f18dd812ae038d836037bb350a  ./package-lock.json
 9d0f00ebebcb55ddc919c76efa0a8d3d694279ea9e8cd18dc3bad23ea7543eae  ./package.json
 6c1236d86c07310a7a0f196fe327b7a544ce8476ab480294b7feac7ccb09d7f0  ./src/app/App.jsx
@@ -60,7 +60,7 @@ e7a683e9f853df100f768be463c806c406e0d07d96905fa43e47d9181638f90b  ./src/data/dem
 18c7abad6a7ff43087f97c9b8d3ad197124855861234160f04816b72f721d1b7  ./src/data/demo/esg-pcf.js
 bd55bf4ea1cf4c0ae9e2376c33998b45ef0989b1d3c8870bb38cc9e8ba1dfc31  ./src/data/demo/esg-persone.js
 bce95b451dffc4e477d0e825a5ce258fa874b506709048413b415b7f3873d728  ./src/data/demo/esg-piano.js
-1d1546d73af18bc02334ef841a8857a0a92df8813be15aa52eff3d52ddf7e5c2  ./src/data/demo/esg-report.js
+12b6b84bb06b381bb7d31c204d3040085c38b035c288ad289f392ca6cc0ae8bc  ./src/data/demo/esg-report.js
 80c356ba756c6e03d047c9395e4398ea82b4742505f1dcd8d6ad9227cf7c414c  ./src/data/demo/esg-rischi.js
 fac765a82ae71500e96a8da71c12c7dad234425493e0b99b7adbe1b95f98c10d  ./src/data/demo/extend.js
 c3fdde7dff590b6258ec5ca1d77dc6dbdffa2e6bcf302ede248f221c25fac2ce  ./src/data/demo/finanza.js
@@ -72,7 +72,7 @@ e0fedb41358701e6f362e46a8597a3933ca058c6d0c720aad6d084c0868bc420  ./src/data/dem
 8901b9d2d4d79a0e42290ddbe28f96f32023101c064c00d313ea6ab2fd9a007d  ./src/data/demo/redditivita.js
 879553aa852b8883b2c5dff8d6e6ffd2f0754b60b668b0c7934acc4d5ae90500  ./src/data/demo/sustainability.js
 898b307b521292e7ce8d320504bca9b5f188f15d8b410f25537b7f36f6c99a7d  ./src/data/eer.js
-d3dff508fc54c2d67b07f97bfb421bdc02dfefb53cea7f52274cde10269cbbb5  ./src/data/esg-i18n.js
+8f27b9e9375b69ef841071671df539b3551eae6b5a5a366d25b8e1f5db6c904c  ./src/data/esg-i18n.js
 3a70acb04dfd69651ccc54bbac885685241e88a759e14277833ffacd9a61523a  ./src/data/esgRegistry.js
 8f475ecff55b5015354ce4f8b9032e2f5820c8c96e1924d9c60982104753106f  ./src/data/fields-ambiente.js
 a864f923e6ca58ecbf569eea747129125e699eae69e2410743a041b911a8ce71  ./src/data/fields-clima.js
@@ -106,7 +106,7 @@ e37e12d7cfe9b4205a243f3f7647ec6552db7046623f5f15c95d6e84c7e0fe8d  ./src/data/sur
 0c24da4d7ae8f5758577185b9f8df6cbcbe57ef03110f7061c8bd363cc00a8fa  ./src/editions/agrofarmaci/co2.jsx
 b80b069d46731e8fb4398f02ba2adda19d2679bf4e70e31d28d23da52e666d16  ./src/editions/agrofarmaci/demo/campagne.js
 3cc438d5f48a479c9b4cd7f1d99d78e2661ea70ffb7679d221e290168cc21a74  ./src/editions/agrofarmaci/demo/catalog.js
-6840b591f22dffbba9ac6f97b776ca34d1aea2b8a1887209733e95baa930f186  ./src/editions/agrofarmaci/demo/extenders.js
+300df0ab240a38531440478ef7b1c3a9600f9cedac60a699e1d25ad837414fb9  ./src/editions/agrofarmaci/demo/extenders.js
 2eeeec564d5a2b3a22a704f6da241e5bb05f6278fba73028e304fb82ba468acb  ./src/editions/agrofarmaci/demo/generator.js
 f597f5b0a344e5c4a4ffcbce99f7746a6af2dd734b7f8d088ea6f224cd397754  ./src/editions/agrofarmaci/demo/index.js
 04182ffcd4da7371a0fb71d3daee489cf8cf08e1244c6d5b70e513972d710a8c  ./src/editions/agrofarmaci/demo/programmi.js
@@ -162,9 +162,9 @@ b0d50d071af156b6367cf98488343b951f27b092a8052f72eb705df64d0e5db5  ./src/engine/e
 676e88fbb1ceabc82790225428408d3b458432f31a957381205320e80b623626  ./src/engine/esg-registry.js
 e3d3fee657a5d707ee6198547057e57879fa260995987567c6d4a1f8fa35e71d  ./src/engine/esg-report-collect.js
 25429612673fce689e7e35fb035ffa4e92c4cd55ba670e64f7ea35425cca90a4  ./src/engine/esg-report-own.js
-6f11d4302a6877a1675593ac9a90ba9c935676a7ba894d5f64fd66ef50a2798a  ./src/engine/esg-report-q.js
+5cdae07558653a65ef9eab0c66b47f63b0443c7190c47f71c91767afe03c4af8  ./src/engine/esg-report-q.js
 acb9fb9e2d348b5eb5a1ea4ee19fdb1402382717fb8fe94fe03f837fec6c28f3  ./src/engine/esg-report-text.js
-66a0f03179f4e0f8a92b9bd4bd6c881c512aaf3fd3107a4cf0aa9bb22be70e68  ./src/engine/esg-report.js
+f2b665d57afe64ebea42192aca983d6694a7fdbf60ecb994fb300536a2eb4c5e  ./src/engine/esg-report.js
 8f340f7cb2aa4d180e6e6bdffcd74d426786f5fdade610f0c564dff9a1af4b79  ./src/engine/esg-rischi.js
 5d5d88787cbeb78b3d1666391d27c2bda624e0965b911f060be7d429341cff92  ./src/engine/esg-years.js
 8f6b256fbaea930ff1632dbb56e0034b9807db8193c5daa292d597f86170870e  ./src/engine/esg.js
@@ -267,7 +267,7 @@ a29d4020d310b4a84d96cd9d1b5247a3fff79db54586eb39f66734d62cd8f1d3  ./src/styles/e
 6db1c02d3d061cdb184d5069b54eae3b4b2133723d4c82cab22f7a3292ad7171  ./src/styles/esg-piano.css
 70adaf99213575e728ce57d21746fef8046ba7832ae2b57a6e0cb491ece73aac  ./src/styles/esg-report.css
 a4cede39e314023ebe0e6f8653a79be1f9fd742fe3bc4410d4da63e9cd6154ba  ./src/styles/esg-rischi.css
-68a28cb0540fa2cdcd5a9eb23111dbf367ad1ccfb6d03714471249a76723911f  ./src/styles/esg-shared.css
+843a2a49cf0d2339220e34bd8e30bee2d009c1d581dcb4c22fd964051d54a887  ./src/styles/esg-shared.css
 aff5e3648ccf7796c4579e85e4d1bcf12c72bf79124315e3e20bc1ceba7fcc74  ./src/styles/finanza.css
 4cefad9eaa0fb2e462b4d1c0a4949abcb6ec3e8b9de960c86adf0bd2a6c11f00  ./src/styles/piattaforma.css
 efa4f242158d5b3c67920dad934ca61a586c692102f959698f101b4d355ec627  ./src/styles/print.css

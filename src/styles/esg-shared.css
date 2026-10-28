@@ -5,8 +5,8 @@
 .esh-card.esh-ok { border-left-color: var(--good); }
 .esh-card.esh-warn { border-left-color: var(--warn); }
 .esh-card.esh-bad { border-left-color: var(--crit); }
-.esh-card-hd { display: flex; align-items: center; gap: 8px; min-width: 0; font-size: 13px; color: var(--ink); }
-.esh-card-hd b { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.esh-card-hd { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; min-width: 0; font-size: 13px; color: var(--ink); }
+.esh-card-hd b { flex: 1 1 9em; min-width: 0; overflow-wrap: break-word; }
 .esh-card-ic { display: inline-flex; flex: none; width: 26px; height: 26px; align-items: center; justify-content: center; border-radius: var(--r-sm); background: var(--accent-soft); color: var(--accent); }
 .esh-card-ic svg { width: 15px; height: 15px; }
 .esh-card-v { font-family: var(--f-display); font-size: 22px; font-weight: 700; line-height: 1.1; color: var(--ink); overflow-wrap: anywhere; }

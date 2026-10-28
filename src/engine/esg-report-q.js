@@ -261,7 +261,7 @@ export function evidenceIndex(filled, d) {
   const ev = Object.fromEntries((Array.isArray(d?.evidence) ? d.evidence : EMPTY).map(e => [String(e.id), e]));
   const by = new Map();
   for (const it of filled.items) for (const id of it.evidence || EMPTY) { if (!by.has(id)) by.set(id, []); by.get(id).push(it.qid); }
-  return [...by.entries()].map(([id, qids]) => { const e = ev[id] || {}; return { id, title: e.title || e.name || id, kind: e.kind || e.type || '', date: e.date || e.issuedAt || '', expiry: e.expiry || e.validTo || '', sha256: e.sha256 || e.hash || '', qids }; });
+  return [...by.entries()].map(([id, qids]) => { const e = ev[id] || {}; return { id, title: e.title || e.name || id, kind: e.kind || e.type || '', date: e.date || e.issuedAt || '', expiry: e.expiry || e.expiresAt || e.validTo || '', sha256: e.sha256 || e.hash || '', qids }; });
 }
 export function evidenceIndexCsv(rows) {
   return toCSV(rows, [{ label: 'Evidenza', value: r => r.id }, { label: 'Titolo', value: r => r.title }, { label: 'Tipo', value: r => r.kind }, { label: 'Data', value: r => r.date },

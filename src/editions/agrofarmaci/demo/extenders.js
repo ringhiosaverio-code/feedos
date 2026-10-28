@@ -168,7 +168,7 @@ const Q_GDO = [
   ['19', 'Raccolta dei contenitori vuoti e programmi di uso sicuro per gli agricoltori', [], 'Adesione a un sistema di raccolta dei contenitori bonificati e formazione degli utilizzatori con i tecnici di zona (dato dimostrativo).'],
 ];
 const AGRO_REPORT = {
-  balanceSheet: 61500000,
+  balanceSheet: 61500000, nace: '20.20',
   strategy: () => 'Spostare il portafoglio verso prodotti biologici, a basso rischio e biostimolanti, ridurre il rame per ettaro con formulazioni a basso dosaggio e documentare ai clienti la CO₂ dei programmi di difesa con dati chiusi ogni anno; efficienza dell’essiccatore della linea WG e fotovoltaico sul magazzino (dato dimostrativo).',
   circular: () => 'Ricircolo delle acque di lavaggio delle linee nei lotti successivi dello stesso prodotto, imballi in polietilene riciclato per le taniche e ritiro dei pallet a rendere con i fornitori principali (dato dimostrativo).',
   customerQ: { id: 'q-gdo-ortofrutta', title: 'Questionario di sostenibilità dei fornitori di mezzi tecnici 2026', requester: 'Ortofrutta Tirrena Cooperativa (demo)', items: Q_GDO },

@@ -465,7 +465,7 @@ export function evidenceRows(d, rep, ids) {
     for (const e of rep.byId[id]?.evidence || EMPTY) add(e, id);
     for (const e of [...evidenceFor(d, 'datapoint', id), ...evidenceFor(d, 'vs', id)]) add(e.id, id);
   }
-  return [...by.entries()].map(([id, set]) => { const e = reg[id] || {}; return { id, title: e.title || e.name || id, kind: e.kind || e.type || '', date: e.date || e.issuedAt || '', expiry: e.expiry || e.validTo || '', sha256: e.sha256 || e.hash || '', dpIds: [...set] }; });
+  return [...by.entries()].map(([id, set]) => { const e = reg[id] || {}; return { id, title: e.title || e.name || id, kind: e.kind || e.type || '', date: e.date || e.issuedAt || '', expiry: e.expiry || e.expiresAt || e.validTo || '', sha256: e.sha256 || e.hash || '', dpIds: [...set] }; });
 }
 /** Pacchetto ESG per la banca: profilo, energia ed emissioni su tre esercizi, obiettivi, rischi, persone, ambiente, governance, evidenze, lacune. */
 export function bankPack(d, Pin, opts = {}) {

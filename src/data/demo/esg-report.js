@@ -76,7 +76,7 @@ export function reportDemo(d, { today } = {}, cfg = FEED_REPORT) {
     ans('C1.strategy', cfg.strategy(sv).replace(/\s+/g, ' ').trim()),
     ans('B7.circular', cfg.circular(sv).replace(/\s+/g, ' ').trim()),
   ];
-  const settings = { ...SETTINGS };
+  const settings = { ...SETTINGS, ...(cfg.nace ? { nace: cfg.nace } : {}) }; // DifesaOS: 20.20 (fabbricazione di agrofarmaci)
   const d2 = { ...d, esgAnswers, settings: { ...d.settings, esg18: { ...(d.settings?.esg18 || {}), report: settings } } };
   // storico dichiarato dei due esercizi precedenti, alla scala dei valori correnti
   const cur = currentValues(d2, P);

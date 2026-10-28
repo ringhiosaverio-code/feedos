@@ -1,7 +1,7 @@
 /* FeedOS 18 · Testi bilingui (italiano e inglese) per report, lettere e moduli ESG (fondazione 18).
  * L'interfaccia resta in italiano; esportazioni, lettere e moduli possono uscire anche in inglese.
  * I18N = { chiave: { it, en } }: chiavi di base qui, quelle dei pacchetti (prefisso «<pkg>.») nei file src/data/i18n-<pkg>.js.
- * Interpolazione {nome} con T(chiave, valori, lingua) di src/engine/esg-nlg.js. File senza logica. */
+ * Interpolazione {nome} con T(chiave, valori, lingua) di src/engine/esg-nlg.js. File senza logica (solo il nome del prodotto dall'edizione). */
 import { I18N_CLIMA } from './i18n-clima.js';
 import { I18N_PCF } from './i18n-pcf.js';
 import { I18N_FILIERA } from './i18n-filiera.js';
@@ -11,12 +11,13 @@ import { I18N_GOVERNANCE } from './i18n-governance.js';
 import { I18N_PIANO } from './i18n-piano.js';
 import { I18N_RISCHI } from './i18n-rischi.js';
 import { I18N_AMBIENTE } from './i18n-ambiente.js';
+import { META } from '../editions/meta.js';
 
 export const LANGS = ['it', 'en'];
 
 /** Chiavi comuni a tutti i pacchetti. */
 export const I18N_BASE = {
-  disclaimer: { it: 'FeedOS organizza dati e calcoli; non sostituisce consulenza legale, fiscale o la verifica di un ente terzo.', en: 'FeedOS organises data and calculations; it does not replace legal or tax advice or verification by a third party.' },
+  disclaimer: { it: `${META.product || 'FeedOS'} organizza dati e calcoli; non sostituisce consulenza legale, fiscale o la verifica di un ente terzo.`, en: `${META.product || 'FeedOS'} organises data and calculations; it does not replace legal or tax advice or verification by a third party.` },
   validAsOf: { it: 'valido al', en: 'valid as of' },
   source: { it: 'fonte', en: 'source' },
   method: { it: 'Nota metodologica', en: 'Methodology note' },
