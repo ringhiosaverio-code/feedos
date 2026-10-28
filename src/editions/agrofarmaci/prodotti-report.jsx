@@ -78,7 +78,7 @@ export function ReportProdotto({ d, ctx, P, route, today, agent }) {
         </div>}>
         <div className="row gap-s" style={{ flexWrap: 'wrap', alignItems: 'center' }}>
           <span className="lbl small muted">Prodotto</span>
-          <Select value={p.id} onChange={v => go('prodotti', 'report', v)} options={prods.map(x => ({ id: x.id, label: `${x.name} · ${x.category}` }))} ariaLabel="Prodotto del report" />
+          <div className="pr-sel"><Select value={p.id} onChange={v => go('prodotti', 'report', v)} options={prods.map(x => ({ id: x.id, label: `${x.name} · ${x.category}` }))} ariaLabel="Prodotto del report" /></div>
           {!agent && <><span className="lbl small muted">Versione</span><Seg options={VERSIONS} value={ver} onChange={setVer} label="Versione del report" /></>}
         </div>
       </Panel>

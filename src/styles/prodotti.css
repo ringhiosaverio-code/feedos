@@ -19,7 +19,8 @@ button.pr-ph-img:focus-visible { outline: 2px solid var(--accent); outline-offse
 .pr-summary h3, .pr-h3 { font: 700 13px/1.2 var(--f-sans); text-transform: uppercase; letter-spacing: .03em; margin: 14px 0 6px; color: var(--ink); }
 .pr-summary p { margin: 6px 0; line-height: 1.5; }
 .pr-list { margin: 4px 0; padding-left: 18px; } .pr-list li { margin: 4px 0; line-height: 1.45; }
-.pr-report { display: grid; gap: 16px; }
+.pr-report { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; min-width: 0; }
+.pr-sel { flex: 1 1 240px; min-width: 0; } .pr-sel .select { width: 100%; max-width: 100%; min-width: 0; }
 .pr-report .print-page { min-width: 0; }
 .pr-form { display: grid; gap: 10px; padding: 12px 14px; border-bottom: 1px solid var(--line); background: var(--surface-2); border-radius: 10px; margin: 8px 0; }
 .pr-form-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 10px 14px; }
@@ -37,3 +38,6 @@ button.pr-ph-img:focus-visible { outline: 2px solid var(--accent); outline-offse
   .pr-grid { grid-template-columns: repeat(3, 1fr); }
   .pr-ph-img { border-color: #ccc; }
 }
+/* le tabelle larghe scorrono dentro la pagina invece di allargarla (telefono) */
+.pr-report .pp-bd { min-width: 0; }
+.pr-report .pp-bd > * { min-width: 0; max-width: 100%; }
