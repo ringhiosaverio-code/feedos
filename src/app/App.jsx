@@ -126,8 +126,8 @@ class Guard extends React.Component {
   render() {
     if (!this.state.err) return this.props.children;
     return (
-      <div className="panel guard-err" style={{ padding: 20, display: 'grid', gap: 10 }} role="alert">
-        <h1 style={{ font: '700 30px/1 var(--f-display)', textTransform: 'uppercase' }}>Questa pagina non si è aperta</h1>
+      <div className="panel guard-err" style={{ padding: 24, display: 'grid', gap: 8 }} role="alert">
+        <h1 style={{ font: '600 32px/1 var(--f-display)' }}>Questa pagina non si è aperta</h1>
         <p className="muted">Probabilmente mancano dei dati che la pagina si aspetta (per esempio un archivio appena creato). I dati salvati non sono stati toccati.</p>
         <p className="small mono">{String(this.state.err?.message || this.state.err).slice(0, 200)}</p>
         <div className="row"><Btn kind="primary" onClick={() => go('oggi')}>Torna a Oggi</Btn><Btn onClick={() => this.setState({ err: null })}>Riprova</Btn></div>
@@ -144,7 +144,7 @@ function NotForRole({ area }) {
       <Panel>
         <Empty icon={LuLock} title="Area non prevista per la vista Agente">
           <p>La vista Agente mostra clienti, offerte, visite e qualità del proprio portafoglio. Per i numeri di direzione, finanza ed economia scegli un’altra vista.</p>
-          <div className="row" style={{ justifyContent: 'center', marginTop: 10 }}>
+          <div className="row" style={{ justifyContent: 'center', marginTop: 8 }}>
             <Btn kind="primary" onClick={() => go('oggi')}>Torna a Oggi</Btn>
             <Btn onClick={() => { setPrefs({ role: 'direzione' }); toast('Vista: ' + ROLE.direzione.label); }}>Passa alla vista Direzione</Btn>
           </div>

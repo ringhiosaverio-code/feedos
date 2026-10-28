@@ -23,7 +23,7 @@ function Ring({ score, size = 132 }) {
     <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} role="img" aria-label={`Punteggio ${nf(score ?? 0)} su 100`}>
       <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="var(--surface-3)" strokeWidth="12" />
       <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={scoreColor(score)} strokeWidth="12" strokeLinecap="round" strokeDasharray={`${(c * v) / 100} ${c}`} transform={`rotate(-90 ${size / 2} ${size / 2})`} />
-      <text x="50%" y="50%" textAnchor="middle" dominantBaseline="central" style={{ fontSize: size / 4, fontWeight: 700, fill: 'var(--ink)' }}>{score == null ? '—' : nf(score)}</text>
+      <text x="50%" y="50%" textAnchor="middle" dominantBaseline="central" style={{ fontSize: size / 4, fontWeight: 600, fill: 'var(--ink)' }}>{score == null ? '—' : nf(score)}</text>
     </svg>
   );
 }
@@ -53,13 +53,13 @@ export function QualitaDati({ d }) {
         <Panel title="Punteggio della qualità dei dati" sub="100 = tutte le regole rispettate · una regola critica (tracciabilità, bilancio di massa dei lotti) perde tutto il suo peso al primo errore" id="dq-score">
           <div className="row" style={{ gap: 24, alignItems: 'center', flexWrap: 'wrap' }}>
             <Ring score={R.score} />
-            <div className="stack" style={{ gap: 6, flex: 1, minWidth: 220 }}>
+            <div className="stack" style={{ gap: 8, flex: 1, minWidth: 220 }}>
               {Object.entries(R.byArea).map(([a, s]) => (
                 <div key={a} className="row between small"><span>{DQ_AREAS[a]}</span><span className="row gap-s" style={{ minWidth: 160 }}><span className="meter" style={{ flex: 1 }}><i style={{ width: s + '%', background: scoreColor(s) }} /></span><b className="num">{nf(s)}</b></span></div>
               ))}
             </div>
           </div>
-          {hist.length > 1 && <div style={{ marginTop: 12 }}><LineChart labels={hist.map(h => dateIt(h.date, 'dm'))} height={120} unit="" decimals={0} area={false} yMin={50} yMax={100} xEvery={Math.max(1, Math.ceil(hist.length / 6))} series={[{ key: 's', label: 'Punteggio', color: 'var(--s1)', values: hist.map(h => h.score) }]} ariaLabel="Andamento del punteggio" /></div>}
+          {hist.length > 1 && <div style={{ marginTop: 16 }}><LineChart labels={hist.map(h => dateIt(h.date, 'dm'))} height={120} unit="" decimals={0} area={false} yMin={50} yMax={100} xEvery={Math.max(1, Math.ceil(hist.length / 6))} series={[{ key: 's', label: 'Punteggio', color: 'var(--s1)', values: hist.map(h => h.score) }]} ariaLabel="Andamento del punteggio" /></div>}
         </Panel>
         <div className="kpis" style={{ alignContent: 'start' }}>
           <Kpi label="Regole rispettate" value={`${R.rules.filter(r => r.ok).length}/${R.rules.length}`} status={bad.some(r => r.severity === 'critico') ? 'bad' : bad.length ? 'warn' : 'ok'} />
@@ -77,7 +77,7 @@ export function QualitaDati({ d }) {
               {R.rules.map(r => (
                 <React.Fragment key={r.id}>
                   <tr className={r.failCount ? 'click' : ''} onClick={r.failCount ? () => setOpen(open === r.id ? null : r.id) : undefined} aria-expanded={r.failCount ? open === r.id : undefined}>
-                    <td><span className="row gap-s" style={{ flexWrap: 'nowrap', alignItems: 'flex-start' }}>{r.failCount ? (open === r.id ? <LuChevronDown aria-hidden="true" style={{ flex: 'none', marginTop: 2 }} /> : <LuChevronRight aria-hidden="true" style={{ flex: 'none', marginTop: 2 }} />) : <LuShieldCheck aria-hidden="true" style={{ color: 'var(--good)', flex: 'none', marginTop: 2 }} />}<b>{r.label}</b></span></td>
+                    <td><span className="row gap-s" style={{ flexWrap: 'nowrap', alignItems: 'flex-start' }}>{r.failCount ? (open === r.id ? <LuChevronDown aria-hidden="true" style={{ flex: 'none', marginTop: 0 }} /> : <LuChevronRight aria-hidden="true" style={{ flex: 'none', marginTop: 0 }} />) : <LuShieldCheck aria-hidden="true" style={{ color: 'var(--good)', flex: 'none', marginTop: 0 }} />}<b>{r.label}</b></span></td>
                     <td className="small">{DQ_AREAS[r.area]}</td>
                     <td><Chip kind={SEV[r.severity].kind}>{SEV[r.severity].label}</Chip></td>
                     <td className="r">{r.base ? nf(r.base) : '—'}</td>
@@ -86,11 +86,11 @@ export function QualitaDati({ d }) {
                   </tr>
                   {open === r.id && r.fails.slice(0, 25).map(f => (
                     <tr key={r.id + f.id} className="sub-row">
-                      <td colSpan={5} className="small" style={{ paddingLeft: 36 }}>{f.msg}</td>
+                      <td colSpan={5} className="small" style={{ paddingLeft: 40 }}>{f.msg}</td>
                       <td>{f.link && <Btn small icon={LuWrench} onClick={() => fix(f.link)}>Correggi</Btn>}</td>
                     </tr>
                   ))}
-                  {open === r.id && r.failCount > 25 && <tr className="sub-row"><td colSpan={6} className="small muted" style={{ paddingLeft: 36 }}>… e altri {nf(r.failCount - 25)}: esporta il CSV degli errori.</td></tr>}
+                  {open === r.id && r.failCount > 25 && <tr className="sub-row"><td colSpan={6} className="small muted" style={{ paddingLeft: 40 }}>… e altri {nf(r.failCount - 25)}: esporta il CSV degli errori.</td></tr>}
                 </React.Fragment>
               ))}
             </tbody>

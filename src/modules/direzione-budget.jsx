@@ -89,7 +89,7 @@ export function Budget({ d }) {
       <Panel title={`Budget ${year}`}>
         <Empty title={`Nessun budget per il ${year}`}>
           <p>Il budget parte dai volumi dello stesso mese degli ultimi 12 mesi per prodotto, dal listino di oggi con lo sconto realizzato negli ultimi 90 giorni, dai costi di oggi di materie prime ed energia e dai costi fissi per centro dell’anno prima. Ogni ipotesi si regola prima di salvare.</p>
-          <div className="row" style={{ justifyContent: 'center', marginTop: 10 }}><Btn kind="primary" icon={LuPlus} onClick={() => openWiz(year, 'nuovo')} disabled={noData}>Crea budget {year}</Btn></div>
+          <div className="row" style={{ justifyContent: 'center', marginTop: 8 }}><Btn kind="primary" icon={LuPlus} onClick={() => openWiz(year, 'nuovo')} disabled={noData}>Crea budget {year}</Btn></div>
           {noData && <p className="small" style={{ marginTop: 8 }}>Servono prima le consegne (o lo storico mensile) da cui partire: Dati › Importa.</p>}
         </Empty>
       </Panel>
@@ -168,7 +168,7 @@ const SPEC_RANGE = [-20, 20];
 function Slider({ label, value, onChange, min, max, step = 1, unit = '%', disabled }) {
   return (
     <div className="slider">
-      <div className="row between"><span className="small" style={{ fontWeight: 600 }}>{label}</span><span className="num" style={{ fontWeight: 700 }}>{unit === '%' ? sf(value, step < 1 ? 1 : 0) + '%' : nf(value)}</span></div>
+      <div className="row between"><span className="small" style={{ fontWeight: 600 }}>{label}</span><span className="num" style={{ fontWeight: 600 }}>{unit === '%' ? sf(value, step < 1 ? 1 : 0) + '%' : nf(value)}</span></div>
       <input type="range" className="range" min={min} max={max} step={step} value={value} disabled={disabled} onChange={e => onChange(+e.target.value)} aria-label={label} />
     </div>
   );
@@ -215,7 +215,7 @@ function BudgetWizard({ d, ctx, today, year, version, mode, basedOn, onClose, on
           <Slider label="Listino" value={o.listDeltaPct} min={-10} max={10} step={0.5} onChange={v => set({ listDeltaPct: v })} />
           <Field label="Aumento di listino dal mese"><Select value={String(o.listFromMonth)} onChange={v => set({ listFromMonth: +v })} options={Array.from({ length: 12 }, (_, i) => ({ id: String(i + 1), label: monthLabel(`${year}-${String(i + 1).padStart(2, '0')}`, false) }))} /></Field>
           <Slider label="Prezzo delle materie prime" value={o.mpDeltaPct} min={-20} max={20} step={0.5} onChange={v => set({ mpDeltaPct: v })} />
-          <div className="eyebrow" style={{ marginTop: 6 }}>Costi fissi (sullo stesso mese dell’anno prima)</div>
+          <div className="eyebrow" style={{ marginTop: 8 }}>Costi fissi (sullo stesso mese dell’anno prima)</div>
           <Slider label="Inflazione di base" value={o.fixedInflPct} min={-5} max={10} step={0.5} onChange={v => set({ fixedInflPct: v })} />
           {(d.costCenters || []).map(c => <Slider key={c.id} label={c.name} value={o.centerPct[c.id] ?? o.fixedInflPct} min={-20} max={20} step={0.5} onChange={v => set({ centerPct: { ...o.centerPct, [c.id]: v } })} />)}
         </div>

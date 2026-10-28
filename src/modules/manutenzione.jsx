@@ -68,7 +68,7 @@ export function Manutenzione({ d }) {
         <Table rows={rows} onRow={r => openDrawer('asset', r.id)} initialSort={{ key: 'due', dir: 'asc' }} exportName="componenti" cols={[
           { key: 'name', label: 'Componente', render: r => <span><b>{r.name}</b><span className="sub">{r.code} · {ASSET_KINDS[r.kind] || r.kind}</span></span>, csv: r => r.name },
           { key: 'lineName', label: 'Linea' },
-          { key: 'used', label: 'Contatore', sort: r => r.st.used ?? -1, render: r => (r.st.every ? <span className="stack" style={{ gap: 4 }}><Meter used={r.st.used} label={`${nf((r.st.used || 0) * 100)}% del piano`} /><span className="small muted">{nf(r.st.counter)} su {nf(r.st.every)} {unitTxt(r.st.unit)}</span></span> : '—'), csv: r => r.st.used },
+          { key: 'used', label: 'Contatore', sort: r => r.st.used ?? -1, render: r => (r.st.every ? <span className="stack" style={{ gap: 8 }}><Meter used={r.st.used} label={`${nf((r.st.used || 0) * 100)}% del piano`} /><span className="small muted">{nf(r.st.counter)} su {nf(r.st.every)} {unitTxt(r.st.unit)}</span></span> : '—'), csv: r => r.st.used },
           { key: 'due', label: 'Scadenza', sort: r => r.st.dueDate || '9999', render: r => (r.st.dueDate ? <span>{dateIt(r.st.dueDate)} <Chip kind={dueKind(r.dueIn)}>{relDays(r.st.dueDate, today)}</Chip></span> : '—'), csv: r => r.st.dueDate },
           { key: 'fail', label: 'Guasti 12 m', align: 'r', sort: r => r.rel.failures, render: r => nf(r.rel.failures), csv: r => r.rel.failures },
           { key: 'mtbf', label: 'MTBF h', align: 'r', sort: r => r.rel.mtbf, render: r => (r.rel.mtbf != null ? nf(r.rel.mtbf) : '—'), csv: r => r.rel.mtbf },
@@ -115,7 +115,7 @@ function AssetBody({ d, a }) {
       {st.every && (
         <div className="dsec"><div className="eyebrow">Contatore · {nf((st.used || 0) * 100)}% del piano</div>
           <Meter used={st.used} label={`${nf(st.counter)} su ${nf(st.every)} ${unitTxt(st.unit)}`} />
-          <p className="small muted" style={{ marginTop: 6 }}>{nf(st.counter)} su {nf(st.every)} {unitTxt(st.unit)} dall’ultimo intervento{st.dueDate ? ` · prossimo intervento ${st.rest <= 0 ? 'scaduto' : `stimato il ${dateIt(st.dueDate)} (${relDays(st.dueDate, today)})`}` : ''}.</p>
+          <p className="small muted" style={{ marginTop: 8 }}>{nf(st.counter)} su {nf(st.every)} {unitTxt(st.unit)} dall’ultimo intervento{st.dueDate ? ` · prossimo intervento ${st.rest <= 0 ? 'scaduto' : `stimato il ${dateIt(st.dueDate)} (${relDays(st.dueDate, today)})`}` : ''}.</p>
         </div>
       )}
       <div className="dsec"><div className="eyebrow">Affidabilità e costo · 12 mesi</div>
@@ -148,14 +148,14 @@ function CloseWo({ d, t, today }) {
     if (store.batch(ops, `Ordine di lavoro eseguito: ${t.title}`)) toast(f.reset ? 'Intervento registrato: contatore azzerato' : 'Intervento registrato', 'ok', { label: 'Annulla', fn: () => store.undo() });
   };
   return (
-    <div className="panel inset" style={{ marginBottom: 10 }}>
+    <div className="panel inset" style={{ marginBottom: 8 }}>
       <div className="row" style={{ justifyContent: 'space-between', marginBottom: 8 }}><b>{t.title}</b><Chip kind={dueKind(daysBetween(today, t.due))}>{relDays(t.due, today)}</Chip></div>
       <div className="form">
         <Field label="Eseguito il"><input type="date" className="input" value={f.date} max={today} onChange={e => set({ date: e.target.value })} /></Field>
         <Field label="Costo €"><NumInput value={f.cost} onChange={v => set({ cost: v })} decimals={0} /></Field>
         <Field label="Minuti di fermo"><NumInput value={f.downMin} onChange={v => set({ downMin: v })} decimals={0} /></Field>
       </div>
-      <label className="row small" style={{ gap: 6, margin: '8px 0' }}><input type="checkbox" checked={f.reset} onChange={e => set({ reset: e.target.checked })} /> Azzera il contatore (sostituzione o revisione completa)</label>
+      <label className="row small" style={{ gap: 8, margin: '8px 0' }}><input type="checkbox" checked={f.reset} onChange={e => set({ reset: e.target.checked })} /> Azzera il contatore (sostituzione o revisione completa)</label>
       <Btn small kind="primary" icon={LuCheck} onClick={close}>Registra l’esecuzione</Btn>
     </div>
   );
@@ -170,7 +170,7 @@ function NewWo({ d, a, today }) {
     set({ title: '' });
   };
   return (
-    <div className="stack" style={{ gap: 8, marginTop: 6 }}>
+    <div className="stack" style={{ gap: 8, marginTop: 8 }}>
       <div className="form">
         <Field label="Tipo"><Select value={f.kind} onChange={v => set({ kind: v })} options={[{ id: 'preventiva', label: 'Preventiva' }, { id: 'correttiva', label: 'Correttiva' }]} /></Field>
         <Field label="Entro il"><input type="date" className="input" value={f.due} min={today} onChange={e => set({ due: e.target.value })} /></Field>

@@ -94,7 +94,7 @@ function Archivio({ d, hi }) {
               <input ref={fileRef} type="file" accept="application/json,.json" hidden onChange={restore} />
               <Btn icon={LuCamera} onClick={snapshot}>Crea istantanea ora</Btn>
             </div>
-            <p className="small muted" style={{ marginTop: 10 }}>Consiglio: esporta un backup ogni settimana e prima di cambiare computer o browser. Svuotare i dati di navigazione cancella anche l’archivio locale.</p>
+            <p className="small muted" style={{ marginTop: 8 }}>Consiglio: esporta un backup ogni settimana e prima di cambiare computer o browser. Svuotare i dati di navigazione cancella anche l’archivio locale.</p>
           </Panel>
           <Panel title="Istantanee" sub="Copie dell’archivio salvate in questo browser prima di ogni sostituzione e una volta al giorno" flush>
             {snaps == null ? <p className="small muted" style={{ padding: 16 }}>Lettura…</p> :
@@ -111,7 +111,7 @@ function Archivio({ d, hi }) {
             <Kv items={counts.map(([k, a]) => [k, nf(a?.length || 0)])} />
           </Panel>
           <Panel title="Cambia archivio" sub="Ogni sostituzione salva prima un’istantanea">
-            <div className="stack" style={{ gap: 10 }}>
+            <div className="stack" style={{ gap: 8 }}>
               <Btn icon={LuRefreshCw} onClick={regenerate}>Rigenera il mangimificio dimostrativo</Btn>
               <Btn icon={LuDatabase} onClick={fresh}>Inizia con i dati della tua azienda</Btn>
               <p className="small muted">Il mangimificio dimostrativo è inventato: numeri coerenti tra loro ma non riferiti a imprese reali.</p>
@@ -175,7 +175,7 @@ function Importa({ d }) {
     <ImportWizard d={d} />
     <div className="split">
       <Panel title="Prezzi, giacenze e quotazioni" sub="File CSV con separatore «;» (Excel in italiano) o «,»: prima si vede l’anteprima, poi si applica" id="dati-csv">
-        <div className="stack" style={{ gap: 12 }}>
+        <div className="stack" style={{ gap: 16 }}>
           <Seg options={Object.entries(KINDS).map(([k, v]) => ({ id: k, label: v.label }))} value={kind} onChange={k => { setKind(k); setRows(null); }} label="Tipo di dati" />
           <p className="small muted">Colonne: {K.hint}.</p>
           <div className="row">
@@ -198,7 +198,7 @@ function Importa({ d }) {
         </div>
       </Panel>
       <Panel title="Da FeedOS 15" sub="Backup completo («feedos-7-backup-….json») o progetto di formulazione («feedos-6.1-progetto.json»)" id="dati-f15">
-        <div className="stack" style={{ gap: 12 }}>
+        <div className="stack" style={{ gap: 16 }}>
           <p className="small">Si importano materie prime con i valori nutrizionali riconosciuti, la specifica del progetto, la composizione come formula in bozza e i valori degli indicatori ESG. Prodotti, preventivi e registrazioni di FeedOS 15 non hanno un corrispondente sicuro e vengono elencati senza essere inventati.</p>
           <label className="btn"><LuUpload aria-hidden="true" />Scegli il file di FeedOS 15<input type="file" accept="application/json,.json" hidden onChange={onF15} /></label>
           {mig && (
@@ -247,8 +247,8 @@ function Impostazioni({ d }) {
           <div className="form">
             <Txt label="Ragione sociale" k="name" /><Txt label="Nome breve" k="short" /><Txt label="Stabilimento" k="site" /><Txt label="Numero di riconoscimento" k="approval" hint="Reg. (CE) 183/2005" />
           </div>
-          <div style={{ marginTop: 12 }}><Txt label="Indirizzo" k="address" /></div>
-          <div className="form" style={{ marginTop: 12 }}>
+          <div style={{ marginTop: 16 }}><Txt label="Indirizzo" k="address" /></div>
+          <div className="form" style={{ marginTop: 16 }}>
             <Field label="Latitudine dello stabilimento" hint="per le distanze dai clienti"><NumInput value={c.lat} decimals={5} onChange={v => setC({ lat: v })} /></Field>
             <Field label="Longitudine dello stabilimento"><NumInput value={c.lon} decimals={5} onChange={v => setC({ lon: v })} /></Field>
           </div>
@@ -265,7 +265,7 @@ function Impostazioni({ d }) {
       </div>
       <div className="stack">
         <Panel title="Aspetto">
-          <div className="stack" style={{ gap: 12 }}>
+          <div className="stack" style={{ gap: 16 }}>
             <Field label="Tema"><Seg options={[{ id: 'auto', label: 'Automatico' }, { id: 'light', label: 'Chiaro' }, { id: 'dark', label: 'Scuro' }]} value={P.theme} onChange={v => setPrefs({ theme: v })} label="Tema" /></Field>
             <Field label="Dimensione del testo" hint={FULL ? '«Aula» ingrandisce tutto per proiettore e seduta di laurea' : '«Grande» ingrandisce tutto per la proiezione'}><Seg options={[{ id: 'normale', label: 'Normale' }, { id: 'aula', label: FULL ? 'Aula' : 'Grande' }]} value={P.size} onChange={v => setPrefs({ size: v })} label="Dimensione" /></Field>
             <Field label="Vista per ruolo"><Select value={P.role} onChange={v => { setPrefs({ role: v }); toast('Vista: ' + ROLE[v]?.label); }} options={ROLES.map(r => ({ id: r.id, label: r.label }))} /></Field>
@@ -278,7 +278,7 @@ function Impostazioni({ d }) {
             <li><span><b>Ogni modifica è annullabile</b> (Ctrl Z) e resta nel registro; le sostituzioni dell’archivio salvano prima un’istantanea.</span></li>
             <li><span><b>Calcoli trasparenti:</b> programmazione lineare con prezzi ombra per le formule, tolleranze di legge, {FULL ? 'metodo della tesi' : 'metodo documentato'} per energia e CO₂; nessuna scatola nera.</span></li>
           </ul>
-          <p className="xs muted" style={{ marginTop: 10 }}>FeedOS {VERSION} · archivio schema {s.schema} · salvataggio {storageMode()}</p>
+          <p className="xs muted" style={{ marginTop: 8 }}>FeedOS {VERSION} · archivio schema {s.schema} · salvataggio {storageMode()}</p>
         </Panel>
       </div>
     </div>
@@ -317,14 +317,14 @@ function Obiettivi({ d }) {
                   ? <span className="row gap-s"><NumInput slim value={t.min != null ? t.min * sc(k) : null} decimals={2} ariaLabel={`Minimo di ${k.label}`} onChange={v => set(k.id, { min: v == null ? null : v / sc(k) }, `Obiettivo ${k.label}`)} /><NumInput slim value={t.max != null ? t.max * sc(k) : null} decimals={2} ariaLabel={`Massimo di ${k.label}`} onChange={v => set(k.id, { max: v == null ? null : v / sc(k) }, `Obiettivo ${k.label}`)} /></span>
                   : <NumInput slim value={t.target != null ? t.target * sc(k) : null} decimals={k.unit === '€' ? 0 : 2} ariaLabel={`Obiettivo di ${k.label}`} onChange={v => set(k.id, { target: v == null ? null : v / sc(k) }, `Obiettivo ${k.label}`)} />}</td>
                 <td className="r"><NumInput slim value={t.warn != null ? t.warn * sc(k) : null} decimals={k.unit === '€' ? 0 : 2} ariaLabel={`Soglia di ${k.label}`} onChange={v => set(k.id, { warn: v == null ? null : v / sc(k) }, `Soglia ${k.label}`)} /></td>
-                <td>{k.dir !== 'range' && <label className="row small" style={{ gap: 6, whiteSpace: 'nowrap', flexWrap: 'nowrap' }}><input type="checkbox" checked={!!t.monthly || open === k.id} onChange={e => { if (e.target.checked) setOpen(k.id); else { setOpen(null); set(k.id, { monthly: null }, `Obiettivo ${k.label}: un solo valore`); } }} /> mese per mese</label>}</td>
+                <td>{k.dir !== 'range' && <label className="row small" style={{ gap: 8, whiteSpace: 'nowrap', flexWrap: 'nowrap' }}><input type="checkbox" checked={!!t.monthly || open === k.id} onChange={e => { if (e.target.checked) setOpen(k.id); else { setOpen(null); set(k.id, { monthly: null }, `Obiettivo ${k.label}: un solo valore`); } }} /> mese per mese</label>}</td>
               </tr>
               {(open === k.id || t.monthly) && k.dir !== 'range' && (
                 <tr className="sub-row"><td colSpan={5}>
                   <div className="row gap-s" style={{ flexWrap: 'wrap' }}>
-                    {MES.map((m, i) => { const key = String(i + 1).padStart(2, '0'); return <label key={m} className="stack xs" style={{ gap: 2, width: 76 }}><span className="muted">{m}</span><NumInput slim value={t.monthly?.[key] != null ? t.monthly[key] * sc(k) : null} decimals={2} ariaLabel={`${k.label} di ${m}`} onChange={v => set(k.id, { monthly: { ...(t.monthly || {}), [key]: v == null ? undefined : v / sc(k) } }, `Obiettivo ${k.label} di ${m}`)} /></label>; })}
+                    {MES.map((m, i) => { const key = String(i + 1).padStart(2, '0'); return <label key={m} className="stack xs" style={{ gap: 0, width: 76 }}><span className="muted">{m}</span><NumInput slim value={t.monthly?.[key] != null ? t.monthly[key] * sc(k) : null} decimals={2} ariaLabel={`${k.label} di ${m}`} onChange={v => set(k.id, { monthly: { ...(t.monthly || {}), [key]: v == null ? undefined : v / sc(k) } }, `Obiettivo ${k.label} di ${m}`)} /></label>; })}
                   </div>
-                  <p className="xs muted" style={{ marginTop: 6 }}>{k.kind === 'flow' ? 'Per i flussi il valore del mese sostituisce un dodicesimo dell’obiettivo annuo.' : 'Per i rapporti l’obiettivo del periodo è la media dei mesi pesata sulle tonnellate.'}</p>
+                  <p className="xs muted" style={{ marginTop: 8 }}>{k.kind === 'flow' ? 'Per i flussi il valore del mese sostituisce un dodicesimo dell’obiettivo annuo.' : 'Per i rapporti l’obiettivo del periodo è la media dei mesi pesata sulle tonnellate.'}</p>
                 </td></tr>
               )}
             </React.Fragment>

@@ -17,6 +17,7 @@ import { PackImage, PhotoGrid, AddPhotos } from './photos.jsx';
 
 const VERSIONS = [{ id: 'completo', label: 'Completo (direzione)' }, { id: 'clienti', label: 'Per i clienti' }];
 const uOf = p => (p?.uom === 'L' ? 'L' : 'kg');
+const cap1 = s => (s ? String(s).charAt(0).toUpperCase() + String(s).slice(1) : '');
 const doseTxt = (lo, hi, unit) => (lo == null ? '—' : `${nf(lo, lo < 1 ? 2 : 1)}${hi != null && hi !== lo ? `–${nf(hi, hi < 1 ? 2 : 1)}` : ''} ${unit || ''}`);
 const phiTxt = u => (u.phiText ? u.phiText : u.phiDays == null ? 'fioritura' : `${nf(u.phiDays)} gg`);
 
@@ -102,7 +103,7 @@ function Cover({ d, p, R, full }) {
       <div className="pr-cover">
         <PackImage d={d} p={p} />
         <div>
-          <div className="eyebrow">{String(p.category || '').toUpperCase()} · {p.formulation || p.form}</div>
+          <div className="eyebrow">{cap1(p.category)} · {p.formulation || p.form}</div>
           <h1 className="pr-title">{p.name}</h1>
           <Kv items={[
             ['Composizione', comp || (p.composition || '—')], ['Formulazione', p.formulation || p.form || '—'],

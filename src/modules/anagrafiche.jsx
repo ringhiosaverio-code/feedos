@@ -68,7 +68,7 @@ export function Anagrafiche({ d }) {
     <div className="split">
       <Panel title={COLL_LABEL[coll]} sub={`${nf((d[coll] || []).length)} record · clic su una riga per modificarla`} flush id="ana-table"
         actions={<><SearchBox value={q} onChange={setQ} placeholder="Cerca" /><Btn small kind="primary" icon={LuPlus} onClick={() => setEdit({ new: true })}>Nuovo</Btn></>}>
-        <div style={{ padding: '10px 16px' }}><Seg label="Anagrafica" value={coll} onChange={c => { setColl(c); setEdit(null); setQ(''); }} options={COLLS.map(c => ({ id: c, label: COLL_LABEL[c] }))} /></div>
+        <div style={{ padding: '8px 16px' }}><Seg label="Anagrafica" value={coll} onChange={c => { setColl(c); setEdit(null); setQ(''); }} options={COLLS.map(c => ({ id: c, label: COLL_LABEL[c] }))} /></div>
         <Table rows={rows} onRow={r => setEdit({ rec: r })} selected={edit?.rec?.id} pageSize={20} exportName={`anagrafica-${coll}`} cols={[
           ...shown.map(f => ({ key: f.key, label: f.label, align: f.type === 'number' ? 'r' : undefined, render: r => fmt(f, r), csv: r => (f.type === 'ref' ? refLabel[f.key]?.[r[f.key]] ?? r[f.key] : r[f.key]) })),
           { key: 'x', label: '', nosort: true, csv: false, render: r => <span className="row gap-s" style={{ flexWrap: 'nowrap' }}>{DRAWER[coll] && <Btn small kind="ghost" icon={LuPencil} title="Apri la scheda" onClick={e => { e.stopPropagation(); openDrawer(DRAWER[coll], r.id); }} />}<Btn small kind="ghost" icon={LuTrash2} title="Elimina" onClick={e => { e.stopPropagation(); remove(r); }} /></span> },

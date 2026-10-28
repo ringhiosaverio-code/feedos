@@ -76,7 +76,7 @@ function Sintesi() {
     <Panel title="Sintesi">
       <Empty title="Nessun dato economico">
         <p>La sintesi della direzione nasce dalle consegne (ricavi e costo effettivo dei lotti) e dai costi fissi per centro di costo. Importa le consegne o registra i primi movimenti, poi definisci i centri di costo.</p>
-        <div className="row" style={{ justifyContent: 'center', marginTop: 10 }}><Btn kind="primary" onClick={() => go('dati', 'importa')}>Importa consegne</Btn><Btn onClick={() => go('direzione', 'costi')}>Centri e costi fissi</Btn></div>
+        <div className="row" style={{ justifyContent: 'center', marginTop: 8 }}><Btn kind="primary" onClick={() => go('dati', 'importa')}>Importa consegne</Btn><Btn onClick={() => go('direzione', 'costi')}>Centri e costi fissi</Btn></div>
       </Empty>
     </Panel>
   );
@@ -179,7 +179,7 @@ function Ponte() {
     <Panel title="Scostamenti del margine">
       <Empty title="Nessun dato da confrontare">
         <p>Il ponte spiega la differenza di margine tra due periodi (volume, mix, listino, sconti, materie prime, energia e altri costi) e quadra al centesimo. Servono le consegne con i lotti, o lo storico mensile dei ricavi e dei costi.</p>
-        <div className="row" style={{ justifyContent: 'center', marginTop: 10 }}><Btn kind="primary" onClick={() => go('dati', 'importa')}>Importa consegne</Btn></div>
+        <div className="row" style={{ justifyContent: 'center', marginTop: 8 }}><Btn kind="primary" onClick={() => go('dati', 'importa')}>Importa consegne</Btn></div>
       </Empty>
     </Panel>
   );
@@ -207,7 +207,7 @@ function Ponte() {
   return (
     <>
       <Panel title="Periodi a confronto" sub="B è il periodo da spiegare, A il riferimento. Il ponte scompone M_B − M_A e quadra al centesimo.">
-        <div className="stack" style={{ gap: 12 }}>
+        <div className="stack" style={{ gap: 16 }}>
           <div className="row gap-s">
             <span className="small muted">Scorciatoie sull’ultimo mese finito ({monthLabel(lastFull, false)}):</span>
             <button className="chip outline pick" onClick={() => shortcut('prec')}>vs mese precedente</button>
@@ -243,7 +243,7 @@ function Ponte() {
       <div className="split">
         <Panel title="Ponte del margine" sub={`${LEVELS[level]} da ${lbl(PA)} a ${PB.label} · passa sopra un effetto per la formula`}>
           {hasA ? <HWaterfall steps={steps} ariaLabel="Ponte del margine" /> : <Empty title="Nessun dato nel periodo A">Scegli un altro periodo di riferimento.</Empty>}
-          <p className="dz-check" style={{ marginTop: 10 }}>Quadratura: {LEVELS[level]} A + Σ effetti − {LEVELS[level]} B = {nf(res.check, 2)} €{res.collapsed ? ` · materie prime senza dettaglio per ingrediente in ${res.collapsed} ${br.by === 'productId' ? 'prodotti' : 'chiavi'}: la variazione per t è tutta nel prezzo` : ''}</p>
+          <p className="dz-check" style={{ marginTop: 8 }}>Quadratura: {LEVELS[level]} A + Σ effetti − {LEVELS[level]} B = {nf(res.check, 2)} €{res.collapsed ? ` · materie prime senza dettaglio per ingrediente in ${res.collapsed} ${br.by === 'productId' ? 'prodotti' : 'chiavi'}: la variazione per t è tutta nel prezzo` : ''}</p>
         </Panel>
         <Panel title="Lettura" sub={`Soglia di materialità ${kEur(Math.max(mat.abs ?? 5000, (mat.pct ?? 2) / 100 * Math.abs(res.start)), 1)} (${nf(mat.pct ?? 2)}% del margine di A, minimo ${kEur(mat.abs ?? 5000, 0)})`}>
           <div className="dz-read">
@@ -336,7 +336,7 @@ function CostiFissi() {
       </div>
       {!centers.length ? <Panel title="Costi fissi per centro"><Empty title="Nessun centro di costo">
         <p>I costi fissi mensili si registrano per centro di costo e alimentano EBITDA ed EBIT. Si può partire dagli otto centri tipici di un mangimificio e poi rinominarli, o aggiungerli uno per uno qui sotto.</p>
-        <div className="row" style={{ justifyContent: 'center', marginTop: 10 }}><Btn kind="primary" icon={LuPlus} onClick={() => { if (store.batch([{ kind: 'addMany', coll: 'costCenters', objs: COST_CENTERS.map(c => ({ ...c })) }], 'Centri di costo tipici di un mangimificio') !== false) toast('8 centri di costo aggiunti', 'ok', { label: 'Annulla', fn: () => store.undo() }); }}>Usa gli 8 centri tipici</Btn></div>
+        <div className="row" style={{ justifyContent: 'center', marginTop: 8 }}><Btn kind="primary" icon={LuPlus} onClick={() => { if (store.batch([{ kind: 'addMany', coll: 'costCenters', objs: COST_CENTERS.map(c => ({ ...c })) }], 'Centri di costo tipici di un mangimificio') !== false) toast('8 centri di costo aggiunti', 'ok', { label: 'Annulla', fn: () => store.undo() }); }}>Usa gli 8 centri tipici</Btn></div>
       </Empty></Panel> : (
         <Panel title={`Costi fissi ${kind === 'budget' ? 'di budget' : 'a consuntivo'} ${year}`} sub={kind === 'consuntivo' ? 'Importi mensili in euro per centro di costo; i mesi chiusi sono bloccati (si riaprono da Chiusura del mese). Un mese senza consuntivo usa il budget (in grigio nelle caselle vuote) o la media degli ultimi 12 mesi, segnato «stimato».' : verLocked ? `Versione ${version} approvata: bloccata. Per cambiare i costi fissi di budget crea una revisione da Direzione › Budget.` : `Budget della versione ${version} (bozza): si può correggere anche nei mesi chiusi.`} flush className="dz-grid">
           <div className="tw">
@@ -363,7 +363,7 @@ function CostiFissi() {
               </tbody>
             </table>
           </div>
-          {partial.length > 0 && <div className="note warn" style={{ margin: '10px 14px 14px' }}>
+          {partial.length > 0 && <div className="note warn" style={{ margin: '8px 16px 16px' }}>
             Consuntivo parziale in {partial.map(m => monthLabel(m, false)).join(', ')}: nel conto economico di quel mese i centri senza importo valgono zero, perché il budget o la media sostituiscono solo i mesi senza alcun consuntivo. Completa i centri mancanti (o cancella gli importi del mese per tornare alla stima).
           </div>}
         </Panel>
@@ -451,7 +451,7 @@ function TrialBalance({ d, today }) {
   return (
     <Panel title="Importa dal bilancio di verifica" sub="Incolla o carica l’estratto mensile (conto; descrizione; importo): ogni conto si assegna a un centro una volta sola" className="dz-paste"
       actions={<label className="btn small"><LuUpload aria-hidden="true" />File CSV<input type="file" accept=".csv,.txt" onChange={onFile} style={{ display: 'none' }} /></label>}>
-      <div className="stack" style={{ gap: 10 }}>
+      <div className="stack" style={{ gap: 8 }}>
         <div className="row"><Field label="Mese (se il file non lo indica)"><input type="month" className="input slim" value={month} max={today.slice(0, 7)} onChange={e => e.target.value && setMonth(e.target.value)} /></Field></div>
         <textarea className="input" aria-label="Estratto del bilancio di verifica" placeholder={'conto;descrizione;importo\n6101;Salari e stipendi;41250,00\n6305;Manutenzioni;12800,50'} value={text} onChange={e => setText(e.target.value)} />
         {parsed && !parsed.ok && <div className="note warn">Servono almeno le colonne «conto» e «importo» (oppure «dare» e «avere»).</div>}
@@ -481,7 +481,7 @@ function CloseBody({ box, blocking }) {
   const [v, setV] = useState(() => ({ sintesi: '', conto: '', ponte: '', budget: '', force: false, note: '', ...(box.current || {}) }));
   const set = patch => { const n = { ...v, ...patch }; setV(n); box.current = n; };
   return (
-    <div className="stack" style={{ gap: 10 }}>
+    <div className="stack" style={{ gap: 8 }}>
       <p>I numeri del mese vengono congelati: consegne, lavorazioni, costi fissi a consuntivo, fatture e incassi del mese non si potranno più modificare senza riaprirlo. Rilascio e blocco dei lotti restano possibili.</p>
       {['sintesi', 'conto', 'ponte', 'budget'].map(k => (
         <Field key={k} label={`Commento · ${{ sintesi: 'sintesi', conto: 'conto economico', ponte: 'scostamenti', budget: 'budget' }[k]}`}><textarea className="input" rows={2} value={v[k]} onChange={e => set({ [k]: e.target.value })} /></Field>
@@ -499,7 +499,7 @@ function CloseBody({ box, blocking }) {
 function ReopenBody({ box, after }) {
   const [v, setV] = useState(() => String(box.current || ''));
   return (
-    <div className="stack" style={{ gap: 10 }}>
+    <div className="stack" style={{ gap: 8 }}>
       <p>Riaprendo il mese i movimenti tornano modificabili e i numeri congelati non valgono più finché non lo si richiude. La nota resta nel registro delle modifiche.</p>
       {after.length > 0 && <div className="note warn">I mesi si chiudono in ordine: si riaprono anche {after.length === 1 ? monthLabel(after[0], false) : `i ${after.length} mesi chiusi dopo (fino a ${monthLabel(after[after.length - 1], false)})`}, da richiudere uno alla volta.</div>}
       <Field label="Nota (obbligatoria)"><textarea className="input" rows={3} value={v} autoFocus onChange={e => { setV(e.target.value); box.current = e.target.value; }} placeholder="Es. nota di credito tardiva al cliente…" /></Field>
@@ -583,7 +583,7 @@ function Chiusura({ sel }) {
           actions={<div className="row gap-s"><Chip kind={st[0]} icon={isClosed ? LuSnowflake : undefined}>{st[1]}</Chip>
             {isClosed && ct && m <= ct && <Btn small icon={LuLockOpen} onClick={() => doReopen()}>Riapri</Btn>}
             {!isClosed && <Btn small kind="primary" icon={LuLock} onClick={() => doClose()} disabled={!canClose} title={canClose ? undefined : 'Il mese deve essere finito e il mese precedente chiuso'}>Chiudi il mese</Btn>}</div>}>
-          <div className="stack" style={{ gap: 12 }}>
+          <div className="stack" style={{ gap: 16 }}>
             {s && <div className="kpis">
               <Kpi label="Ricavi netti" {...money(rec?.status === 'chiuso' ? rec.pnl?.revenue : s.revenue)} cmp={kcm(s.revenue, ps?.revenue)} foot={`${nf(rec?.status === 'chiuso' ? rec.pnl?.tonnes : s.tonnes)} t`} />
               <Kpi label="MdC II" value={perT(rec?.status === 'chiuso' ? rec.kpis?.mdc2T : s.mdc2T)} unit={PM_LABEL} cmp={kcm(s.mdc2T, ps?.mdc2T, false)} foot={eurTxt(rec?.status === 'chiuso' ? rec.pnl?.mc2 : s.mdc2)} />

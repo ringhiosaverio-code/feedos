@@ -124,9 +124,9 @@ function Settimana({ d, today }) {
   const incoming = d.purchases.filter(p => p.status !== 'ricevuto' && p.status !== 'annullato' && p.deliveryDate <= addDays(today, 7)).sort((a, b) => a.deliveryDate < b.deliveryDate ? -1 : 1);
   return (
     <Panel title="Questa settimana" sub={`Settimana dal ${dateIt(w0, 'dm')}`}>
-      <div className="stack" style={{ gap: 12 }}>
+      <div className="stack" style={{ gap: 16 }}>
         {rows.map(r => (
-          <div key={r.l.id} className="grid" style={{ gap: 4 }}>
+          <div key={r.l.id} className="grid" style={{ gap: 8 }}>
             <div className="row between small"><b>{r.l.name}</b><span className="num">{nf(r.t)} t · {nf(r.u * 100)}%</span></div>
             <div className="bar-cell" title={`Carico ${nf(r.u * 100)}% della capacità utile`}><i style={{ width: Math.min(100, r.u * 100) + '%', background: r.u > 1 ? 'var(--crit)' : r.u > 0.9 ? 'var(--serious)' : 'var(--s1)' }} /></div>
           </div>
@@ -167,7 +167,7 @@ function Attivita({ d, today }) {
         ]} />
       </Panel>
       <Panel title="Nuova attività">
-        <form className="stack" style={{ gap: 12 }} onSubmit={add}>
+        <form className="stack" style={{ gap: 16 }} onSubmit={add}>
           <Field label="Cosa fare"><input className="input" value={title} onChange={e => setTitle(e.target.value)} placeholder="Es. verificare il contratto soia" id="task-title" /></Field>
           <Field label="Responsabile"><Select value={owner} onChange={setOwner} options={['Direzione', 'Acquisti', 'Formulazione', 'Produzione', 'Qualità', 'Commerciale', 'Manutenzione']} id="task-owner" /></Field>
           <Field label="Scadenza"><input type="date" className="input" value={due} onChange={e => setDue(e.target.value)} id="task-due" /></Field>

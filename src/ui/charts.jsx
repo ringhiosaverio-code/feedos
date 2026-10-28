@@ -75,13 +75,13 @@ export function LineChart({ series, labels, height = 220, unit = '', decimals = 
         {series.map((s, k) => (
           <g key={s.key || k}>
             {area && series.length === 1 && lastIdx(s.values) >= 0 && <path d={path(s.values) + `L${x(lastIdx(s.values))} ${height - padB}L${x(firstIdx(s.values))} ${height - padB}Z`} fill={s.color} opacity=".08" />}
-            {lastIdx(s.values) >= 0 && <path d={path(s.values)} fill="none" stroke={s.color} strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" strokeDasharray={s.dashed ? '5 4' : undefined} />}
-            {markLast && lastIdx(s.values) >= 0 && <><circle cx={x(lastIdx(s.values))} cy={y(s.values[lastIdx(s.values)])} r="4" fill={s.color} stroke="var(--surface)" strokeWidth="2" />
+            {lastIdx(s.values) >= 0 && <path d={path(s.values)} fill="none" stroke={s.color} strokeWidth="1.5" strokeLinejoin="round" strokeLinecap="round" strokeDasharray={s.dashed ? '5 4' : undefined} />}
+            {markLast && lastIdx(s.values) >= 0 && <><circle cx={x(lastIdx(s.values))} cy={y(s.values[lastIdx(s.values)])} r="3" fill={s.color} stroke="var(--surface)" strokeWidth="1.5" />
               {series.length <= 3 && <text x={x(lastIdx(s.values)) + 8} y={y(s.values[lastIdx(s.values)]) + 4} className="lbl-strong">{nf(s.values[lastIdx(s.values)], decimals)}</text>}</>}
           </g>
         ))}
         {hover != null && <g><line x1={x(hover)} x2={x(hover)} y1={padT} y2={height - padB} stroke="var(--ink-2)" strokeWidth="1" opacity=".45" />
-          {series.map((s, k) => s.values[hover] != null && <circle key={k} cx={x(hover)} cy={y(s.values[hover])} r="4.5" fill={s.color} stroke="var(--surface)" strokeWidth="2" />)}</g>}
+          {series.map((s, k) => s.values[hover] != null && <circle key={k} cx={x(hover)} cy={y(s.values[hover])} r="3.5" fill={s.color} stroke="var(--surface)" strokeWidth="1.5" />)}</g>}
       </svg>
       <Tip tip={tip} />
     </div>
@@ -186,7 +186,7 @@ export function StackBar({ parts, height = 22, showLabels = true, ariaLabel, uni
           return (
             <g key={p.key || i} onPointerEnter={() => setHover(i)}>
               <rect x={x0 + (i ? 1 : 0)} y="0" width={Math.max(0, w - (i ? 2 : 0))} height={height} rx={i === 0 || i === parts.length - 1 ? 4 : 0} fill={p.color} opacity={hover == null || hover === i ? 1 : .7} />
-              {fits && <text x={x0 + 8} y={height / 2 + 4} style={{ fill: '#fff', fontWeight: 700 }}>{label}</text>}
+              {fits && <text x={x0 + 8} y={height / 2 + 4} style={{ fill: '#fff', fontWeight: 600 }}>{label}</text>}
             </g>
           );
         })}
@@ -226,9 +226,9 @@ export function Waterfall({ steps, height = 240, unit = '€/t', decimals = 2, a
               <rect className="hit" x={padL + slot * i} y={padT} width={slot} height={height - padT - padB} />
               <rect x={cx - bw / 2} y={top} width={bw} height={h} rx="3" fill={b.color || col} opacity={hover == null || hover === i ? 1 : .6} />
               {i < n - 1 && <line x1={cx + bw / 2} x2={cx + slot - bw / 2} y1={y(b.to)} y2={y(b.to)} stroke="var(--axis)" strokeWidth="1" />}
-              <text x={cx} y={top - 5} textAnchor="middle" className="lbl-strong" style={{ fontSize: 11 }}>{b.kind === 'total' ? nf(b.value, labelDec ?? 0) : (b.value > 0 ? '+' : '−') + nf(Math.abs(b.value), labelDec ?? (b.value > -10 && b.value < 10 ? 1 : 0))}</text>
-              <text x={cx} y={height - 24} textAnchor="middle" className="lbl-ink" style={{ fontSize: 10.5 }}>{wrap(b.label)[0]}</text>
-              <text x={cx} y={height - 11} textAnchor="middle" className="lbl-ink" style={{ fontSize: 10.5 }}>{wrap(b.label)[1]}</text>
+              <text x={cx} y={top - 5} textAnchor="middle" className="lbl-strong" style={{ fontSize: 12 }}>{b.kind === 'total' ? nf(b.value, labelDec ?? 0) : (b.value > 0 ? '+' : '−') + nf(Math.abs(b.value), labelDec ?? (b.value > -10 && b.value < 10 ? 1 : 0))}</text>
+              <text x={cx} y={height - 24} textAnchor="middle" className="lbl-ink" style={{ fontSize: 12 }}>{wrap(b.label)[0]}</text>
+              <text x={cx} y={height - 11} textAnchor="middle" className="lbl-ink" style={{ fontSize: 12 }}>{wrap(b.label)[1]}</text>
             </g>
           );
         })}
@@ -260,8 +260,8 @@ export function Tornado({ rows, base, unit = '', decimals = 2, ariaLabel }) {
             <g key={i}>
               <text x={LW - 8} y={y0 + 15} textAnchor="end" className="lbl-ink">{trunc(r.label, Math.floor(LW / 6.3))}</text>
               <rect x={x(a)} y={y0 + 4} width={Math.max(2, x(b) - x(a))} height="16" rx="4" fill="var(--s1)" opacity=".85" />
-              <text x={x(a) - 5} y={y0 + 16} textAnchor="end" style={{ fontSize: 10.5 }}>{nf(a, decimals)}</text>
-              <text x={x(b) + 5} y={y0 + 16} style={{ fontSize: 10.5 }}>{nf(b, decimals)}</text>
+              <text x={x(a) - 5} y={y0 + 16} textAnchor="end" style={{ fontSize: 12 }}>{nf(a, decimals)}</text>
+              <text x={x(b) + 5} y={y0 + 16} style={{ fontSize: 12 }}>{nf(b, decimals)}</text>
             </g>
           );
         })}
@@ -289,12 +289,12 @@ export function Frontier({ points, current, xLabel, yLabel, xDec = 0, yDec = 2, 
         {tx.map(t => <text key={'x' + t} x={x(t)} y={height - 22} textAnchor="middle">{nf(t, dec(tx[1] - tx[0]))}</text>)}
         <text x={(padL + W - padR) / 2} y={height - 5} textAnchor="middle" className="lbl-ink">{xLabel}</text>
         <text x={padL - 6} y={10} textAnchor="end" className="lbl-ink">{yLabel}</text>
-        <path d={sorted.map((p, i) => (i ? 'L' : 'M') + x(p.x) + ' ' + y(p.y)).join('')} fill="none" stroke="var(--s3)" strokeWidth="2" />
+        <path d={sorted.map((p, i) => (i ? 'L' : 'M') + x(p.x) + ' ' + y(p.y)).join('')} fill="none" stroke="var(--s3)" strokeWidth="1.5" />
         {current && <g><path d={`M${x(current.x)} ${y(current.y) - 7}L${x(current.x) + 7} ${y(current.y)}L${x(current.x)} ${y(current.y) + 7}L${x(current.x) - 7} ${y(current.y)}Z`} fill="var(--maize)" stroke="var(--surface)" strokeWidth="2" /><text x={x(current.x) - 10} y={y(current.y) - 9} textAnchor="end" className="lbl-strong">{current.label}</text></g>}
         {points.map((p, i) => (
           <g key={i} onPointerEnter={() => setHover(i)} onClick={onPick ? () => onPick(p, i) : undefined} style={{ cursor: onPick ? 'pointer' : undefined }}>
             <circle cx={x(p.x)} cy={y(p.y)} r="13" className="hit" />
-            <circle cx={x(p.x)} cy={y(p.y)} r={p.active ? 6.5 : 4.5} fill={p.active ? 'var(--maize)' : 'var(--s3)'} stroke="var(--surface)" strokeWidth="2" />
+            <circle cx={x(p.x)} cy={y(p.y)} r={p.active ? 6.5 : 4.5} fill={p.active ? 'var(--maize)' : 'var(--s3)'} stroke="var(--surface)" strokeWidth="1.5" />
           </g>
         ))}
       </svg>
@@ -353,7 +353,7 @@ export function Sankey({ nodes, links, height = 260, unit = '', decimals = 0, ar
             <g key={n.id}>
               <rect x={p.x} y={p.y} width={L.nodeW} height={Math.max(2, p.h)} rx="3" fill={n.color || 'var(--ink-2)'} />
               <text x={right ? p.x - 6 : p.x + L.nodeW + 6} y={L.labelY[n.id] - 2} textAnchor={right ? 'end' : 'start'} className="lbl-ink">{n.label}</text>
-              <text x={right ? p.x - 6 : p.x + L.nodeW + 6} y={L.labelY[n.id] + 11} textAnchor={right ? 'end' : 'start'} style={{ fontSize: 10.5 }}>{nf(L.val[n.id], decimals)} {unit}</text>
+              <text x={right ? p.x - 6 : p.x + L.nodeW + 6} y={L.labelY[n.id] + 11} textAnchor={right ? 'end' : 'start'} style={{ fontSize: 12 }}>{nf(L.val[n.id], decimals)} {unit}</text>
             </g>
           );
         })}

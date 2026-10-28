@@ -55,11 +55,11 @@ export function Pareggio({ d }) {
           <LineChart labels={series.map(m => monthLabel(m.month))} height={250} unit="%" decimals={0}
             series={[{ key: 'mos', label: 'Margine di sicurezza', color: 'var(--s1)', values: series.map(m => (m.tonnes && !m.open && (m.cov ?? 1) >= 0.9 ? m.mos * 100 : null)) }]}
             refs={[{ y: 0, label: 'pareggio', kind: 'muted' }]} ariaLabel="Margine di sicurezza mensile" />
-          <p className="small muted" style={{ marginTop: 6 }}>{series.some(m => m.open || (m.cov ?? 1) < 0.9) ? `Esclusi i mesi parziali: ${series.filter(m => m.open || (m.cov ?? 1) < 0.9).map(m => monthLabel(m.month, false)).join(', ')}.` : ''} Pareggio mensile da {nf(Math.min(...series.filter(m => m.bepT > 0 && !m.open && (m.cov ?? 1) >= 0.9).map(m => m.bepT)))} a {nf(Math.max(...series.filter(m => m.bepT > 0 && !m.open && (m.cov ?? 1) >= 0.9).map(m => m.bepT)))} t.</p>
+          <p className="small muted" style={{ marginTop: 8 }}>{series.some(m => m.open || (m.cov ?? 1) < 0.9) ? `Esclusi i mesi parziali: ${series.filter(m => m.open || (m.cov ?? 1) < 0.9).map(m => monthLabel(m.month, false)).join(', ')}.` : ''} Pareggio mensile da {nf(Math.min(...series.filter(m => m.bepT > 0 && !m.open && (m.cov ?? 1) >= 0.9).map(m => m.bepT)))} a {nf(Math.max(...series.filter(m => m.bepT > 0 && !m.open && (m.cov ?? 1) >= 0.9).map(m => m.bepT)))} t.</p>
         </Panel>
       </div>
       <Panel title="Struttura dei costi" sub={`Variabili ${kEur(cs.variable)} (${pct(cs.variable / (cs.variable + cs.cf), 0)}) e fissi ${kEur(cs.cf)} per centro di costo`}>
-        <div className="stack" style={{ gap: 12 }}>
+        <div className="stack" style={{ gap: 16 }}>
           <div><span className="eyebrow">Costi variabili</span><StackBar parts={varParts} ariaLabel="Composizione dei costi variabili" /><Legend items={varParts.map(p => ({ label: `${p.label} ${kEur(p.value, 0)}`, color: p.color }))} /></div>
           <div><span className="eyebrow">Costi fissi per centro</span><StackBar parts={fixParts} ariaLabel="Composizione dei costi fissi" /><Legend items={fixParts.map(p => ({ label: `${p.label} ${kEur(p.value, 0)}`, color: p.color }))} /></div>
         </div>

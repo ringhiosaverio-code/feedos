@@ -8,13 +8,10 @@ const esc = s => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').re
 const f1 = v => Math.round(v * 10) / 10;
 export const svgUrl = svg => 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
 
-function frame(body, { bg = ['#dfe9d3', '#b9cfa6'], tag = 'illustrazione dimostrativa', R }) {
-  const bokeh = Array.from({ length: 7 }, () => `<circle cx="${f1(R.range(0, W))}" cy="${f1(R.range(0, H))}" r="${f1(R.range(30, 90))}" fill="#ffffff" opacity="${f1(R.range(0.05, 0.16))}"/>`).join('');
+function frame(body, { bg = ['#E6EBE0'], tag = 'illustrazione dimostrativa' }) {
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}">`
-    + `<defs><linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${bg[0]}"/><stop offset="1" stop-color="${bg[1]}"/></linearGradient>`
-    + '<radialGradient id="sh" cx="0.35" cy="0.3" r="0.8"><stop offset="0" stop-color="#fff" stop-opacity="0.55"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient></defs>'
-    + `<rect width="${W}" height="${H}" fill="url(#bg)"/>${bokeh}${body}`
-    + `<rect x="${W - 168}" y="${H - 28}" width="160" height="20" rx="10" fill="#000" opacity="0.5"/><text x="${W - 88}" y="${H - 14}" font-family="sans-serif" font-size="11.5" fill="#fff" text-anchor="middle">${esc(tag)}</text></svg>`;
+    + `<rect width="${W}" height="${H}" fill="${bg[0]}"/>${body}`
+    + `<rect x="${W - 168}" y="${H - 32}" width="160" height="24" rx="12" fill="#3B3F44"/><text x="${W - 88}" y="${H - 16}" font-family="sans-serif" font-size="12" fill="#fff" text-anchor="middle">${esc(tag)}</text></svg>`;
 }
 
 // macchie e sintomi
@@ -38,7 +35,7 @@ function grappolo(R, sev, symptom) {
   const b = berries.map((o, i) => {
     const sick = hit.has(i);
     const fill = sick ? (symptom === 'oidio' ? '#9fae7c' : '#8a6f45') : '#8db35a';
-    let s = `<circle cx="${f1(o.x)}" cy="${f1(o.y)}" r="${f1(o.r)}" fill="${fill}" stroke="#5c7a36" stroke-width="0.8"/><circle cx="${f1(o.x - o.r * 0.35)}" cy="${f1(o.y - o.r * 0.35)}" r="${f1(o.r * 0.3)}" fill="#fff" opacity="0.35"/>`;
+    let s = `<circle cx="${f1(o.x)}" cy="${f1(o.y)}" r="${f1(o.r)}" fill="${fill}" stroke="#5c7a36" stroke-width="0.8"/>`;
     if (sick && symptom === 'oidio') s += powder(R, o.x, o.y, o.r);
     if (sick && symptom !== 'oidio') s += `<path d="M${f1(o.x - o.r * 0.5)} ${f1(o.y)} q ${f1(o.r * 0.5)} ${f1(-o.r * 0.4)} ${f1(o.r)} 0" stroke="#5b4528" stroke-width="1.2" fill="none"/>`;
     return s;
@@ -71,7 +68,7 @@ function olive(R, sev) {
     const x = 70 + (i % 8) * 46 + R.range(-6, 6), y = 170 + Math.floor(i / 8) * 80 + R.range(-8, 8);
     const sick = R.next() < sev;
     const col = R.next() < 0.3 ? '#5b3a55' : '#7f9a3a';
-    out.push(`<path d="M${f1(x)} ${f1(y - 40)} L${f1(x)} ${f1(y - 22)}" stroke="#6b5130" stroke-width="2"/><ellipse cx="${f1(x)}" cy="${f1(y)}" rx="17" ry="23" fill="${col}"/><ellipse cx="${f1(x - 6)}" cy="${f1(y - 8)}" rx="5" ry="7" fill="#fff" opacity="0.3"/>${sick ? sting(R, x + R.range(-6, 6), y + R.range(-6, 8)) : ''}`);
+    out.push(`<path d="M${f1(x)} ${f1(y - 40)} L${f1(x)} ${f1(y - 22)}" stroke="#6b5130" stroke-width="2"/><ellipse cx="${f1(x)}" cy="${f1(y)}" rx="17" ry="23" fill="${col}"/>${sick ? sting(R, x + R.range(-6, 6), y + R.range(-6, 8)) : ''}`);
   }
   return twig + out.join('');
 }
@@ -88,7 +85,7 @@ function pomodori(R, sev) {
   const fruits = Array.from({ length: 11 }, (_, i) => ({ x: 85 + i * 31 + R.range(-4, 4), y: 130 + (i % 3) * 52 + R.range(-6, 6), r: R.range(21, 26) }));
   const hit = new Set(R.shuffle(fruits.map((_, i) => i)).slice(0, Math.round(fruits.length * Math.min(1, sev * 1.1))));
   fruits.forEach((o, i) => {
-    out.push(`<path d="M${f1(o.x)} ${f1(o.y - o.r - 30)} L${f1(o.x)} ${f1(o.y - o.r)}" stroke="#4e7a2e" stroke-width="2"/><circle cx="${f1(o.x)}" cy="${f1(o.y)}" r="${f1(o.r)}" fill="#d2402c"/><circle cx="${f1(o.x - o.r * 0.35)}" cy="${f1(o.y - o.r * 0.4)}" r="${f1(o.r * 0.28)}" fill="#fff" opacity="0.35"/><path d="M${f1(o.x - 8)} ${f1(o.y - o.r + 2)} l8 -6 l8 6 l-8 -2 z" fill="#3f6a25"/>`);
+    out.push(`<path d="M${f1(o.x)} ${f1(o.y - o.r - 30)} L${f1(o.x)} ${f1(o.y - o.r)}" stroke="#4e7a2e" stroke-width="2"/><circle cx="${f1(o.x)}" cy="${f1(o.y)}" r="${f1(o.r)}" fill="#d2402c"/><path d="M${f1(o.x - 8)} ${f1(o.y - o.r + 2)} l8 -6 l8 6 l-8 -2 z" fill="#3f6a25"/>`);
     if (hit.has(i)) out.push(mold(R, o.x + R.range(-6, 6), o.y + R.range(-4, 8), o.r * 0.55));
   });
   return out.join('');
@@ -102,8 +99,8 @@ export function symptomArt(art) {
   if (!draw) return null;
   const R = rng(+art.seed || 1);
   const sev = Math.max(0, Math.min(1, +art.severity || 0));
-  const bg = art.kind === 'pomodori' ? ['#e7ecdf', '#c8d6bd'] : art.kind === 'olive' || art.kind === 'foglie-olivo' ? ['#e4e8d6', '#c6cfaa'] : ['#dfe9d3', '#b9cfa6'];
-  return svgUrl(frame(draw(R, sev, art.symptom), { bg, R }));
+  const bg = art.kind === 'pomodori' ? ['#E9ECE6'] : art.kind === 'olive' || art.kind === 'foglie-olivo' ? ['#E8EADF'] : ['#E6EBE0'];
+  return svgUrl(frame(draw(R, sev, art.symptom), { bg }));
 }
 
 const PACK_COLOR = { rameico: '#2a7f8f', zolfo: '#d9b51c', fungicida: '#2f8a4e', insetticida: '#c4472f', erbicida: '#7a6a2a', biologico: '#6fae3a', biostimolante: '#7a4fa0' };
@@ -132,8 +129,8 @@ export function packArt(p) {
   else if (fmt === 'scatola') shape = `<path d="M150 95 l90 -35 l90 35 v200 l-90 35 l-90 -35 z" fill="#f4f6f3" stroke="#9aa59a" stroke-width="2"/><path d="M150 95 l90 35 l90 -35 M240 130 v200" stroke="#c7cec5" stroke-width="2" fill="none"/>`;
   else shape = `<path d="M150 70 q90 -18 180 0 l12 250 q-102 22 -204 0 z" fill="#f4f6f3" stroke="#9aa59a" stroke-width="2"/><path d="M150 82 q90 -16 180 0" stroke="#c7cec5" stroke-width="3" fill="none"/>`;
   const label = `<rect x="158" y="150" width="164" height="110" rx="8" fill="#fff" stroke="${col}" stroke-width="2"/><rect x="158" y="150" width="164" height="26" rx="8" fill="${col}"/>`
-    + `<text x="240" y="168" font-family="sans-serif" font-size="11" fill="#fff" text-anchor="middle">${esc(String(p?.category || '').toUpperCase())}</text>`
-    + `<text x="240" y="210" font-family="sans-serif" font-weight="700" font-size="${fs}" fill="#1f2a22" text-anchor="middle">${name}</text>`
+    + `<text x="240" y="168" font-family="sans-serif" font-size="11" fill="#fff" text-anchor="middle">${esc(String(p?.category || '').replace(/^./, c => c.toLocaleUpperCase('it')))}</text>`
+    + `<text x="240" y="210" font-family="sans-serif" font-weight="600" font-size="${fs}" fill="#1f2a22" text-anchor="middle">${name}</text>`
     + `<text x="240" y="238" font-family="sans-serif" font-size="12" fill="#55605a" text-anchor="middle">${size}</text>`;
-  return svgUrl(frame(shape + label, { bg: ['#eef1ec', '#d6ddd3'], R }));
+  return svgUrl(frame(shape + label, { bg: ['#ECEEEF'] }));
 }

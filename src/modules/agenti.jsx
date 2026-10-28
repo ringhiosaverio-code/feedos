@@ -75,7 +75,7 @@ function SchemeEditor({ d, a }) {
         <Field label="Maturazione"><Seg options={[{ id: 'fatturato', label: 'Al fatturato' }, { id: 'incasso', label: 'All’incasso' }]} value={s.accrual} onChange={v => set({ accrual: v })} label="Maturazione" /></Field>
         <Field label="Mandato"><Seg options={[{ id: 'mono', label: 'Mono' }, { id: 'pluri', label: 'Pluri' }]} value={s.mandate || 'mono'} onChange={v => set({ mandate: v })} label="Mandato" /></Field>
       </div>
-      <div className="small" style={{ fontWeight: 600, marginTop: 6 }}>Scaglioni sul fatturato da inizio anno</div>
+      <div className="small" style={{ fontWeight: 600, marginTop: 8 }}>Scaglioni sul fatturato da inizio anno</div>
       {s.tiers.map((t, i) => (
         <div key={i} className="row" style={{ flexWrap: 'nowrap' }}>
           <span className="small muted">da</span><NumInput value={t.from} decimals={0} min={0} onChange={v => setS(x => ({ ...x, tiers: x.tiers.map((y, j) => (j === i ? { ...y, from: v } : y)) }))} ariaLabel={`Soglia dello scaglione ${i + 1}`} />
@@ -84,7 +84,7 @@ function SchemeEditor({ d, a }) {
         </div>
       ))}
       <Btn small kind="ghost" icon={LuPlus} onClick={() => setS(x => ({ ...x, tiers: [...x.tiers, { from: (x.tiers.at(-1)?.from || 0) + 1000000, pct: x.basePct }] }))}>Aggiungi scaglione</Btn>
-      <div className="small" style={{ fontWeight: 600, marginTop: 6 }}>Eccezioni per prodotto</div>
+      <div className="small" style={{ fontWeight: 600, marginTop: 8 }}>Eccezioni per prodotto</div>
       {Object.entries(s.byProduct).map(([code, v]) => (
         <div key={code} className="row" style={{ flexWrap: 'nowrap' }}>
           <span className="code">{code}</span><span className="small">{products.find(p => p.code === code || p.id === code)?.name || ''}</span>

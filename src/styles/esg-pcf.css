@@ -2,21 +2,21 @@
  * Il file viene incluso da build.mjs senza import. Chiaro e scuro, da 390 a 1440 px senza sbordi. */
 .epc { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; min-width: 0; }
 .epc > *, .epc .split > *, .epc .stack > *, .epc .grid > *, .epc .pp-grid > * { min-width: 0; }
-.epc-mt { margin-top: 10px; }
+.epc-mt { margin-top: 8px; }
 .epc-m0 { margin: 0; }
-.epc-pad { padding: 12px 16px; }
-.epc-h3 { margin: 14px 0 6px; font-size: 12px; font-weight: 700; letter-spacing: .03em; text-transform: uppercase; color: var(--ink-2); }
+.epc-pad { padding: 16px 16px; }
+.epc-h3 { margin: 16px 0 8px; font-size: 12px; font-weight: 600; color: var(--ink-2); }
 .epc-wrap { display: block; white-space: normal; min-width: 140px; max-width: 46ch; overflow-wrap: anywhere; }
-.epc-nowrap { flex-wrap: nowrap; gap: 4px; }
-.epc-card-sig { margin: 2px 0 0; font-size: 12px; color: var(--warn-ink); overflow-wrap: anywhere; }
+.epc-nowrap { flex-wrap: nowrap; gap: 8px; }
+.epc-card-sig { margin: 0 0 0; font-size: 12px; color: var(--warn-ink); overflow-wrap: anywhere; }
 .epc-bar { flex-wrap: wrap; gap: 8px; }
 .epc-bar > .row { flex-wrap: wrap; }
-.epc-alert { display: flex; gap: 6px; align-items: flex-start; flex-wrap: wrap; }
-.epc-alert svg { flex: 0 0 auto; margin-top: 2px; color: var(--warn-ink); }
-.epc-ta { width: 100%; height: auto; min-height: 84px; margin-top: 8px; padding: 8px 10px; resize: vertical; font: 12px/1.45 var(--f-mono); }
+.epc-alert { display: flex; gap: 8px; align-items: flex-start; flex-wrap: wrap; }
+.epc-alert svg { flex: 0 0 auto; margin-top: 0; color: var(--warn-ink); }
+.epc-ta { width: 100%; height: auto; min-height: 84px; margin-top: 8px; padding: 8px 8px; resize: vertical; font: 12px/1.45 var(--f-mono); }
 
 /* scheda ambientale (eredita .passport e .pp-* dal vecchio passaporto) */
-.epc-sheet .pp-big .chart { margin-top: 6px; }
+.epc-sheet .pp-big .chart { margin-top: 8px; }
 .epc-sheet .pp-grid .kv { font-size: 13px; }
 .epc-sheet .pp-head h2 { overflow-wrap: anywhere; }
 .epc-sheet .esh-disc { margin: 0; }
@@ -24,21 +24,21 @@
 /* banda P10-P90 nella tabella del portafoglio */
 .epc-band { position: relative; display: inline-block; width: 120px; max-width: 100%; height: 10px; border-radius: 5px; background: var(--surface-3); vertical-align: middle; }
 .epc-band-r { position: absolute; top: 0; bottom: 0; border-radius: 5px; background: var(--s3); opacity: .45; }
-.epc-band-v { position: absolute; top: -2px; width: 3px; height: 14px; margin-left: -1px; border-radius: 2px; background: var(--ink); }
+.epc-band-v { position: absolute; top: -2px; width: 3px; height: 14px; margin-left: 0; border-radius: 2px; background: var(--ink); }
 
 /* dichiarazione per il cliente (foglio di stampa) */
 .epc-letter .epc-l-to { margin: 0; }
-.epc-letter .epc-l-t td, .epc-letter .epc-l-t th { font-size: 12px; padding: 5px 6px; }
+.epc-letter .epc-l-t td, .epc-letter .epc-l-t th { font-size: 12px; padding: 8px 8px; }
 .epc-letter .epc-l-t tfoot td { border-top: 2px solid var(--ink); }
 .epc-refs { font-family: var(--f-mono); overflow-wrap: anywhere; color: var(--ink-2); }
 .epc-hash { overflow-wrap: anywhere; word-break: break-all; }
 .epc-letter p { margin: 0 0 8px; max-width: 92ch; line-height: 1.5; }
 
 /* elenchi */
-.epc-dates, .epc-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
-.epc-dates li { display: grid; grid-template-columns: 92px minmax(0, 1fr); column-gap: 10px; row-gap: 2px; align-items: baseline; }
+.epc-dates, .epc-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.epc-dates li { display: grid; grid-template-columns: 92px minmax(0, 1fr); column-gap: 8px; row-gap: 0; align-items: baseline; }
 .epc-dates li > span { grid-column: 2; overflow-wrap: anywhere; }
-.epc-list li { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; padding-bottom: 8px; border-bottom: 1px solid var(--line); }
+.epc-list li { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 8px; padding-bottom: 8px; border-bottom: 1px solid var(--line); }
 .epc-list li .btn { margin-left: auto; }
 .epc-dsec .row { flex-wrap: wrap; }
 
@@ -51,7 +51,7 @@
   .epc-sheet { break-inside: avoid; }
 }
 .select.epc-sel { width: auto; max-width: 320px; min-width: 0; }
-.epc-segs { display: flex; flex-wrap: wrap; gap: 12px 20px; align-items: flex-start; }
+.epc-segs { display: flex; flex-wrap: wrap; gap: 16px 24px; align-items: flex-start; }
 .epc-segs > .field { min-width: 0; }
 .epc-segs .seg { flex-wrap: wrap; }
 .epc-segs > .epc-grow { flex: 1 1 220px; }

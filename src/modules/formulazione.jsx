@@ -5,7 +5,7 @@ import { LuPlus, LuTrash2, LuLock, LuLockOpen, LuSparkles, LuCheck, LuFileText, 
 import { useData, store, toast, openDrawer, uiStore } from '../core/store.js';
 import { go } from '../core/router.js';
 import { idx, reopt, volumes, appToday, contaminantFor, costs, signals } from '../core/derived.js';
-import { nf, sum, dateIt, round, byId, norm, addDays } from '../core/util.js';
+import { nf, sum, dateIt, round, byId, norm, addDays, codeCase } from '../core/util.js';
 import { optimize, checkSpec, formulaCost, formulaCO2, coProductShare, carbonFrontier, diagnose, afb1Check, priceRange } from '../engine/formulation.js';
 import { NUTRIENTS, NUT, SPECIES, profile, onDM } from '../engine/nutrients.js';
 import { labelFor } from '../engine/label.js';
@@ -92,7 +92,7 @@ function NuovaFormula({ d }) {
     if (!spec) return;
     const r = optimize({ ingredients: d.ingredients, spec, lines: [], options: { contaminant: contaminantFor(d, { species: spec.species }) } });
     const lines = r.status === 'optimal' ? roundLines(r.lines) : [];
-    const code = 'F-' + (spec.id.replace('sp-', '').toUpperCase()) + '-' + String(d.formulas.length + 1).padStart(2, '0');
+    const code = 'F-' + codeCase(spec.id.replace('sp-', '')) + '-' + String(d.formulas.length + 1).padStart(2, '0');
     const id = store.add('formulas', { code, name: name.trim() || spec.name, specId, species: spec.species, status: 'bozza', version: 0, lines, draft: lines, history: [], approvedAt: null, approvedCost: null, createdAt: appToday(d) }, 'Nuova formula: ' + (name.trim() || spec.name));
     toast(r.status === 'optimal' ? 'Formula creata con la soluzione a costo minimo: verificala e approvala.' : 'Formula creata vuota: la specifica non ha soluzione con le materie prime attive.');
     go('formulazione', 'formule', id);
@@ -105,7 +105,7 @@ function NuovaFormula({ d }) {
           <Field label="Specifica nutrizionale"><Select value={specId} onChange={setSpecId} options={d.specs.map(s => ({ id: s.id, label: s.name }))} id="nf-spec" /></Field>
           <Field label="Nome della formula" hint="Facoltativo: di norma il nome della specifica"><input className="input" value={name} onChange={e => setName(e.target.value)} id="nf-name" /></Field>
         </div>
-        <div className="row" style={{ marginTop: 14 }}><Btn kind="primary" icon={LuSparkles} onClick={create}>Crea e ottimizza</Btn>{spec && <span className="small muted">{spec.constraints.length} vincoli nutrizionali · specie {SPECIES[spec.species]?.name}</span>}</div>
+        <div className="row" style={{ marginTop: 16 }}><Btn kind="primary" icon={LuSparkles} onClick={create}>Crea e ottimizza</Btn>{spec && <span className="small muted">{spec.constraints.length} vincoli nutrizionali · specie {SPECIES[spec.species]?.name}</span>}</div>
       </Panel>
     </>
   );
@@ -202,7 +202,7 @@ function Composition({ draft, I, d, setLine, removeLine, addLine, total, spec })
   for (const l of draft) { const c = I.ing[l.ing]?.category || 'altro'; cats[c] = (cats[c] || 0) + (+l.kg || 0); }
   return (
     <Panel title="Composizione per 1.000 kg" sub={Math.abs(total - 1000) > 0.05 ? `Totale ${nf(total, 1)} kg: ${total < 1000 ? 'mancano' : 'eccedono'} ${nf(Math.abs(1000 - total), 1)} kg` : 'Totale 1.000 kg'} flush>
-      <div style={{ padding: '0 16px 12px' }}>
+      <div style={{ padding: '0 16px 16px' }}>
         <StackBar parts={Object.entries(cats).sort((a, b) => b[1] - a[1]).map(([k, v]) => ({ key: k, label: CAT[k] || k, value: v, color: CAT_COLOR[k] || 'var(--ink-2)' }))} ariaLabel="Composizione per categoria" />
       </div>
       <div className="tw">
@@ -229,7 +229,7 @@ function Composition({ draft, I, d, setLine, removeLine, addLine, total, spec })
           <tfoot><tr><td>Totale</td><td className="r">{nf(total, 1)}</td><td className="r">{nf(total / 10, 1)}</td><td /><td className="r">{nf(formulaCost(draft, I.ing), 2)}</td><td /><td /></tr></tfoot>
         </table>
       </div>
-      <div className="row" style={{ padding: '12px 16px' }}>
+      <div className="row" style={{ padding: '16px 16px' }}>
         <select className="select" style={{ maxWidth: 320 }} value={adding} onChange={e => setAdding(e.target.value)} aria-label="Aggiungi materia prima">
           <option value="">Aggiungi una materia prima…</option>
           {Object.entries(CAT).map(([k, lab]) => <optgroup key={k} label={lab}>{avail.filter(i => i.category === k).map(i => <option key={i.id} value={i.id}>{i.name} · {nf(i.price)} €/t</option>)}</optgroup>)}
@@ -295,7 +295,7 @@ function Infeasible({ res, spec }) {
   return (
     <div className="stack" style={{ marginTop: 16 }}>
       <div className="note crit"><b>Nessuna composizione rispetta insieme tutti i vincoli.</b> {res.status === 'infeasible' ? 'Le materie prime ammesse, i loro limiti e la specifica sono incompatibili.' : res.message}</div>
-      {diag?.tips?.length > 0 && <div><div className="eyebrow" style={{ marginBottom: 6 }}>Vincoli che bloccano la soluzione</div>
+      {diag?.tips?.length > 0 && <div><div className="eyebrow" style={{ marginBottom: 8 }}>Vincoli che bloccano la soluzione</div>
         <ul className="steplist">{diag.tips.map((t, i) => { const n = NUT[t.nut]; const ex = diag.extremes[t.nut]; return <li key={i}><span>Senza il vincolo su <b>{n?.name}</b> la soluzione esiste ({nf(t.cost, 2)} €/t, {n?.short} {nf(t.reachable, n?.dec)}{n?.unit === '%' ? '%' : ' ' + n?.unit}). Con queste materie prime {n?.short} può andare da {nf(ex?.min, n?.dec)} a {nf(ex?.max, n?.dec)}.</span></li>; })}</ul></div>}
       <p className="small muted">Suggerimenti: allarga un limite, aggiungi una materia prima con il nutriente mancante o sblocca le quantità fisse.</p>
     </div>
@@ -390,13 +390,13 @@ function Cartellino({ d, f, draft, I, spec, prods }) {
   const product = prods.find(p => p.id === pid) || prods[0];
   const lot = d.lots.filter(l => l.productId === product?.id).sort((a, b) => a.date < b.date ? 1 : -1)[0];
   const L = labelFor({ product, formula: { ...f, lines: draft }, spec, ingById: I.ing, company: d.settings.company, lot });
-  const text = [`${L.title.toUpperCase()}`, L.name, '', 'COMPOSIZIONE: ' + L.composition.map(c => c.name).join(', ') + '.', '', 'COMPONENTI ANALITICI: ' + L.analytical.map(a => `${a.name} ${nf(a.value, a.name.match(/Calcio|Fosforo|Sodio|Lisina|Metionina|Magnesio/) ? 2 : 1)}%`).join('; ') + '.',
-    L.additives.length ? 'ADDITIVI (per kg): ' + L.additives.map(a => `${a.name} ${nf(a.value, a.value < 1 ? 2 : a.value < 10 ? 1 : 0)} ${a.unit.replace('/kg', '')}`).join('; ') + '.' : '', '', 'ISTRUZIONI: ' + L.use, `Lotto: ${L.lot} · Peso netto: ${L.netWeight}${L.bestBefore ? ' · Da consumarsi preferibilmente entro: ' + dateIt(L.bestBefore) : ''}`, `Stabilimento ${L.approval} · ${L.responsible}`].filter(x => x !== undefined).join('\n');
+  const text = [L.title, L.name, '', 'Composizione: ' + L.composition.map(c => c.name).join(', ') + '.', '', 'Componenti analitici: ' + L.analytical.map(a => `${a.name} ${nf(a.value, a.name.match(/Calcio|Fosforo|Sodio|Lisina|Metionina|Magnesio/) ? 2 : 1)}%`).join('; ') + '.',
+    L.additives.length ? 'Additivi (per kg): ' + L.additives.map(a => `${a.name} ${nf(a.value, a.value < 1 ? 2 : a.value < 10 ? 1 : 0)} ${a.unit.replace('/kg', '')}`).join('; ') + '.' : '', '', 'Istruzioni: ' + L.use, `Lotto: ${L.lot} · Peso netto: ${L.netWeight}${L.bestBefore ? ' · Da consumarsi preferibilmente entro: ' + dateIt(L.bestBefore) : ''}`, `Stabilimento ${L.approval} · ${L.responsible}`].filter(x => x !== undefined).join('\n');
   return (
     <div className="split">
       <div className="label-card" id="fx-label">
         <h3>{L.title}</h3>
-        <div style={{ fontWeight: 700, fontSize: 15, marginTop: 4 }}>{L.name}</div>
+        <div style={{ fontWeight: 600, fontSize: 15, marginTop: 8 }}>{L.name}</div>
         <div className="k">Composizione</div>
         <div>{L.composition.map(c => c.name).join(', ')}.</div>
         <div className="k">Componenti analitici</div>
@@ -445,7 +445,7 @@ function Storia({ d, f, I, onRestore }) {
       <Panel title="Confronto" sub="Differenze di composizione tra due versioni">
         {hist.length < 2 ? <p className="muted">Serve almeno una seconda versione.</p> : <>
           <div className="row" style={{ flexWrap: 'nowrap' }}><Select className="grow" value={a} onChange={setA} options={hist.map(h => ({ id: h.version, label: 'Versione ' + h.version }))} ariaLabel="Versione A" /><LuGitCompare aria-hidden="true" style={{ flex: 'none' }} /><Select className="grow" value={b} onChange={setB} options={hist.map(h => ({ id: h.version, label: 'Versione ' + h.version }))} ariaLabel="Versione B" /></div>
-          <div className="tw" style={{ marginTop: 12 }}><table className="t"><thead><tr><th>Materia prima</th><th className="r">v{a}</th><th className="r">v{b}</th><th className="r">Δ</th></tr></thead>
+          <div className="tw" style={{ marginTop: 16 }}><table className="t"><thead><tr><th>Materia prima</th><th className="r">v{a}</th><th className="r">v{b}</th><th className="r">Δ</th></tr></thead>
             <tbody>{ids.map(id => { const x = ha.lines.find(l => l.ing === id)?.kg || 0, y = hb.lines.find(l => l.ing === id)?.kg || 0; return <tr key={id}><td>{I.ing[id]?.name}</td><td className="r">{nf(x, 1)}</td><td className="r">{nf(y, 1)}</td><td className="r">{Math.abs(y - x) < 0.05 ? '—' : (y > x ? '+' : '−') + nf(Math.abs(y - x), 1)}</td></tr>; })}</tbody></table></div>
         </>}
       </Panel>
@@ -500,11 +500,11 @@ function Specifiche({ d, id }) {
               <td><button className="btn ghost small icon" title="Togli il vincolo" onClick={() => upd(s => ({ ...s, constraints: s.constraints.filter((_, k) => k !== i) }), `Specifica ${spec.name}: vincolo rimosso`)}><LuTrash2 /></button></td></tr>
           ))}</tbody>
         </table></div>
-        <div className="row" style={{ marginTop: 12 }}>
+        <div className="row" style={{ marginTop: 16 }}>
           <select className="select" style={{ maxWidth: 280 }} value={addNut} onChange={e => setAddNut(e.target.value)} aria-label="Nuovo vincolo"><option value="">Aggiungi un vincolo…</option>{NUTRIENTS.filter(n => n.id !== 'AFB1' && !spec.constraints.some(c => c.nut === n.id)).map(n => <option key={n.id} value={n.id}>{n.name}</option>)}</select>
           <Btn icon={LuPlus} disabled={!addNut} onClick={() => { upd(s => ({ ...s, constraints: [...s.constraints, { nut: addNut, min: null, max: null, basis: 'tq' }] }), `Specifica ${spec.name}: nuovo vincolo`); setAddNut(''); }}>Aggiungi</Btn>
         </div>
-        <div className="eyebrow" style={{ margin: '18px 0 8px' }}>Limiti delle materie prime (kg/t)</div>
+        <div className="eyebrow" style={{ margin: '16px 0 8px' }}>Limiti delle materie prime (kg/t)</div>
         <div className="row gap-s">{Object.entries(spec.ingLimits || {}).map(([ing, l]) => <span key={ing} className="chip outline">{d.ingredients.find(i => i.id === ing)?.name}: {l.min != null ? `${l.min}–` : '≤ '}{l.max ?? '∞'}</span>)}</div>
       </Panel>}
     </div>

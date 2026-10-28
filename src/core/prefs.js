@@ -6,8 +6,8 @@ import { useSyncExternalStore, useCallback, useRef } from 'react';
 const KEY = (EDITION.storageKey || 'feedos16') + '.prefs';
 const deepFreeze = o => { for (const v of Object.values(o)) if (v && typeof v === 'object') deepFreeze(v); return Object.freeze(o); };
 
-/** Periodo di partenza (core/period.js lo riesporta come DEFAULT_SPEC). */
-export const DEFAULT_PERIOD = deepFreeze({ preset: '12m', from: null, to: null, compare: 'prec' });
+/** Periodo di partenza (core/period.js lo riesporta come DEFAULT_SPEC): l'ultimo mese chiuso confrontato con il mese prima. */
+export const DEFAULT_PERIOD = deepFreeze({ preset: 'mese-chiuso', from: null, to: null, compare: 'prec' });
 export const PREF_DEFAULTS = deepFreeze({
   theme: 'auto', size: 'normale', role: 'direzione', agentId: null, period: DEFAULT_PERIOD,
   lastSeenAt: null, lastBackupAt: null, tableViews: {},

@@ -212,12 +212,12 @@ function Scenari({ d }) {
       </div>
       <div className="split r">
         <Panel title="Ipotesi" sub="Variazioni rispetto a oggi" id="eco-controls" actions={<Btn small kind="ghost" icon={LuRotateCcw} onClick={() => setSc(EMPTY)} disabled={!changed}>Azzera</Btn>}>
-          <div className="stack" style={{ gap: 14 }}>
+          <div className="stack" style={{ gap: 16 }}>
             <div className="eyebrow">Prezzi delle materie prime</div>
             {CAT.map(([k, l]) => <Slider key={k} label={l} value={sc.byCategory[k] || 0} onChange={v => setCat(k, v)} min={-30} max={30} unit="%" />)}
             <div className="grid" style={{ gridTemplateColumns: 'minmax(0,1fr) auto', gap: 8, alignItems: 'end' }}>
               <Field label="Una materia prima"><Select value={ing} onChange={setIng} options={d.ingredients.map(i => ({ id: i.id, label: i.name }))} /></Field>
-              <span className="num" style={{ paddingBottom: 8, fontWeight: 700 }}>{sf(sc.byIngredient[ing] || 0)}%</span>
+              <span className="num" style={{ paddingBottom: 8, fontWeight: 600 }}>{sf(sc.byIngredient[ing] || 0)}%</span>
             </div>
             <input type="range" className="range" min={-40} max={40} step={1} value={sc.byIngredient[ing] || 0} onChange={e => setSc(s => ({ ...s, byIngredient: { ...s.byIngredient, [ing]: +e.target.value } }))} aria-label="Variazione della materia prima scelta" />
             {Object.entries(sc.byIngredient || {}).some(([, v]) => v) && <div className="row gap-s">{Object.entries(sc.byIngredient).filter(([, v]) => v).map(([k, v]) => (
@@ -266,7 +266,7 @@ function Scenari({ d }) {
 function Slider({ label, value, onChange, min, max, step = 1, unit = '%', disabled }) {
   return (
     <div className="slider">
-      <div className="row between"><span className="small" style={{ fontWeight: 600 }}>{label}</span><span className="num" style={{ fontWeight: 700 }}>{unit === '%' ? sf(value) + '%' : nf(value)}</span></div>
+      <div className="row between"><span className="small" style={{ fontWeight: 600 }}>{label}</span><span className="num" style={{ fontWeight: 600 }}>{unit === '%' ? sf(value) + '%' : nf(value)}</span></div>
       <input type="range" className="range" min={min} max={max} step={step} value={value} disabled={disabled} onChange={e => onChange(+e.target.value)} aria-label={label} />
     </div>
   );
@@ -333,7 +333,7 @@ function Previsioni({ d, sel }) {
           <Legend items={[{ label: 'Consegne', color: 'var(--s1)', line: true }, { label: 'Previsione', color: 'var(--s2)', line: true }, { label: 'Piano', color: 'var(--s3)', line: true }]} />
         </Panel>
         <Panel title="Lettura" sub="Metodo classico e verificabile, non una scatola nera">
-          <div className="stack" style={{ gap: 12 }}>
+          <div className="stack" style={{ gap: 16 }}>
             <Kv items={[['Modello scelto', MODEL_LABEL[cur.fc.model] || cur.fc.model], ['Previsione 8 settimane', `${nf(cur.fc8)} t`], ['Piano 8 settimane', `${nf(cur.plan8)} t (${sf(cur.gap * 100)}%, ${sf((cur.gapEur || 0) / 1000, 0)} k€ ai prezzi netti)`], ['Errore a un passo (selezione)', cur.fc.mape != null ? `${nf(cur.fc.mape * 100, 1)}% contro ${cur.fc.benchmarkMape != null ? nf(cur.fc.benchmarkMape * 100, 1) + '%' : '—'} della media mobile a 4 settimane` : '—'], ['Errore sulle ultime 4 settimane', cur.fc.holdoutMape != null ? `${nf(cur.fc.holdoutMape * 100, 1)}% (escluse dalla scelta)` : '—']]} />
             <div className={`note ${Math.abs(cur.gap) > 0.1 ? 'maize' : 'good'}`}>{Math.abs(cur.gap) > 0.1 ? `Il piano è ${cur.gap > 0 ? 'sopra' : 'sotto'} la previsione del ${nf(Math.abs(cur.gap) * 100)}%: ${cur.gap > 0 ? 'rischio di scorte di prodotto finito e di acquisti anticipati' : 'rischio di mancate consegne'}. Verificare con il commerciale.` : 'Piano e previsione sono coerenti (differenza entro il 10%).'}</div>
             <p className="small muted">FeedOS confronta metodo ingenuo, media mobile, livellamento esponenziale semplice e con tendenza smorzata, e sceglie quello con l’errore minore sulle settimane passate; la banda P10–P90 viene dagli errori osservati e non scende sotto zero. La stagionalità si attiva con almeno due anni di storico settimanale.</p>

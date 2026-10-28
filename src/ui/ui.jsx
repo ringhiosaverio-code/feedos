@@ -77,11 +77,13 @@ export function Cls({ c }) { return <span className={`cls ${c}`} title={{ A: 'Cl
 
 const KPI_STATUS = { ok: 'In linea con l’obiettivo', warn: 'Vicino alla soglia', bad: 'Fuori obiettivo' };
 /**
- * Indicatore. Facoltativi: status 'ok'|'warn'|'bad' (pallino), target (testo «obiettivo …» nel piede),
+ * Indicatore. Facoltativi: status 'ok'|'warn'|'bad' (solo per i lettori di schermo: il numero resta senza decorazioni), target (testo «obiettivo …» nel piede),
  * cmp {value, kind: 'flow'|'ratio', good: 'up'|'down', unit, decimals, scale, label, cov, cur} confronto col periodo C:
  * il valore corrente è cmp.cur ?? raw ?? value (se numero); cov < 0,9 mostra «non confrontabile».
  */
 export function Kpi({ label, value, unit, foot, delta, deltaGood, spark, onClick, title, sparkColor, status, target, cmp, raw }) {
+  // numeri senza decorazioni: niente pallini, triangoli o mini-grafici; lo stato resta per i lettori di schermo,
+  // la variazione è testo semplice («+3,2% rispetto ad agosto»)
   const Tag = onClick ? 'button' : 'div';
   const st = KPI_STATUS[status] ? status : null;
   const cur = cmp ? cmp.cur ?? raw ?? (typeof value === 'number' ? value : null) : null;
@@ -89,18 +91,17 @@ export function Kpi({ label, value, unit, foot, delta, deltaGood, spark, onClick
   const di = cmp && !nc && cur != null && cmp.value != null ? deltaInfo(cur, cmp.value, cmp) : null;
   return (
     <Tag className={`kpi ${st ? 'kpi-' + st : ''}`} onClick={onClick} title={title} type={onClick ? 'button' : undefined}>
-      <span className="lbl">{st && <i className="kdot" role="img" aria-label={KPI_STATUS[st]} title={KPI_STATUS[st]} />}{label}</span>
+      <span className="lbl">{label}{st && <span className="sr"> ({KPI_STATUS[st]})</span>}</span>
       <span className="val">{value}{unit && <small>{unit}</small>}</span>
       <span className="foot">
         <span>
-          {delta != null && <span className={`delta ${delta >= 0 ? 'up' : 'down'} ${deltaGood == null ? '' : deltaGood ? 'good' : 'bad'}`}>{delta >= 0 ? '▲' : '▼'} {nf(Math.abs(delta), 1)}%</span>}
-          {nc && <Chip kind="outline" title={`Dati presenti solo per il ${pct(cmp.cov, 0)} del periodo di confronto`}>non confrontabile</Chip>}
-          {di && di.abs != null && <span className={`delta ${di.sign >= 0 ? 'up' : 'down'} ${di.good == null ? '' : di.good ? 'good' : 'bad'}`} title={cmp.label ? `Rispetto a ${cmp.label}` : undefined}>{di.sign > 0 ? '▲' : di.sign < 0 ? '▼' : '='} {di.text.replace(/^[+−]/, '')}</span>}
-          {di && cmp.label && <span className="cmp-l"> vs {cmp.label}</span>}
+          {delta != null && <span className={`delta ${deltaGood == null ? '' : deltaGood ? 'good' : 'bad'}`}>{delta >= 0 ? '+' : '−'}{nf(Math.abs(delta), 1)}%</span>}
+          {nc && <span className="cmp-l" title={`Dati presenti solo per il ${pct(cmp.cov, 0)} del periodo di confronto`}>non confrontabile</span>}
+          {di && di.abs != null && <span className={`delta ${di.good == null ? '' : di.good ? 'good' : 'bad'}`}>{di.sign === 0 ? '=' : di.text}</span>}
+          {di && cmp.label && <span className="cmp-l"> rispetto {/^[aeiou]/i.test(cmp.label) ? 'ad' : 'a'} {cmp.label}</span>}
           {(delta != null || nc || di) && foot ? ' · ' : ' '}{foot}
           {target && <span className="tgt">{foot || di || nc ? ' · ' : ''}obiettivo {target}</span>}
         </span>
-        {spark && <Spark values={spark} color={sparkColor} />}
       </span>
     </Tag>
   );

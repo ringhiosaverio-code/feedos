@@ -54,7 +54,7 @@ export function Fornitori({ d, sel }) {
         </Panel>
         <Panel title="Certificati e audit" sub="In scadenza nei prossimi 90 giorni">
           {certs.length ? (
-            <div className="stack" style={{ gap: 6 }}>
+            <div className="stack" style={{ gap: 8 }}>
               {certs.map(c => (
                 <button key={c.id} className="dlink" onClick={() => openDrawer('supplier', c.s.id)}>
                   <span className="code">{c.type}</span><span>{c.s.name} · {dateIt(c.expiry)}</span>
@@ -63,7 +63,7 @@ export function Fornitori({ d, sel }) {
               ))}
             </div>
           ) : <p className="small muted">Nessun certificato in scadenza.</p>}
-          {notOk.length > 0 && <div className="note warn" style={{ marginTop: 12 }}>{notOk.map(s => <div key={s.id}><b>{s.name}</b>: {APPROVAL[s.approval]?.label.toLowerCase()}{s.note ? ` — ${s.note}` : ''}</div>)}</div>}
+          {notOk.length > 0 && <div className="note warn" style={{ marginTop: 16 }}>{notOk.map(s => <div key={s.id}><b>{s.name}</b>: {APPROVAL[s.approval]?.label.toLowerCase()}{s.note ? ` — ${s.note}` : ''}</div>)}</div>}
         </Panel>
       </div>
 
@@ -150,7 +150,7 @@ function SupplierBody({ d, s }) {
   return (
     <Drawer title={s.name} sub={`Fornitore${s.code ? ' · ' + s.code : ''}${s.virtual ? ' · senza anagrafica' : ''}`} icon={<span className="dicon"><LuTruck /></span>} wide>
       {r ? (
-        <div className="kpis" style={{ marginBottom: 12 }}>
+        <div className="kpis" style={{ marginBottom: 16 }}>
           <Kpi label="Punteggio" value={r.score != null ? nf(r.score) : '—'} unit={r.cls ? `classe ${r.cls}` : ''} status={r.cls === 'A' ? 'ok' : r.cls === 'B' ? 'warn' : r.cls ? 'bad' : undefined} />
           <Kpi label="OTIF 12 mesi" value={pc(r.otif)} foot={`${nf(r.pos)} consegne · ritardo medio ${nf(r.avgDelay || 0, 1)} gg`} />
           <Kpi label="Qualità" value={nf(r.quality)} foot={`respinti ${pc(r.rejectRate, 1)}${r.afb1P95 != null ? ` · AFB1 P95 ${nf(r.afb1P95, 1)}` : ''}`} />
@@ -212,9 +212,9 @@ function SupplierEdit({ d, s, today }) {
         <Field label="Ordine minimo t"><NumInput value={f.minOrderT} onChange={v => set({ minOrderT: v })} decimals={1} /></Field>
         <Field label="Ultimo audit"><input type="date" className="input" value={f.lastAudit} max={today} onChange={e => set({ lastAudit: e.target.value })} /></Field>
       </div>
-      <label className="row small" style={{ gap: 6, margin: '8px 0' }}><input type="checkbox" checked={f.endOfMonth} onChange={e => set({ endOfMonth: e.target.checked })} /> Pagamento a fine mese</label>
+      <label className="row small" style={{ gap: 8, margin: '8px 0' }}><input type="checkbox" checked={f.endOfMonth} onChange={e => set({ endOfMonth: e.target.checked })} /> Pagamento a fine mese</label>
       <Btn small icon={LuSave} onClick={save}>Salva</Btn>
-      <div className="form" style={{ marginTop: 12 }}>
+      <div className="form" style={{ marginTop: 16 }}>
         <Field label="Certificato"><Select value={f.certType} onChange={v => set({ certType: v })} options={['GMP+', 'FAMI-QS', 'ISO 22000', 'Biologico']} /></Field>
         <Field label="Valido fino al"><input type="date" className="input" value={f.certExpiry} min={today} onChange={e => set({ certExpiry: e.target.value })} /></Field>
       </div>
