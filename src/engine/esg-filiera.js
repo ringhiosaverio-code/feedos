@@ -14,6 +14,7 @@ import { T, fmtNum, listJoin, deltaPhrase } from './esg-nlg.js';
 import { buildIndex } from './trace.js';
 import { checkClaim } from './esg-governance.js';
 import { PACK_FILIERA, COUNTRY_NAMES } from '../data/pack-filiera.js';
+import { META } from '../editions/meta.js';
 
 const EMPTY = Object.freeze([]);
 const A = x => (Array.isArray(x) ? x : EMPTY);
@@ -25,6 +26,8 @@ const pctTxt = (v, k = 0) => (v == null || !Number.isFinite(v) ? '—' : `${nf(v
 const ISO = /^\d{4}-\d{2}-\d{2}$/;
 const todayOf = (d, ctx) => (ctx && typeof ctx.today === 'string' && ISO.test(ctx.today) ? ctx.today : esgToday(d));
 const LINK = id => ({ area: 'esg', tab: 'filiera', ...(id ? { id } : {}) });
+/** La scheda «EUDR e fornitori» esiste in questa edizione? (FitoOS la nasconde: niente segnali, sezioni o scadenze che vi portano). */
+export const FILIERA_TAB = !(Array.isArray(META?.hiddenTabs?.esg) && META.hiddenTabs.esg.includes('filiera'));
 
 /* memoria per identità degli argomenti (come kpis.js): il cruscotto e la pagina chiedono gli stessi conti molte volte */
 const CACHE = new Map();
@@ -530,9 +533,9 @@ export function customerEudrLetter(d, customerId, periodKey, lang = 'it') {
   if (!refs.length) paragraphs.push(T('filiera.letter.noScope', {}, L));
   else {
     paragraphs.push(T(sectorOf(d) === 'mangimi' ? 'filiera.letter.scope.mangimi' : 'filiera.letter.scope.generic', {}, L));
-    paragraphs.push(T('filiera.letter.quantity', { tIn: fmtNum(tIn, '', L, 1), nLots: String(refs.length) }, L));
+    const qty = T('filiera.letter.quantity', { tIn: fmtNum(tIn, '', L, 1), nLots: String(refs.length) }, L);
+    paragraphs.push(tDcf >= 0.05 && claim.ok ? `${qty} ${T('filiera.letter.dcf', { t: fmtNum(tDcf, '', L, 1), schemes: listJoin(dcfSchemes, L) || '—' }, L)}` : qty);
     paragraphs.push(missing.length ? T('filiera.letter.partial', { nMissing: String(missing.length), share: fmtNum(shareMissing * 100, '%', L, 1) }, L) : T('filiera.letter.allCovered', {}, L));
-    if (tDcf >= 0.05 && claim.ok) paragraphs.push(T('filiera.letter.dcf', { t: fmtNum(tDcf, '', L, 1), schemes: listJoin(dcfSchemes, L) || '—' }, L));
   }
   if (credits.t >= 0.5) paragraphs.push(T('filiera.letter.credits', { t: fmtNum(credits.t, '', L, 0), schemes: listJoin(credits.schemes, L) || '—' }, L));
   paragraphs.push(T('filiera.letter.closing', {}, L));
@@ -719,6 +722,7 @@ export function filieraSummary(d, P) {
 /* ---------------- segnali di «Oggi» ---------------- */
 /** Segnali: DDS mancante sui lotti recenti, conto alla rovescia, lotto ad alto rischio, registro DCF negativo, certificato in scadenza, richiesta scaduta, revisione del fornitore. */
 export function filieraSignals(d, ctx) {
+  if (!FILIERA_TAB) return [];
   if (!d || !A(d.ingLots).length && !A(d.supplierRequests).length && !A(d.supplierEsg).length && !A(d.dcfLedger).length) return [];
   const today = todayOf(d, ctx);
   const reg = eudrRegister(d), role = reg.role, st = reg.settings, out = [];
@@ -792,6 +796,7 @@ export function filieraSignals(d, ctx) {
 /* ---------------- sezione del report «EUDR e fornitori» (83) ---------------- */
 /** Sezione del report CdA / Rapporto ESG: quote della soia con DDS, DCF fisica, SSG, origine ad alto rischio, richieste aperte; tabella per fornitore. */
 export function filieraReportSection(d, ctx, P, C) {
+  if (!FILIERA_TAB) return null;
   if (!d || !P || !has(P.from)) return null;
   const reg = eudrRegister(d);
   const rows = reg.rows.filter(r => inP(r.date, P));
@@ -924,6 +929,7 @@ export function filieraDatapoints(d, P) {
 /* ---------------- scadenze per il calendario degli adempimenti ---------------- */
 /** Scadenze: applicazione dell'EUDR (per dimensione), revisione della classificazione dei paesi, risposte attese, certificati, revisioni e azioni correttive dei fornitori. */
 export function filieraCalendarItems(d, today) {
+  if (!FILIERA_TAB) return [];
   if (!d || !isObj(d)) return [];
   const t = has(today) ? String(today).slice(0, 10) : esgToday(d);
   const pack = packIndex(d), out = [], keys = new Set();
