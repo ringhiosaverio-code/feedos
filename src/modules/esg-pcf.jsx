@@ -78,8 +78,8 @@ export function PcfCard({ d }) {
   const top = sig.find(x => x.severity === 'attenzione') || sig[0] || null;
   const status = sig.some(x => x.severity === 'critico') ? 'bad' : sig.some(x => x.severity === 'attenzione') ? 'warn' : 'ok';
   return (
-    <EsgCard title="Impronta mangimi" tab="passaporto" id="prodotti" icon={LuWheat} value={nf(w.pcf)} unit="kg CO₂e/t" status={status} chip={<Chip kind="outline">{P.short}</Chip>}
-      sub={`media ponderata sulla produzione · LUC ${pctTxt(w.lucShare)} · dati primari ${pctTxt(w.primary, 1)}`}>
+    <EsgCard title="Impronta mangimi" tab="passaporto" id="prodotti" icon={LuWheat} value={nf(w.pcf)} unit="kg CO₂e/t" status={status}
+      sub={`${P.short} · media ponderata sulla produzione · LUC ${pctTxt(w.lucShare)} · dati primari ${pctTxt(w.primary, 1)}`}>
       {top && <p className="epc-card-sig">{top.title}</p>}
     </EsgCard>
   );
@@ -193,8 +193,8 @@ function Scheda({ d, P, today, S, productId }) {
     <>
       <div className="row between no-print epc-bar">
         <div className="row gap-s">
-          <Select value={p.id} onChange={v => go('esg', 'passaporto', v)} options={prods.map(x => ({ id: x.id, label: x.name }))} ariaLabel="Prodotto" className="auto" />
-          <Select value={lot} onChange={setLotId} options={[{ id: '', label: 'Formula in vigore' }, ...lots.map(l => ({ id: l.id, label: `Lotto ${l.code} · ${dateIt(l.date, 'dm')}` }))]} ariaLabel="Base del calcolo" className="auto" />
+          <Select value={p.id} onChange={v => go('esg', 'passaporto', v)} options={prods.map(x => ({ id: x.id, label: x.name }))} ariaLabel="Prodotto" className="epc-sel" />
+          <Select value={lot} onChange={setLotId} options={[{ id: '', label: 'Formula in vigore' }, ...lots.map(l => ({ id: l.id, label: `Lotto ${l.code} · ${dateIt(l.date, 'dm')}` }))]} ariaLabel="Base del calcolo" className="epc-sel" />
         </div>
         <div className="row gap-s">
           <Btn small icon={LuSend} onClick={publish} disabled={!!r.lot} title={r.lot ? 'Si pubblica l’impronta della formula, non quella di un lotto' : undefined}>Pubblica l’impronta</Btn>
@@ -223,7 +223,7 @@ function Scheda({ d, P, today, S, productId }) {
           <div><span className="eyebrow">Circolarità e filiera</span>
             <Kv items={[['Residui dell’agroindustria', `${pctTxt(r.coShares.residuo, 1)} in peso`], ['Farine di estrazione', `${pctTxt(r.coShares['farina-oleosa'], 1)} in peso`],
               ['Ex prodotti alimentari', pctTxt(r.exFood, 1)], ['Proteine edibili dall’uomo', r.hep.value == null ? '—' : `${pctTxt(r.hep.value)} (scenario ${HEP_LABEL[r.hep.scenario]}; ${pctTxt(r.hep.low)}–${pctTxt(r.hep.high)})`],
-              ['Soia senza deforestazione', r.soy.kg > 0 ? `${pctTxt(r.soy.dcfShare)} della soia (${r.soy.basis})` : 'formula senza soia'],
+              ['Soia senza deforestazione', r.soy.kg > 0 ? `${pctTxt(r.soy.dcfShare)} della soia · ${r.soy.basis}` : 'formula senza soia'],
               ['Origine delle materie prime', Object.entries(byClass).sort((a, b) => b[1] - a[1]).map(([k, v]) => `${ORIG[k] || k} ${pctTxt(v)}`).join(' · ')]]} />
           </div>
           <div><span className="eyebrow">Dati, energia e imballaggio</span>
@@ -240,7 +240,7 @@ function Scheda({ d, P, today, S, productId }) {
             <p className="small epc-m0">Calcolato solo il cambiamento climatico. Le altre 15 categorie (acidificazione, eutrofizzazione, uso dell’acqua, uso del suolo come indice di qualità, risorse fossili e minerali…) risultano <b>non calcolate</b>.</p>
           </div>
         </div>
-        <p className="pp-note">Metodo: {r.method}, {BOUNDARY_LABEL[r.boundary] || r.boundary}; materie prime con i fattori del registro (origine, banca dati e anno), perdite di lavorazione {nf(r.lossPct, 1)}%, energia del mangimificio per linea ({EL_MODEL_LABEL[r.energy.model] || r.energy.model}: {r.energySource}), imballaggio dalla scheda della confezione; incertezza Monte Carlo ({nf(r.mc.n)} iterazioni). Stima interna, non verificata da terzi: serve a confrontare prodotti e scelte di formulazione e a rispondere ai clienti. Esercizio dell’energia: {P.label}.</p>
+        <p className="pp-note">Metodo: {r.method}, {BOUNDARY_LABEL[r.boundary] || r.boundary}; materie prime con i fattori del registro (origine, banca dati e anno), perdite di lavorazione {nf(r.lossPct, 1)}%, energia del mangimificio per linea con {EL_MODEL_LABEL[r.energy.model] || r.energy.model} (fattore: {r.energySource}), imballaggio dalla scheda della confezione; incertezza Monte Carlo ({nf(r.mc.n)} iterazioni). Stima interna, non verificata da terzi: serve a confrontare prodotti e scelte di formulazione e a rispondere ai clienti. Esercizio dell’energia: {P.label}.</p>
         <Disclaimer />
       </div>
       <Panel title="Da dove viene l’impronta" sub="Per materia prima: uso interno, non si stampa e non va ai clienti (le formule restano riservate)" className="no-print" flush
@@ -278,7 +278,8 @@ function Prodotti({ d, P, prev, S }) {
   const max = Math.max(1, ...rows.map(x => x.p90 || x.total));
   const drivers = useMemo(() => {
     const m = new Map();
-    for (const x of S.products) for (const l of x.r.lines) { const v = (x.t || 0) * (l.raw + l.loss + l.tin) / 1000; m.set(l.name, (m.get(l.name) || 0) + v); }
+    const short = new Map(A(d.ingredients).map(i => [i.id, i.short || i.name]));
+    for (const x of S.products) for (const l of x.r.lines) { const v = (x.t || 0) * (l.raw + l.loss + l.tin) / 1000; const k = short.get(l.ing) || l.name; m.set(k, (m.get(k) || 0) + v); }
     return [...m].sort((a, b) => b[1] - a[1]).slice(0, 10).map(([label, value], i) => ({ key: label, label, value, color: i < 3 ? 'var(--s3)' : 'var(--s1)' }));
   }, [S]);
   const cmp = (cur, pv, good, kind = 'ratio', decimals = 0, unit = '') => (pv != null ? { value: pv, kind, good, decimals, unit, label: prev.label } : undefined);
@@ -331,19 +332,21 @@ function Metodo({ d, S }) {
   return (
     <>
       <Panel title="Impostazioni del calcolo" sub="Valgono per tutte le schede, le dichiarazioni e le esportazioni del pacchetto">
-        <div className="form">
+        <div className="epc-segs">
           <Field label="Confini del sistema"><Seg options={[{ id: 'culla-cancello', label: 'Al cancello' }, { id: 'culla-cliente', label: 'Con la consegna' }]} value={s.includeOutbound ? 'culla-cliente' : 'culla-cancello'}
             onChange={v => set({ includeOutbound: v === 'culla-cliente' }, v === 'culla-cliente' ? 'Impronta: consegna al cliente inclusa' : 'Impronta: confini al cancello del mangimificio')} label="Confini" /></Field>
           <Field label="Elettricità"><Seg options={[{ id: 'rete-LB-meno-FV', label: 'Rete meno fotovoltaico' }, { id: 'rete-LB', label: 'Tutta da rete' }]} value={s.elModel} onChange={v => set({ elModel: v }, 'Impronta: modello dell’elettricità')} label="Modello dell’elettricità" /></Field>
           <Field label="Proteine edibili dall’uomo"><Seg options={[{ id: 'low', label: 'Basso' }, { id: 'med', label: 'Medio' }, { id: 'high', label: 'Alto' }]} value={s.hepScenario} onChange={v => set({ hepScenario: v }, 'Impronta: scenario delle proteine edibili')} label="Scenario" /></Field>
+          <Field label="Nome del metodo" className="epc-grow"><input className="input" value={s.method} maxLength={80} onChange={e => set({ method: e.target.value || PCF_DEFAULTS.method }, 'Impronta: nome del metodo')} /></Field>
+        </div>
+        <div className="form epc-mt">
           <Field label="Calo di lavorazione di base (%)" hint="se il prodotto non ha il suo calo"><NumInput value={s.lossDefault} decimals={2} min={0} max={10} onChange={v => v != null && set({ lossDefault: v }, 'Impronta: calo di base')} /></Field>
           <Field label="Iterazioni Monte Carlo" hint="da 100 a 2.000"><NumInput value={s.mcN} decimals={0} min={100} max={2000} onChange={v => v != null && set({ mcN: Math.max(100, Math.min(2000, Math.round(v))) }, 'Impronta: iterazioni Monte Carlo')} /></Field>
           <Field label="Ricalcolo: origine (punti)"><NumInput value={s.recalcOriginPp} decimals={0} min={1} max={50} onChange={v => v != null && set({ recalcOriginPp: v }, 'Impronta: soglia di ricalcolo per origine')} /></Field>
           <Field label="Ricalcolo: energia (%)"><NumInput value={s.recalcEnergyPct} decimals={0} min={1} max={50} onChange={v => v != null && set({ recalcEnergyPct: v }, 'Impronta: soglia di ricalcolo per energia')} /></Field>
-          <Field label="Nome del metodo"><input className="input" value={s.method} maxLength={80} onChange={e => set({ method: e.target.value || PCF_DEFAULTS.method }, 'Impronta: nome del metodo')} /></Field>
         </div>
       </Panel>
-      <Panel title="Nota metodologica"><MethodNote text={PCF_METHOD} open /><MethodNote text={PCF_METHOD} lang="en" title="Methodology note (English)" /></Panel>
+      <Panel title="Nota metodologica"><MethodNote text={PCF_METHOD} open title="Testo in italiano" /><MethodNote text={PCF_METHOD} lang="en" title="Methodology note (English)" /></Panel>
       <Panel title="Valori di letteratura del pacchetto" sub={`Pacchetto «pcf» ${pk.version} valido al ${dateIt(pk.validAsOf)} (${pk.origin}) · nessun valore GFLI incluso: si importano dall’esportazione GFLI`} flush>
         <Table rows={lit} pageSize={15} exportName="impronta-letteratura" cols={[
           { key: 'label', label: 'Materia prima', render: x => <><b>{x.label}</b>{x.note && <span className="sub">{x.note}</span>}</> },

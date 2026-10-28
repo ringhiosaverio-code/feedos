@@ -52,7 +52,7 @@ export function pcfSettings(d) {
   return { ...s, mcN: Math.max(100, Math.min(2000, Math.round(num(s.mcN) ?? 2000))), lossDefault: num(s.lossDefault) ?? 0.5, sent: A(s.sent) };
 }
 export const BOUNDARY_LABEL = { 'culla-cancello': 'dalla culla al cancello del mangimificio', 'culla-cliente': 'dalla culla alla consegna al cliente' };
-export const EL_MODEL_LABEL = { 'rete-LB-meno-FV': 'rete (location-based) sulla quota non coperta dal fotovoltaico', 'rete-LB': 'rete (location-based) su tutta l’elettricità' };
+export const EL_MODEL_LABEL = { 'rete-LB-meno-FV': 'elettricità di rete location-based sulla quota non coperta dal fotovoltaico', 'rete-LB': 'elettricità di rete location-based su tutti i consumi' };
 export const HEP_LABEL = { low: 'basso', med: 'medio', high: 'alto' };
 /** Pacchetto di contenuti in uso: il più recente tra integrato e importato (settings.esg18.packs.pcf). */
 export function pcfPack(d) { return activePack(d, 'pcf', PACK_PCF) || { ...PACK_PCF, origin: 'integrato' }; }
@@ -540,7 +540,7 @@ function computePcf(d, prod, f, version, P, date, lot, light = false) {
     if (soy) { soyKg += x; if (dcf) soyDcfKg += x; }
     const sp = ef.low != null && ef.high != null && total ? { low: ef.low / total, high: ef.high / total } : spreadByDqr(ef.dqr);
     if (total != null) mcIn.push({ central: e + eLoss, low: (e + eLoss) * sp.low, high: (e + eLoss) * sp.high });
-    lines.push({ ing: l.ing, name: ing.name || l.ing, kg: x, ingLotId: l.ingLotId || null, origin: ef.origin || originKey(ing.origin), scheme: ef.scheme || null, coc: ef.coc || null,
+    lines.push({ ing: l.ing, name: ing.name || l.ing, kg: x, ingLotId: l.ingLotId || null, origin: ef.origin && ef.origin !== '*' ? ef.origin : originKey(ing.origin) || '*', scheme: ef.scheme || null, coc: ef.coc || null,
       ef: total, efSource: ef.source, step: ef.step, dqr: ef.dqr, db: ef.db, dbVersion: ef.dbVersion, year: ef.year, low: ef.low, high: ef.high, status: ef.status, ref: ef.ref, rowId: ef.rowId, supplierPcfId: ef.supplierPcfId,
       raw: e, loss: eLoss, tin: eTin, tinLegs: tr.legs, luc: lucI, landMgmt: lmI, hasComp, land: landI, landEstimated: landE, coClass: c.coClass, soy, dcf });
   }
@@ -559,7 +559,7 @@ function computePcf(d, prod, f, version, P, date, lot, light = false) {
   const dqW = sum(dq, x => x[0]);
   const dqr = dqW > 0 ? sum(dq, x => x[0] * x[1]) / dqW : null;
   const dbs = [...new Set(lines.filter(l => l.ef != null).map(l => (l.efSource === 'anagrafica' ? 'anagrafica' : l.efSource === 'fornitore' ? 'impronte dei fornitori' : `${l.db || 'registro'}${l.dbVersion ? ' ' + l.dbVersion : ''}`)))].sort();
-  const energySrc = me.grid ? `${me.grid.label || me.grid.id}${me.grid.source ? ' · ' + me.grid.source : ''}` : 'fattore di rete delle impostazioni';
+  const energySrc = me.grid ? `${String(me.grid.label || me.grid.id).replace(/[()]/g, '')}${me.grid.source ? ' · ' + String(me.grid.source).replace(/[()]/g, '') : ''}` : 'fattore di rete delle impostazioni';
   const hepSc = ['low', 'med', 'high'].includes(s.hepScenario) ? s.hepScenario : 'med';
   const hep = { low: cp > 0 ? hepL / cp : null, med: cp > 0 ? hepM / cp : null, high: cp > 0 ? hepH / cp : null, scenario: hepSc };
   hep.value = hep[hepSc];
@@ -572,7 +572,7 @@ function computePcf(d, prod, f, version, P, date, lot, light = false) {
     lines, components: { raw, loss: lossC, inbound: tin, mill: mill.total, millCommon: mill.common, millPellet: mill.pellet, packaging: pk.co2PerT, outbound: out?.value ?? null },
     total, luc, landMgmt: lm, flag: luc + lm, nonFlag: total - luc - lm, fossil: fossilKnown || null, lucShare: total > 0 ? luc / total : null,
     componentCoverage: raw > 0 ? compRaw / raw : null, land, landEstimatedShare: land > 0 ? landEst / land : null, missingKg,
-    soy: { kg: soyKg, dcfKg: soyDcfKg, dcfShare: soyKg > 0 ? soyDcfKg / soyKg : null, basis: lot ? 'lotti di arrivo' : 'formula (schema e catena di custodia del fattore)' },
+    soy: { kg: soyKg, dcfKg: soyDcfKg, dcfShare: soyKg > 0 ? soyDcfKg / soyKg : null, basis: lot ? 'dai lotti di arrivo' : 'stima dalla formula' },
     coShares: Object.fromEntries(Object.entries(co).map(([k, v]) => [k, v / 1000])), exFood: (co['ex-food'] || 0) / 1000, hep,
     primaryShare: total > 0 ? (mill.total + supRaw) / total : null, supplierShare: total > 0 ? supRaw / total : null, dqr,
     energy: { kwhT: mill.kwhT, fuelT: mill.fuelT, efEl: me.efEl, efLB: me.efLB, pvShare: me.pvShare, efFuel: me.efFuel, pelletShare: mill.pelletShare, measured: mill.measured, source: energySrc, model: me.elModel },

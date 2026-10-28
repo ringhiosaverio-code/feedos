@@ -319,7 +319,7 @@ export function Scambio({ d, P, today, S }) {
       </Panel>
       <Panel title="Pacchetto dati per GMP+ MI5.7" sub={MI57_LABEL.it}>
         <div className="row gap-s">
-          <Select value={mi} onChange={setMi} options={A(d.products).filter(p => p.active !== false).map(p => ({ id: p.id, label: p.name }))} ariaLabel="Prodotto del pacchetto MI5.7" className="auto" />
+          <Select value={mi} onChange={setMi} options={A(d.products).filter(p => p.active !== false).map(p => ({ id: p.id, label: p.name }))} ariaLabel="Prodotto del pacchetto MI5.7" className="epc-sel" />
           <Btn small icon={LuDownload} onClick={m57} disabled={!mi}>Scarica JSON e CSV</Btn>
         </div>
         <p className="small muted epc-mt">Contiene la formula con origini e kg per t, l’energia per t (elettricità e GPL, pellet o farina), le tratte di trasporto, l’imballaggio, il calo e i prezzi per l’allocazione: è un documento riservato per l’ente di certificazione e lo strumento riconosciuto.</p>

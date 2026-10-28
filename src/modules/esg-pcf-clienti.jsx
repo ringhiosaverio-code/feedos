@@ -98,7 +98,7 @@ function Dichiarazione({ d, P, today, list, id, sent }) {
     <>
       <Panel title="Dichiarazione d’impronta per un cliente" sub="Totali per prodotto e ripartizione FLAG: la base per lo Scope 3 del cliente" className="no-print"
         actions={<>
-          <Select value={id} onChange={v => go('esg', 'passaporto', `clienti.${v}`)} ariaLabel="Cliente" options={list.map(x => ({ id: x.c.id, label: `${x.c.name} · ${nf(x.ct.totals.t)} t` }))} className="auto" />
+          <Select value={id} onChange={v => go('esg', 'passaporto', `clienti.${v}`)} ariaLabel="Cliente" options={list.map(x => ({ id: x.c.id, label: `${x.c.name} · ${nf(x.ct.totals.t)} t` }))} className="epc-sel" />
           <Seg options={[{ id: 'it', label: 'IT' }, { id: 'en', label: 'EN' }]} value={lang} onChange={setLang} label="Lingua della dichiarazione" />
         </>}>
         <div className="kpis">

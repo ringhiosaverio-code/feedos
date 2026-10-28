@@ -55,7 +55,7 @@ export function Formulazione({ d, today, pick }) {
   return (
     <>
       <Panel title="Formulazione a basso carbonio" sub="Stessa specifica nutrizionale della formula: si cerca il costo minimo per ogni tetto dell’obiettivo (frontiera di Pareto)"
-        actions={<Select value={p.id} onChange={v => { setPid(v); setSel(null); setRowChoice({}); }} options={prods.map(x => ({ id: x.id, label: x.name }))} ariaLabel="Prodotto" className="auto" />}>
+        actions={<Select value={p.id} onChange={v => { setPid(v); setSel(null); setRowChoice({}); }} options={prods.map(x => ({ id: x.id, label: x.name }))} ariaLabel="Prodotto" className="epc-sel" />}>
         <div className="form">
           <Field label="Obiettivo"><Seg options={[{ id: 'co2', label: 'Impronta' }, { id: 'luc', label: 'Uso del suolo (FLAG)' }, { id: 'land', label: 'Superficie' }]} value={objective} onChange={v => { setObjective(v); setSel(null); }} label="Obiettivo" /></Field>
           <Field label="Soia"><Seg options={[{ id: 'tutte', label: 'Tutte le origini' }, { id: 'dcf', label: 'Solo senza deforestazione' }]} value={dcfOnly ? 'dcf' : 'tutte'} onChange={v => { setDcfOnly(v === 'dcf'); setSel(null); }} label="Soia ammessa" /></Field>
@@ -75,8 +75,8 @@ export function Formulazione({ d, today, pick }) {
         </div>
         <div className="split">
           <Panel title="Frontiera costo–obiettivo" sub={`${OBJECTIVES[objective]} contro costo delle materie prime (${PM_LABEL}) · clic su un punto per sceglierlo`}>
-            <Frontier points={pts.map((x, i) => ({ x: x.cost, y: x.metric, label: `Punto ${i + 1}`, active: i === sel }))} current={{ x: fr.current.cost, y: fr.current.metric, label: 'Formula approvata' }} xLabel={PM_LABEL} yLabel={unit} xDec={2} yDec={0} ariaLabel="Frontiera costo–emissioni" onPick={(pt, i) => setSel(i)} />
-            <p className="small muted">Il rombo è la formula approvata; il primo punto è la riformulazione a costo minimo con i prezzi di oggi. Il costo marginale è l’euro per tonnellata in più per ogni kg CO₂e in meno.</p>
+            <Frontier points={pts.map((x, i) => ({ x: x.cost, y: x.metric, label: `Punto ${i + 1}`, active: i === sel }))} current={{ x: fr.current.cost, y: fr.current.metric, label: 'Attuale' }} xLabel={PM_LABEL} yLabel={unit} xDec={2} yDec={0} ariaLabel="Frontiera costo–emissioni" onPick={(pt, i) => setSel(i)} />
+            <p className="small muted">Il rombo («Attuale») è la formula approvata; il primo punto è la riformulazione a costo minimo con i prezzi di oggi. Il costo marginale è l’euro per tonnellata in più per ogni kg CO₂e in meno.</p>
           </Panel>
           <Panel title="Punti della frontiera" sub="Variazioni rispetto alla riformulazione a costo minimo" flush>
             <Table rows={pts.map((x, i) => ({ ...x, id: i, n: i + 1 }))} onRow={x => setSel(x.id)} selected={sel} pageSize={12} cols={[
@@ -86,7 +86,7 @@ export function Formulazione({ d, today, pick }) {
               { key: 'pct', label: 'Δ %', align: 'r', sort: x => x.vsBase.pct, render: x => pctTxt(x.vsBase.pct, 1) },
               { key: 'dc', label: `Δ ${PM_LABEL}`, align: 'r', sort: x => x.vsBase.cost, render: x => (x.vsBase.cost >= 0 ? '+' : '') + nfPm(x.vsBase.cost, 2) },
               { key: 'mc', label: '€ per kg', align: 'r', sort: x => x.eurPerKg, render: x => (x.eurPerKg == null ? '—' : nf(x.eurPerKg, 3)) },
-              { key: 'hep', label: 'Prot. edibili', align: 'r', render: x => pctTxt(x.hep) },
+              ...(hep != null ? [{ key: 'hep', label: 'Prot. edibili', align: 'r', render: x => pctTxt(x.hep) }] : []),
             ]} />
           </Panel>
         </div>

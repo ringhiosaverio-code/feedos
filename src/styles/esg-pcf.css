@@ -50,3 +50,8 @@
 @media print {
   .epc-sheet { break-inside: avoid; }
 }
+.select.epc-sel { width: auto; max-width: 320px; min-width: 0; }
+.epc-segs { display: flex; flex-wrap: wrap; gap: 12px 20px; align-items: flex-start; }
+.epc-segs > .field { min-width: 0; }
+.epc-segs .seg { flex-wrap: wrap; }
+.epc-segs > .epc-grow { flex: 1 1 220px; }
