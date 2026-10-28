@@ -1,0 +1,9 @@
+# FeedOS 18 · Report e questionari: percorsi in più per tests/e2e/smoke.py, uno per riga (es. esg.vsme.sezione). Le righe con # sono commenti.
+esg.vsme.vsme
+esg.vsme.esercizio
+esg.vsme.bozza
+esg.vsme.banche
+esg.vsme.questionari
+esg.vsme.questionari.q-caseificio-sila
+esg.vsme.materialita
+esg.vsme.storico

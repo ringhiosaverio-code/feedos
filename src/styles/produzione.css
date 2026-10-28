@@ -1,0 +1,4 @@
+/* FeedOS 17 · Produzione (OEE, manutenzione, bilancio di massa) */
+.pr-neg { color: var(--serious-ink); }
+.pr-neg svg { width: 13px; height: 13px; vertical-align: -2px; }
+.linecard .lbl .chip { margin-left: 8px; }

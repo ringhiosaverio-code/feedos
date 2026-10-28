@@ -1,0 +1,32 @@
+/* FeedOS 18 · Testi bilingui · Impronta mangimi (pacchetto WP2). File senza dipendenze.
+ * I18N_PCF = { 'pcf.chiave': { it, en } } (chiavi con il prefisso «pcf.»), unite in src/data/esg-i18n.js.
+ * Servono alle stampe e alle esportazioni per i clienti (dichiarazione d'impronta, scheda ambientale del mangime). */
+export const I18N_PCF = {
+  'pcf.statement.title': { it: 'Dichiarazione d’impronta dei prodotti', en: 'Product carbon footprint statement' },
+  'pcf.statement.customer': { it: 'Cliente', en: 'Customer' },
+  'pcf.statement.supplier': { it: 'Fornitore', en: 'Supplier' },
+  'pcf.statement.period': { it: 'Periodo', en: 'Period' },
+  'pcf.statement.product': { it: 'Prodotto', en: 'Product' },
+  'pcf.statement.tonnes': { it: 't consegnate', en: 't delivered' },
+  'pcf.statement.kgPerT': { it: 'kg CO₂e/t', en: 'kg CO₂e/t' },
+  'pcf.statement.tco2e': { it: 't CO₂e', en: 't CO₂e' },
+  'pcf.statement.luc': { it: 'di cui LUC', en: 'of which LUC' },
+  'pcf.statement.lm': { it: 'gestione del suolo', en: 'land management' },
+  'pcf.statement.nonFlag': { it: 'non FLAG', en: 'non-FLAG' },
+  'pcf.statement.ha': { it: 'ha·anno', en: 'ha·year' },
+  'pcf.statement.total': { it: 'Totale', en: 'Total' },
+  'pcf.statement.soy': { it: 'Soia senza deforestazione e conversione', en: 'Deforestation- and conversion-free soy' },
+  'pcf.statement.eudr': { it: 'Riferimenti EUDR delle consegne', en: 'EUDR references of the deliveries' },
+  'pcf.statement.noRecipe': { it: 'Le formule dei mangimi non sono comunicate: la dichiarazione riporta solo totali e ripartizioni per prodotto.', en: 'Feed formulas are not disclosed: the statement only reports totals and splits by product.' },
+  'pcf.statement.fingerprint': { it: 'Impronta digitale SHA-256 del documento', en: 'SHA-256 fingerprint of the document' },
+  'pcf.statement.footer': { it: 'Stima interna, non verificata da terzi · elaborata con FeedOS', en: 'Internal estimate, not verified by a third party · prepared with FeedOS' },
+  'pcf.sheet.title': { it: 'Scheda ambientale del mangime', en: 'Feed environmental sheet' },
+  'pcf.sheet.climate': { it: 'Cambiamento climatico', en: 'Climate change' },
+  'pcf.sheet.ofWhichLuc': { it: 'di cui cambio d’uso del suolo', en: 'of which land-use change' },
+  'pcf.sheet.notCalculated': { it: 'non calcolato', en: 'not calculated' },
+  'pcf.sheet.method': { it: 'Metodo', en: 'Method' },
+  'pcf.sheet.boundary': { it: 'Confini del sistema', en: 'System boundary' },
+  'pcf.sheet.databases': { it: 'Banche dati e versioni', en: 'Databases and versions' },
+  'pcf.sheet.uncertainty': { it: 'Incertezza (P10–P90)', en: 'Uncertainty (P10–P90)' },
+  'pcf.sheet.date': { it: 'Data del calcolo', en: 'Calculation date' },
+};

@@ -1,0 +1,22 @@
+/* FeedOS 17 · Piattaforma: badge della qualità dei dati, righe espanse, procedura d'importazione */
+.dq-badge { display: flex; align-items: center; gap: 8px; margin-top: 8px; font-size: 12px; color: var(--ink-2); text-decoration: none; }
+.dq-badge:hover { color: var(--ink); }
+.dq-badge i { flex: none; width: 8px; height: 8px; border-radius: 50%; }
+tr.sub-row td { background: var(--surface-2); }
+.imp-steps { display: flex; flex-wrap: wrap; gap: 8px 16px; list-style: none; margin: 0 0 16px; padding: 0; font-size: 13px; color: var(--ink-2); }
+.imp-steps li { display: flex; align-items: center; gap: 8px; }
+.imp-steps li span { display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: var(--surface-3); font-size: 12px; font-weight: 600; }
+.imp-steps li.on { color: var(--ink); font-weight: 600; }
+.imp-steps li.on span { background: var(--accent); color: var(--on-accent, #fff); }
+.imp-steps li.done span { background: color-mix(in srgb, var(--good) 35%, var(--surface)); }
+.imp-type { display: flex; flex-direction: column; gap: 8px; text-align: left; padding: 8px 16px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); color: var(--ink); cursor: pointer; font: inherit; }
+.imp-type:hover { border-color: var(--accent); }
+.imp-type.on { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+td.imp-err { background: color-mix(in srgb, var(--crit) 16%, var(--surface)); }
+td.imp-ch { background: color-mix(in srgb, var(--accent) 12%, var(--surface)); }
+/* elenchi cliccabili del cruscotto (perdite e indicatori fuori obiettivo): il testo va a capo */
+.loss-list { display: grid; gap: 8px; margin-top: 16px; }
+.loss-row { display: grid; grid-template-columns: minmax(64px, auto) minmax(0, 1fr) auto; gap: 8px; align-items: center; width: 100%; padding: 8px 8px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--ink); text-align: left; font: inherit; cursor: pointer; }
+.loss-row:hover { border-color: var(--accent); }
+.loss-row > span { min-width: 0; white-space: normal; }
+.loss-row svg { width: 15px; height: 15px; color: var(--muted); }

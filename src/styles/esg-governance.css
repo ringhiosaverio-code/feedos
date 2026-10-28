@@ -1,0 +1,133 @@
+/* FeedOS 18 · Governance ed evidenze (pacchetto WP6): stile del pacchetto, solo classi con il prefisso ego- e token del tema (var(--…)).
+ * Il file viene incluso da build.mjs senza import. Chiaro e scuro, da 390 a 1440 px senza sbordi. */
+.ego { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; min-width: 0; }
+.ego > *, .ego .split > *, .ego .stack > *, .ego .grid > * { min-width: 0; }
+.ego-mt { margin-top: 8px; }
+.ego-h3 { margin: 16px 0 8px; font-size: 12px; font-weight: 600; color: var(--ink-2); }
+.ego-wrap { display: block; white-space: normal; min-width: 140px; max-width: 56ch; overflow-wrap: anywhere; }
+.ego-wrap .sub, .ego .t .sub { display: block; font-size: 11.5px; color: var(--muted); font-weight: 400; }
+.ego-nowrap { white-space: nowrap; display: inline-flex; gap: 8px; align-items: center; }
+.ego-chips { display: inline-flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.ego-chips .chip .linkish { margin-left: 0; font-weight: 600; }
+.ego-flags { display: inline-flex; flex-wrap: wrap; gap: 8px; }
+.ego-hash { word-break: break-all; overflow-wrap: anywhere; }
+.ego-url { word-break: break-all; }
+.ego-sel { width: auto; max-width: 100%; }
+.ego-ta { height: auto; min-height: 88px; padding: 8px 8px; resize: vertical; font: inherit; line-height: 1.45; }
+.ego-fs { border: 1px solid var(--line); border-radius: var(--r-sm, 8px); padding: 8px 16px 16px; margin: 0; min-width: 0; }
+.ego-fs legend { padding: 0 8px; font-size: 12px; font-weight: 600; color: var(--ink-2); }
+.ego-checks { display: flex; flex-wrap: wrap; gap: 8px 16px; }
+.ego-banner { display: flex; gap: 8px; align-items: flex-start; }
+.ego-banner svg { flex: none; width: 18px; height: 18px; margin-top: 0; }
+.ego-warn-t { color: var(--warn-ink); font-weight: 600; }
+.ego-focus { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* panoramica */
+.ego-hero { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr) minmax(0, 1fr); gap: 16px; }
+.ego-stat { display: grid; gap: 8px; align-content: start; padding: 16px 16px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); min-width: 0; }
+.ego-stat b { font-family: var(--f-display); font-size: 38px; line-height: 1; color: var(--ink); }
+.ego-stat span:not(.eyebrow) { font-size: 13px; color: var(--ink-2); font-weight: 600; overflow-wrap: anywhere; }
+.ego-stat small { font-size: 12px; color: var(--muted); overflow-wrap: anywhere; }
+.ego-stat-main { border-left: 3px solid var(--accent); }
+.ego-next { list-style: none; margin: 0; padding: 0; }
+.ego-next li { display: grid; grid-template-columns: 52px minmax(0, 1fr); gap: 8px; align-items: center; padding: 8px 16px; border-top: 1px solid var(--line); }
+.ego-next li:first-child { border-top: 0; }
+.ego-next-d { display: grid; justify-items: center; font-size: 11px; color: var(--muted); line-height: 1.1; }
+.ego-next-d b { font-family: var(--f-display); font-size: 20px; color: var(--ink); }
+.ego-next-t { display: grid; gap: 0; min-width: 0; }
+.ego-next-t .linkish { font-size: 13px; font-weight: 600; color: var(--ink); white-space: normal; overflow-wrap: anywhere; }
+
+/* calendario */
+.ego-filters { display: flex; flex-wrap: wrap; gap: 8px 8px; align-items: center; padding: 16px 16px; border-bottom: 1px solid var(--line); background: var(--surface-2); }
+.ego-filters .seg { flex-wrap: wrap; }
+.ego-filters .search { min-width: 0; flex: 1 1 220px; }
+.ego-filters .select { width: auto; max-width: 100%; }
+.ego-month h3 { margin: 0; padding: 16px 16px 8px; font-size: 13px; font-weight: 600; color: var(--ink); border-top: 1px solid var(--line); }
+.ego-month:first-of-type h3 { border-top: 0; }
+.ego-cal { list-style: none; margin: 0; padding: 0 0 8px; }
+.ego-ci { display: grid; grid-template-columns: 64px minmax(0, 1fr) auto; gap: 16px; align-items: start; padding: 8px 16px; border-left: 3px solid transparent; }
+.ego-ci + .ego-ci { border-top: 1px dashed var(--line); }
+.ego-ci-scaduto { border-left-color: var(--crit); background: color-mix(in srgb, var(--crit-soft) 45%, transparent); }
+.ego-ci-in-scadenza { border-left-color: var(--warn); }
+.ego-ci-in-vigore { border-left-color: var(--maize); }
+.ego-ci-fatto { opacity: .75; }
+.ego-ci-d { display: grid; justify-items: center; gap: 0; text-align: center; }
+.ego-ci-d b { font-family: var(--f-display); font-size: 24px; line-height: 1; color: var(--ink); }
+.ego-ci-d span { font-size: 11px; color: var(--muted); }
+.ego-ci-t { display: grid; gap: 8px; min-width: 0; }
+.ego-ci-t > b { font-size: 13.5px; color: var(--ink); overflow-wrap: anywhere; }
+.ego-ci-a { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
+.ego-flaglist { list-style: none; margin: 16px 0 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 8px 16px; }
+.ego-flaglist li { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; min-width: 0; }
+.ego-print-t { font-size: 11px; }
+.ego-print-t td, .ego-print-t th { padding: 8px 8px; white-space: normal; }
+
+/* politiche */
+.ego-two { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+.ego-two > * { min-width: 0; }
+.ego-clamp { display: -webkit-box; -webkit-line-clamp: 8; -webkit-box-orient: vertical; overflow: hidden; color: var(--ink-2); }
+.ego-matrix th.c, .ego-matrix td.c { text-align: center; width: 86px; }
+.ego-matrix .ego-uncov td:first-child b { color: var(--warn-ink); }
+.ego-tick { display: inline-flex; width: 22px; height: 22px; border-radius: 50%; align-items: center; justify-content: center; }
+.ego-tick svg { width: 13px; height: 13px; }
+.ego-yes { background: var(--good-soft); color: var(--good-ink); }
+.ego-no { background: var(--surface-3); color: var(--muted); }
+.ego-na { color: var(--muted); }
+.ego-c6 { list-style: none; margin: 8px 0 8px; padding: 0; display: grid; gap: 8px; font-size: 13px; }
+.ego-c6 li { display: flex; align-items: center; gap: 8px; }
+
+/* certificati e permessi */
+.ego-bars { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.ego-bars li { display: grid; grid-template-columns: minmax(0, 220px) minmax(0, 1fr) minmax(0, 200px); gap: 8px; align-items: center; font-size: 13px; }
+.ego-bars-l { overflow-wrap: anywhere; font-weight: 600; color: var(--ink); }
+.ego-bars-t { height: 10px; border-radius: 5px; background: var(--surface-3); overflow: hidden; }
+.ego-bars-t i { display: block; height: 100%; border-radius: 5px; background: var(--good); }
+.ego-bars-t i.ego-warnb { background: var(--warn); }
+.ego-bars-t i.ego-bad { background: var(--crit); }
+.ego-bars-v { font-size: 12px; color: var(--ink-2); text-align: right; }
+
+/* evidenze */
+.ego-drop { display: grid; justify-items: center; gap: 8px; padding: 24px 16px; border: 2px dashed var(--line-2); border-radius: var(--r); background: var(--surface-2); text-align: center; cursor: pointer; }
+.ego-drop:hover, .ego-drop:focus-within { border-color: var(--accent); background: var(--accent-soft); }
+.ego-drop svg { width: 26px; height: 26px; color: var(--accent); }
+.ego-drop b { font-size: 14px; color: var(--ink); }
+.ego-busy { opacity: .7; cursor: progress; }
+.ego-new { display: grid; gap: 8px; margin-top: 16px; padding: 16px 16px; border: 1px solid var(--line); border-left: 3px solid var(--accent); border-radius: var(--r); background: var(--surface); min-width: 0; }
+.ego-meter { height: 12px; border-radius: 6px; background: var(--surface-3); overflow: hidden; }
+.ego-meter i { display: block; height: 100%; background: var(--accent); border-radius: 6px; min-width: 2px; }
+.ego .small svg { width: 14px; height: 14px; vertical-align: -2px; }
+
+/* dichiarazioni */
+.ego-find { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 8px; }
+.ego-find li { display: grid; gap: 0; padding: 8px 8px; border-radius: 8px; border: 1px solid var(--line); border-left: 3px solid var(--line-2); background: var(--surface-2); min-width: 0; overflow-wrap: anywhere; }
+.ego-find-blocco, .ego-find-alto { border-left-color: var(--crit) !important; }
+.ego-find-medio { border-left-color: var(--warn) !important; }
+.ego-find-info { border-left-color: var(--accent) !important; }
+.ego-rules { margin: 0; padding-left: 16px; display: grid; gap: 8px; font-size: 13px; color: var(--ink-2); }
+.ego-rules b { color: var(--ink); }
+
+/* C8 */
+.ego-c8 { display: grid; gap: 8px; }
+.ego-c8-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 150px); gap: 8px; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--line); font-size: 13px; color: var(--ink-2); }
+.ego-c8-row > span:first-child { overflow-wrap: anywhere; font-weight: 600; }
+.ego-c8-v { text-align: right; font-weight: 600; color: var(--ink); }
+.ego-c8-v .sub { display: block; font-size: 11px; font-weight: 400; color: var(--muted); }
+
+@media (max-width: 980px) {
+  .ego-two { grid-template-columns: minmax(0, 1fr); }
+  .ego-hero { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .ego-stat-main { grid-column: 1 / -1; }
+  .ego-bars li { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .ego-bars-v { grid-column: 1 / -1; text-align: left; }
+}
+@media (max-width: 720px) {
+  .ego-hero { grid-template-columns: minmax(0, 1fr); }
+  .ego-stat b { font-size: 30px; }
+  .ego-ci { grid-template-columns: 48px minmax(0, 1fr); }
+  .ego-ci-a { grid-column: 2; justify-content: flex-start; }
+  .ego-wrap { min-width: 120px; }
+  .ego-bars li { grid-template-columns: minmax(0, 1fr); gap: 8px; }
+}
+@media print {
+  .ego-ci, .ego-stat { break-inside: avoid; }
+}

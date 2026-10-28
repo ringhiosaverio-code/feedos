@@ -1,0 +1,73 @@
+/* ============================================================
+   FeedOS 17 · stampa A4 (report CdA, estratti, lettere, offerte)
+   A schermo PrintPage è un foglio di anteprima sempre chiaro; in stampa si forzano i colori del tema chiaro,
+   si nasconde il guscio dell'app e ogni .print-page va su una pagina.
+   ============================================================ */
+@page { size: A4; margin: 14mm 12mm 16mm; }
+
+/* colori del tema chiaro, anche con l'app in tema scuro (stessi valori di :root in app.css) */
+.print-page {
+  color-scheme: light;
+  --bg: #EDF1EC; --surface: #FFFFFF; --surface-2: #F3F6F2; --surface-3: #E5ECE6; --overlay: rgba(16, 26, 20, .38);
+  --ink: #101A14; --ink-2: #405048; --muted: #6A786F; --line: #D5DDD5; --line-2: #BFCAC1;
+  --accent: #1D6B45; --accent-2: #155235; --accent-soft: #DCEBE1; --accent-ink: #FFFFFF;
+  --maize: #D5940F; --maize-soft: #FAEFD2; --maize-ink: #6B4700;
+  --good: #0CA30C; --good-ink: #0B6B20; --good-soft: #DDF2DC;
+  --warn: #FAB219; --warn-ink: #7E5300; --warn-soft: #FCF1D4;
+  --serious: #EC835A; --serious-ink: #A0431D; --serious-soft: #FBE5DB;
+  --crit: #D03B3B; --crit-ink: #B02727; --crit-soft: #F8DEDC;
+  --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a; --s4: #eda100; --s5: #e87ba4; --s6: #008300; --s7: #4a3aa7; --s8: #e34948;
+  --seq-1: #cde2fb; --seq-3: #86b6ef; --seq-5: #3987e5; --seq-7: #1c5cab; --seq-9: #0d366b;
+  --grid: #E1E7E1; --axis: #BFCAC1;
+  --shadow: none; --shadow-lg: none;
+  background: var(--surface); color: var(--ink);
+}
+
+/* anteprima a schermo: un foglio A4 */
+.print-page { width: 210mm; max-width: 100%; min-height: 120mm; margin: 0 auto; padding: 14mm 12mm 12mm; border: 1px solid #D5DDD5; border-radius: 4px; box-shadow: 0 1px 2px rgba(16, 26, 20, .06), 0 8px 24px rgba(16, 26, 20, .10); display: flex; flex-direction: column; gap: 8px; }
+.print-page + .print-page { margin-top: 16px; }
+.pp-hd { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; padding-bottom: 8px; border-bottom: 2px solid var(--ink); font-size: 11.5px; }
+.pp-co { display: grid; gap: 0; }
+.pp-co b { font: 600 15px/1.2 var(--f-display); }
+.pp-co span, .pp-meta { color: var(--ink-2); }
+.pp-meta { display: grid; justify-items: end; gap: 0; text-align: right; }
+.pp-title { font: 600 22px/1.1 var(--f-display); margin: 8px 0 0; }
+.pp-bd { flex: 1; display: grid; gap: 8px; align-content: start; font-size: 12.5px; }
+.pp-bd .panel { border-color: #BFCAC1; }
+.pp-ft { display: flex; justify-content: space-between; gap: 16px; padding-top: 8px; border-top: 1px solid var(--line); font-size: 10.5px; color: var(--muted); }
+.print-only { display: none; }
+@media (max-width: 720px) { .print-page { padding: 16px 16px; min-height: 0; } .pp-hd { flex-direction: column; } .pp-meta { justify-items: start; text-align: left; } }
+
+@media print {
+  :root, :root[data-theme], :root:not([data-theme="light"]) {
+    color-scheme: light;
+    --bg: #FFFFFF; --surface: #FFFFFF; --surface-2: #F3F6F2; --surface-3: #E5ECE6; --overlay: transparent;
+    --ink: #101A14; --ink-2: #405048; --muted: #6A786F; --line: #D5DDD5; --line-2: #BFCAC1;
+    --accent: #1D6B45; --accent-2: #155235; --accent-soft: #DCEBE1; --accent-ink: #FFFFFF;
+    --maize: #D5940F; --maize-soft: #FAEFD2; --maize-ink: #6B4700;
+    --good: #0CA30C; --good-ink: #0B6B20; --good-soft: #DDF2DC;
+    --warn: #FAB219; --warn-ink: #7E5300; --warn-soft: #FCF1D4;
+    --serious: #EC835A; --serious-ink: #A0431D; --serious-soft: #FBE5DB;
+    --crit: #D03B3B; --crit-ink: #B02727; --crit-soft: #F8DEDC;
+    --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a; --s4: #eda100; --s5: #e87ba4; --s6: #008300; --s7: #4a3aa7; --s8: #e34948;
+    --seq-1: #cde2fb; --seq-3: #86b6ef; --seq-5: #3987e5; --seq-7: #1c5cab; --seq-9: #0d366b;
+    --grid: #E1E7E1; --axis: #BFCAC1;
+    --shadow: none; --shadow-lg: none;
+  }
+  html, body { background: #fff !important; color: #101A14; }
+  body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .side, .top, .mnav, .no-print, .toasts, .scrim, .skip { display: none !important; }
+  .print-only { display: block !important; }
+  .app, .main { display: block !important; }
+  .content { padding: 0 !important; max-width: none !important; }
+  /* un cassetto aperto si stampa al posto della pagina sotto */
+  .drawer { position: static !important; width: auto !important; max-width: none !important; height: auto !important; max-height: none !important; overflow: visible !important; box-shadow: none !important; border: 0 !important; transform: none !important; animation: none !important; }
+  html:has(.drawer) .content { display: none !important; }
+  /* con fogli di stampa nella pagina si stampano solo quelli */
+  html:has(.print-page) .content > :not(.print-page):not(:has(.print-page)) { display: none !important; }
+  html:has(.print-page) :has(> .print-page) > :not(.print-page) { display: none !important; }
+  html:has(.print-page) .panel:has(.print-page) { border: 0 !important; background: none !important; }
+  .print-page { width: auto; max-width: none; min-height: 0; margin: 0 !important; padding: 0; border: 0; border-radius: 0; box-shadow: none; break-after: page; }
+  .print-page:last-of-type { break-after: auto; }
+  .print-page table, .print-page .panel { break-inside: avoid; }
+}
