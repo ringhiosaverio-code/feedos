@@ -2,9 +2,9 @@
 bc5afd74709cf5363f53fd6336c3ce30b96a5cf5879b3e9802f00b8133902e82  ./CHANGELOG_16.0.md
 bafa077e485cda4a6b26a43c534fc2d556b0572b25dafd03921673480c061373  ./CHANGELOG_16.1.md
 0751dfcd4a87873e709756daef1cc53441833ec88664fe913821ecbb22d180cb  ./CHANGELOG_17.0.md
-fe53f5bc223939021210a65e455483902359d18ad8aa8caf6b43ba91f5bf90bc  ./DifesaOS-demo.html
+a4cf1b9bc82ad49f2d60fbc27f58dc91a4d1cfaaefd3fbca6c682a7509da4632  ./DifesaOS-demo.html
 ec0d23dc877d328dbfad71d55095bd7a77d3e75346b4894bd7b9cec6f1297e7f  ./FeedOS-16-completa-RISERVATA.html
-0f8e75536aaf5a6c5a2d1e2bd41daf7fb60ee35ef6fda286837587dd662e9355  ./FeedOS-16-demo.html
+5dac5ebcccd9bc13742bec61e90dc4c92e53355726c9903ee336b539974849b0  ./FeedOS-16-demo.html
 ab53b465e72bc9c35eb7911b4a987add391f52d26348f4ecf15e3cd7764c965d  ./LEGGIMI.md
 2b9eb9012ae34eef79307933998e33dfd533a6f62987a8cae054051ebea6ecdc  ./LEGGIMI.txt
 588b408d54597fdd557dcbdcdbe2b929e4732ea4996f5a51106b1dd2159c44bd  ./README.md
@@ -17,7 +17,7 @@ ec733354b8ee5a8b66a7a57ec439013146ebf9952d8e352f085b9104720e69fa  ./fonts/mono-4
 dd92c0677e81b151c7ae43ae2e6138831321f7cc50be570a27b8a0f42ab4423b  ./fonts/sans-400.woff
 886bec12ec89a752c5600bee9cf8e9bf05316d0009781e1c5cfeaa6025b76447  ./fonts/sans-400i.woff
 78be11935c8bcf0acd7b81ead02e405da6eb493337cbb6b280d2e8dee2a27446  ./fonts/sans-700.woff
-0f8e75536aaf5a6c5a2d1e2bd41daf7fb60ee35ef6fda286837587dd662e9355  ./index.html
+5dac5ebcccd9bc13742bec61e90dc4c92e53355726c9903ee336b539974849b0  ./index.html
 7521726a7719afb32c109acea3fe1d2dd388b9f18dd812ae038d836037bb350a  ./package-lock.json
 9d0f00ebebcb55ddc919c76efa0a8d3d694279ea9e8cd18dc3bad23ea7543eae  ./package.json
 6c1236d86c07310a7a0f196fe327b7a544ce8476ab480294b7feac7ccb09d7f0  ./src/app/App.jsx
@@ -53,7 +53,7 @@ e7a683e9f853df100f768be463c806c406e0d07d96905fa43e47d9181638f90b  ./src/data/dem
 8cf5b70757692c4acf3dd57fb6d58eb6b97b11b3b70cd5aafb1aa1a0de668831  ./src/data/demo/direzione.js
 03ca007f490e9e45364d49caf3d91c038ef480db4ce9eedf4e4cc2d1124c2800  ./src/data/demo/esg-ambiente.js
 0e29d0c1b2a73a053e15ec10bbf9c738330c7d491e8fdd5ebdf0a79dfdbb4832  ./src/data/demo/esg-clima.js
-351119a51241c1332dbb8a18a306029485356f475663ac2f1a583064145406ea  ./src/data/demo/esg-filiera.js
+4c26e5813a87d6fd364da7e3922d92d23f24de4cf1f1d4d7dee7c4af2eb0cf52  ./src/data/demo/esg-filiera.js
 cd4a6f23e7092255da8ce47f2b0c037d239c9f693a35e5f8779d94a17e55d112  ./src/data/demo/esg-governance.js
 b9d971a3e11abf9a4f99047cb5b8a9efeefc5f8bf955feebef539d409904a6dc  ./src/data/demo/esg-pcf.js
 bd55bf4ea1cf4c0ae9e2376c33998b45ef0989b1d3c8870bb38cc9e8ba1dfc31  ./src/data/demo/esg-persone.js
@@ -74,7 +74,7 @@ d3dff508fc54c2d67b07f97bfb421bdc02dfefb53cea7f52274cde10269cbbb5  ./src/data/esg
 3a70acb04dfd69651ccc54bbac885685241e88a759e14277833ffacd9a61523a  ./src/data/esgRegistry.js
 8f475ecff55b5015354ce4f8b9032e2f5820c8c96e1924d9c60982104753106f  ./src/data/fields-ambiente.js
 a864f923e6ca58ecbf569eea747129125e699eae69e2410743a041b911a8ce71  ./src/data/fields-clima.js
-80d631a4443c38ad667a34f2bb0f5f107f59621c4d2fcdb7bb693dd743403cfb  ./src/data/fields-filiera.js
+f4741741535f95ff639e6bec00ae737b100d51fd38acaea24c3908b708bcb848  ./src/data/fields-filiera.js
 4f150053fbb7f8166b15b39f2f00eb09d95ab5ef1aae70f5793752a2d8d4069d  ./src/data/fields-governance.js
 62a48278c04e135756751e35efb325bbea6eeb8d9b459a632ebed90ef3a071fd  ./src/data/fields-pcf.js
 0a3b18bdf9c1ea4ad490c1299484c5df5e8aebd01591057aee9121267239fac9  ./src/data/fields-persone.js
@@ -83,7 +83,7 @@ a864f923e6ca58ecbf569eea747129125e699eae69e2410743a041b911a8ce71  ./src/data/fie
 1e0f535ebe6dc80d3e3bbf72c3561cac7a3a5e01f1e5e1fbc3f6d34e01b8e275  ./src/data/fields-rischi.js
 3e441bf4e39a6ee7744c6024f0fa36301f594d2ad3cd8063821ed81f7d4726b8  ./src/data/i18n-ambiente.js
 896dc15c06db0b69b1608a84c3eb36c4dea1074ff4d19cd8dffeb30cc61c9958  ./src/data/i18n-clima.js
-ff986e216eba60d1b9f3f507acd0fe3c3a7e7d0e1492d2c07e46ebf020c6027f  ./src/data/i18n-filiera.js
+81fa3a9817631d026bda2d63dd74e802767f01cfd7eab2e20b26cab4544c880a  ./src/data/i18n-filiera.js
 c190e0e8bbd1a86c9be409bf1e207b052f9f9d739d6440af233cc5d892ecdb06  ./src/data/i18n-governance.js
 2e9a6bbadc4824d762179422c0c132c46fb11f3ced67546767f8f61039c9ca2e  ./src/data/i18n-pcf.js
 089a4497451c641bee34cc2adc623a3875b116c081e16b5f9a018024b1f6d33e  ./src/data/i18n-persone.js
@@ -91,6 +91,7 @@ c06e29b7734d349c0b9a97020e4bc7c9c2f3fea82e39dd5b3276a6933f520b68  ./src/data/i18
 5d3dacef90384fb7e79657e77952c1a26bcf6f06f7dbbb044f0193cebde5d26f  ./src/data/i18n-report.js
 9d659b2349d03df01ef0b86cde6de86c572aef937406d53c6f5ec003601027e5  ./src/data/i18n-rischi.js
 cef53fa3be8e83295cd3b2a57676ee3e394ba9a703e551678da40543c09610f6  ./src/data/pack-clima.js
+34e3d3a1b853c0282fd412ab3b591060de4a1aa0f688377e99f7056b3007b3fa  ./src/data/pack-filiera.js
 d82c7e432b07ca7902cc6b22c49709e90493796e6353ac55db0997153fea3c72  ./src/data/pack-report.js
 e37e12d7cfe9b4205a243f3f7647ec6552db7046623f5f15c95d6e84c7e0fe8d  ./src/data/survey.js
 4b4bb511b7b88ce679793302bf1efecfe2d9e5420d6a146a520be07833b4557f  ./src/data/thesis.js
@@ -129,7 +130,9 @@ b2dc355494fae00f0abce68612aa4c3def9cfd204e0c48826a8e1f2333734625  ./src/engine/e
 d4e7d5bb9ed941f7f7964deb5708c910263fb0e5e76836366f5e011f4711e71b  ./src/engine/esg-clima-inventory.js
 557d7f35d7c66b6c9db53f998a3e5634b806de394968bc2ce80ac283a6c3c8dc  ./src/engine/esg-clima-scope3.js
 3cbdf6b7a472ada03be523a19f383929e226a7dc7665be56ff49e0e91babb78e  ./src/engine/esg-clima.js
-13aeae3efe9447f16db414d2f6fb6d9f71f3658753b08e0596f5eb6520d083e3  ./src/engine/esg-filiera.js
+8b05584409e55852b1bde51c215b7dcc8b855e5aa6d01f9281444b68968981ef  ./src/engine/esg-filiera-forms.js
+fa9a3ba142b304f3f77949d1ee02162e25701a4f5eb9957d2705f0bdb4f8d41d  ./src/engine/esg-filiera-geo.js
+500a775e3e9ca0b8909e3c4fb052c190879e07a6e24513a8ddd8df6705baa9f0  ./src/engine/esg-filiera.js
 6ee5a24c7cd5555597cb8b763e1a2f92cec589f680adf29583b1926566ca4bee  ./src/engine/esg-governance.js
 f0aa6b57b7a7d401d010d08ed2894cc61f5ede14f704453ff6c362d9712593a7  ./src/engine/esg-nlg.js
 8dee011d28da48cccf9f4edc78eb4c81cfd3e925897af6b981a214246ad18dd1  ./src/engine/esg-packs.js
@@ -189,7 +192,10 @@ c2672d291e4ffdfcdaf4b1cae6dd7466cf8080632e73a612995683ad2d7ce07d  ./src/modules/
 95f21d5b12335900240d41a3b23c6f2aab713e2ac5d31007eb1737ae9699bae9  ./src/modules/esg-clima-registri.jsx
 76bbf3a804cd02525c76627e665ef41ebb737e9f8d738152cdd669908ba69c00  ./src/modules/esg-clima-ui.jsx
 858f4617e3d0ab9365f0fc38c42372be2437abe2e98247067a484559776aad07  ./src/modules/esg-clima.jsx
-a4952ff2c55d742ce5964d6a304f63980225909eff30051593477da83fb6f819  ./src/modules/esg-filiera.jsx
+83ba1841c371cfaf9fb6aec542632aa1c7ba326e63aa4af8888cf560a76d2cf1  ./src/modules/esg-filiera-lotti.jsx
+10f6cfb54c7d23b37f138f3b78fdd365c8f490d89572f46004c2e932538323ac  ./src/modules/esg-filiera-rete.jsx
+9ae29ef3d91d96ef751ba842991a4763c433f68674783ea8b923661f7b6bd0ec  ./src/modules/esg-filiera-ui.jsx
+7a36ba869b3a1ddf851539690621877e9d2669371ef3d7928e8defa8809813a1  ./src/modules/esg-filiera.jsx
 47c90476fbdd3a94ed8a08e7268bb0bdccd648e712556e699431c0fa10a53acd  ./src/modules/esg-governance.jsx
 c138bf3fe2fa7d0fb01426817ea4807107b173a28d82618d1d21af73118baf5e  ./src/modules/esg-pages.jsx
 5e707d8d7d7cb8911f511d91b9f8e6d4d1c8d4a7e8556fb3944e46821280d4af  ./src/modules/esg-pcf.jsx
@@ -226,7 +232,7 @@ dc31f2395bf817d46360c85237f6246f54b4bab0d3048c37f0e10e7304e32e3f  ./src/styles/a
 382fda27ec8ac0e24c2f2ab740d4e8ff46e22363e0643353b0bc077b0ee2d0fd  ./src/styles/direzione.css
 7648ae65e9ae403e50f09b0bc3132bc012f6cd670e15cb8bd20eebda2401fa54  ./src/styles/esg-ambiente.css
 849d07b598743cfff619d4be9784e6586aa5df27423e00aef8c7238228f92511  ./src/styles/esg-clima.css
-d9c7f31d0be0320ae84f21ead5ca0ed1342c4391f38c3b4d1d0bddf853cdc75d  ./src/styles/esg-filiera.css
+a3b2e885fdd1b62cf9c37c957bb57d27ca545c3e5e201616f5757fb224f58a50  ./src/styles/esg-filiera.css
 b01ebca08c95cdbf99693d50c63933d3e5a02f56688acddb36f894008d629962  ./src/styles/esg-governance.css
 96a0492ae86d7413974a51e5b2cfb3a50c326ebf79046c301861f466e512e7a1  ./src/styles/esg-pcf.css
 a29d4020d310b4a84d96cd9d1b5247a3fff79db54586eb39f66734d62cd8f1d3  ./src/styles/esg-persone.css
@@ -250,7 +256,7 @@ aed7d5fc31a7389e1e3e6eff62e57a9f0e282f3aa98c4f142e5a0bfb080679de  ./tests/e2e/fl
 422f2fa167802c0d2c38a4e9e5716369a3f2c0f5cd9d2d6374d23679ce1fb4d9  ./tests/e2e/ops.py
 1a6035dc00762a60360122247eaf10079fedd50e42b964aa901767d97542c6f7  ./tests/e2e/routes-ambiente.txt
 4e169ebbb6a05f449a6c84824e5cc7eab5429393c5f3bebdecc58db2365b0a1f  ./tests/e2e/routes-clima.txt
-e60f8173d27c71c9d64aba70f21898dcfc6a8e3c7a62667d12669bef658cab73  ./tests/e2e/routes-filiera.txt
+371ce9f723d90a57f9b461a4ad40f80b8bf92708de663f61ec1232d0b8d12be8  ./tests/e2e/routes-filiera.txt
 fb59aa9c21c07e812773207b2e59d251ac1b4a326fe199ba0fa17c4ed15a7449  ./tests/e2e/routes-governance.txt
 d02939e41d0de9d51daa45cd1b163e4a64e7c1e43c58e54b512f30fa69fdc79d  ./tests/e2e/routes-pcf.txt
 77a3378bddc3d69c01217531ae246123afbb71f794c90855b507ea0413956134  ./tests/e2e/routes-persone.txt
@@ -270,7 +276,7 @@ f3a1e1ab222d7753e628f0d3b432d33000f2f8ad993c4adcb7b91995fbc55717  ./tests/engine
 374d4af519b8d41e3e4d25294676909f236121939922d9709a11a1dd733556e7  ./tests/engine/demo.test.mjs
 ff0c785f99016601e9c99597073ef5cc0b6b01058bc6d4ccf57e9d3ce2c0dd07  ./tests/engine/esg-ambiente.test.mjs
 2ac3c324f03f6212c2f8c7350f466b44dcd4cff91f565442eb0d940770498dd3  ./tests/engine/esg-clima.test.mjs
-ff29df17aee4a9ff29c2722968d217de25a4f751a1e5efcae3a6e224ae682418  ./tests/engine/esg-filiera.test.mjs
+9b49ac2e0faa7b43da0b4de6ab3d9942d849da84e7690e27c7e6f8b135864977  ./tests/engine/esg-filiera.test.mjs
 3be32e0db693abf603cc6c69601a80a1af1a805273dc49180b8f990d332be554  ./tests/engine/esg-foundation.test.mjs
 1ba8bb0367d7b71528906c53414e78926daaab68e1caf8e1d40afb540198d6d8  ./tests/engine/esg-governance.test.mjs
 220b91016e3188697ec362ae98621901fd7e9dfd5f02b47764b62a386599a41a  ./tests/engine/esg-pcf.test.mjs

@@ -26,7 +26,7 @@ const pctTxt = (v, k = 0) => (v == null || !Number.isFinite(v) ? '—' : `${nf(v
 const ISO = /^\d{4}-\d{2}-\d{2}$/;
 const todayOf = (d, ctx) => (ctx && typeof ctx.today === 'string' && ISO.test(ctx.today) ? ctx.today : esgToday(d));
 const LINK = id => ({ area: 'esg', tab: 'filiera', ...(id ? { id } : {}) });
-/** La scheda «EUDR e fornitori» esiste in questa edizione? (FitoOS la nasconde: niente segnali, sezioni o scadenze che vi portano). */
+/** La scheda «EUDR e fornitori» esiste in questa edizione? (DifesaOS la nasconde: niente segnali, sezioni o scadenze che vi portano). */
 export const FILIERA_TAB = !(Array.isArray(META?.hiddenTabs?.esg) && META.hiddenTabs.esg.includes('filiera'));
 
 /* memoria per identità degli argomenti (come kpis.js): il cruscotto e la pagina chiedono gli stessi conti molte volte */
