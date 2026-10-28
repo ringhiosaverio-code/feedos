@@ -19,8 +19,13 @@ const RIVALS = ['Mangimi Valle del Crati (fantasia)', 'Nutrizione Ionica (fantas
 const REASON = { 'Prezzo concorrente più basso': 'prezzo', 'Tempi di consegna': 'servizio', 'Cliente ha ridotto i capi': 'altro' };
 const isNone = s => !s || /^nessun[ao]?$/i.test(String(s).trim());
 
-export function demoCommerciale(d, { today, R } = {}) {
+/* Configurazione del mangimificio; l'edizione agrofarmaci passa la sua. */
+export const FEED_COMMERCIALE = { schemes: SCHEMES, rivals: RIVALS, reason: REASON, movedType: 'allevamento', rebateType: 'rivendita', rebates: [1, 1.5, 2] };
+export function demoCommerciale(d, opts = {}) { return commercialeDemo(d, opts, FEED_COMMERCIALE); }
+/** Estensore commerciale con la configurazione dell'azienda (cfg, vedi FEED_COMMERCIALE). */
+export function commercialeDemo(d, { today, R } = {}, cfg = FEED_COMMERCIALE) {
   if (!d?.products?.length || !today || !R) return {};
+  const { schemes: SCHEMES, rivals: RIVALS, reason: REASON } = cfg;
   const add = {}, update = {};
 
   // listini: apertura al 97% del listino attuale fino alla revisione di primavera (lunedì della settimana 26 del demo)
@@ -41,7 +46,7 @@ export function demoCommerciale(d, { today, R } = {}) {
 
   // storico delle assegnazioni: un cliente cambia agente a metà anno (agentId e consegne restano come sono)
   const custs = [...(d.customers || [])].sort((a, b) => (a.id < b.id ? -1 : 1));
-  const farms = custs.filter(c => c.type === 'allevamento' && !c.agentHistory);
+  const farms = custs.filter(c => c.type === cfg.movedType && !c.agentHistory);
   const moved = farms.length ? farms[R.int(0, farms.length - 1)] : null;
   const agents = (d.agents || []).map(a => a.id);
   const change = monthStart(addDays(today, -120));
@@ -56,7 +61,7 @@ export function demoCommerciale(d, { today, R } = {}) {
       } else u.agentHistory = [{ agentId: c.agentId, from: since }];
     }
     // premio di fine anno delle rivendite (maturato sul fatturato): entra nella cascata del prezzo pocket
-    if (c.type === 'rivendita' && c.rebatePct == null) u.rebatePct = R.pick([1, 1.5, 2]);
+    if (c.type === cfg.rebateType && c.rebatePct == null) u.rebatePct = R.pick(cfg.rebates);
     if (Object.keys(u).length > 1) update.customers.push(u);
   }
 

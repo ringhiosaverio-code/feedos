@@ -8,9 +8,13 @@ import { ROLES, AGENT_HIDDEN } from '../core/roles.js';
 import { setPrefs, usePrefs } from '../core/prefs.js';
 import { norm, nf } from '../core/util.js';
 import { NAV } from './nav.js';
+import { META } from '../editions/meta.js';
 import { kpis, esgOverview } from '../core/derived.js';
 
 const FULL = __FULL__; // versione completa (con i riferimenti alla tesi) o pubblica
+
+/** Vero se l'area (e la scheda) esistono in questa edizione: le azioni verso parti nascoste non si propongono. */
+const can = (area, tab) => !!NAV[area] && (!tab || NAV[area].tabs.some(t => t.id === tab));
 
 function buildIndex(d, role) {
   const items = [];
@@ -21,16 +25,18 @@ function buildIndex(d, role) {
     for (const t of N.tabs) items.push({ kind: 'Pagina', icon: N.icon, label: `${N.label} › ${t.label}`, run: () => go(area, t.id) });
   }
   const A = (label, run, icon = LuZap, extra = '', area = null) => { if (!hidden.includes(area)) items.push({ kind: 'Azione', icon, label, run, extra }); };
-  A('Nuova formula', () => go('formulazione', 'formule', 'nuova'), LuFlaskConical);
-  A('Ottimizza una formula ai prezzi di oggi', () => go('formulazione', 'formule'), LuFlaskConical);
+  if (can('formulazione')) {
+    A('Nuova formula', () => go('formulazione', 'formule', 'nuova'), LuFlaskConical);
+    A('Ottimizza una formula ai prezzi di oggi', () => go('formulazione', 'formule'), LuFlaskConical);
+  }
   A('Nuova offerta con margine in tempo reale', () => go('commerciale', 'offerte', 'nuova'), LuHandshake);
   A('Registra una produzione', () => go('produzione', 'registro', 'nuova'));
   A('Simula un richiamo di prodotto', () => go('qualita', 'richiamo'), LuShieldCheck);
-  A('Apri il simulatore «E se…»', () => go('economia', 'scenari'), LuSparkles, '', 'economia');
+  if (can('economia', 'scenari')) A('Apri il simulatore «E se…»', () => go('economia', 'scenari'), LuSparkles, '', 'economia');
   A('Registra un reclamo', () => go('qualita', 'reclami', 'nuovo'), LuMessageSquare);
   A('Registra la lettura dell’acqua', () => go('esg', 'acqua', 'nuova'), LuDroplets);
   A('Registra un rifiuto (formulario)', () => go('esg', 'rifiuti', 'nuovo'), LuRecycle);
-  A('Compila il questionario ESG', () => go('esg', 'questionario'), LuClipboardList);
+  if (can('esg', 'questionario')) A('Compila il questionario ESG', () => go('esg', 'questionario'), LuClipboardList);
   // direzione, finanza e operations
   A('Conto economico', () => go('direzione', 'conto'), LuLandmark, 'Direzione', 'direzione');
   A('Budget vs consuntivo', () => go('direzione', 'budget'), LuLandmark, 'Direzione', 'direzione');
@@ -47,7 +53,7 @@ function buildIndex(d, role) {
   A('Tema chiaro', () => setPrefs({ theme: 'light' })); A('Tema scuro', () => setPrefs({ theme: 'dark' })); A('Tema automatico', () => setPrefs({ theme: 'auto' }));
   A(FULL ? 'Modalità aula (caratteri grandi)' : 'Caratteri grandi (proiezione)', () => setPrefs(p => ({ size: p.size === 'aula' ? 'normale' : 'aula' })));
   for (const r of ROLES) A(`Vista: ${r.label}`, () => { setPrefs({ role: r.id }); toast('Vista: ' + r.label); });
-  for (const f of d.formulas) items.push({ kind: 'Formula', icon: LuFlaskConical, label: f.name, extra: f.code, run: () => go('formulazione', 'formule', f.id) });
+  if (can('formulazione')) for (const f of d.formulas) items.push({ kind: 'Formula', icon: LuFlaskConical, label: f.name, extra: f.code, run: () => go('formulazione', 'formule', f.id) });
   for (const p of d.products) items.push({ kind: 'Prodotto', icon: LuBoxes, label: p.name, extra: p.code, run: () => openDrawer('product', p.id) });
   for (const i of d.ingredients) items.push({ kind: 'Materia prima', icon: LuWheat, label: i.name, extra: i.code, run: () => openDrawer('ingredient', i.id) });
   for (const c of d.customers) items.push({ kind: 'Cliente', icon: LuUsers, label: c.name, extra: `${c.city} (${c.province})`, run: () => openDrawer('customer', c.id) });
@@ -69,16 +75,16 @@ function questions(q, d, role) {
   let m;
   if (role !== 'agente' && (m = s.match(/^(margin[ei]|margine di|guadagno)\s+(.+)/))) for (const p of find(d.products, m[2], p => p.name + ' ' + p.code)) out.push({ kind: 'Risposta', icon: LuSparkles, label: `Margine di ${p.name}`, extra: 'apre Economia › Margini', run: () => go('economia', 'margini', p.id) });
   if ((m = s.match(/^(scort[ae]|giacenz[ae]|magazzino)\s+(.+)/))) for (const i of find(d.ingredients, m[2], i => i.name)) out.push({ kind: 'Risposta', icon: LuSparkles, label: `Scorta di ${i.name}: ${nf(i.stock, 1)} t`, extra: 'apre le scorte', run: () => go('acquisti', 'scorte', i.id) });
-  if ((m = s.match(/^(costo|prezzo|formula)\s+(.+)/))) for (const f of find(d.formulas, m[2], f => f.name + ' ' + f.code)) out.push({ kind: 'Risposta', icon: LuSparkles, label: `Costo della formula ${f.name}`, extra: 'apre la formula', run: () => go('formulazione', 'formule', f.id) });
+  if (can('formulazione') && (m = s.match(/^(costo|prezzo|formula)\s+(.+)/))) for (const f of find(d.formulas, m[2], f => f.name + ' ' + f.code)) out.push({ kind: 'Risposta', icon: LuSparkles, label: `Costo della formula ${f.name}`, extra: 'apre la formula', run: () => go('formulazione', 'formule', f.id) });
   if ((m = s.match(/^(richiam[oa]|dove e finito|dove è finito)\s+(.+)/))) {
     for (const l of d.ingLots.filter(l => norm(l.code).includes(norm(m[2]))).slice(0, 3)) out.push({ kind: 'Risposta', icon: LuShieldCheck, label: `Richiamo del lotto ${l.code}`, extra: 'simula dove è finito', run: () => go('qualita', 'richiamo', l.id) });
     for (const l of d.lots.filter(l => norm(l.code).includes(norm(m[2]))).slice(0, 3)) out.push({ kind: 'Risposta', icon: LuShieldCheck, label: `Richiamo del lotto ${l.code}`, extra: 'simula dove è finito', run: () => go('qualita', 'richiamo', l.id) });
   }
-  if (role !== 'agente' && (m = s.match(/^(e se|se)\s+(.+?)\s*([+-]\s*\d+)\s*%?/))) for (const i of find(d.ingredients, m[2], i => i.name)) out.push({ kind: 'Risposta', icon: LuSparkles, label: `E se ${i.name.toLowerCase()} ${m[3].replace(/\s/g, '')}%?`, extra: 'apre il simulatore con questo scenario', run: () => { uiStore.set({ scenarioSeed: { byIngredient: { [i.id]: +m[3].replace(/\s/g, '') } } }); go('economia', 'scenari'); } });
+  if (role !== 'agente' && can('economia', 'scenari') && (m = s.match(/^(e se|se)\s+(.+?)\s*([+-]\s*\d+)\s*%?/))) for (const i of find(d.ingredients, m[2], i => i.name)) out.push({ kind: 'Risposta', icon: LuSparkles, label: `E se ${i.name.toLowerCase()} ${m[3].replace(/\s/g, '')}%?`, extra: 'apre il simulatore con questo scenario', run: () => { uiStore.set({ scenarioSeed: { byIngredient: { [i.id]: +m[3].replace(/\s/g, '') } } }); go('economia', 'scenari'); } });
   if (/^(acqua|consumo idrico|prelievo idrico)\b/.test(s)) { const W = kpis(d).water; out.push({ kind: 'Risposta', icon: LuDroplets, label: W.nMonths ? `Acqua: ${nf(W.m3)} m³ in 12 mesi · ${nf(W.intensity * 1000, 1)} litri/t` : 'Acqua: nessuna lettura registrata', extra: 'apre ESG › Acqua', run: () => go('esg', 'acqua') }); }
   if (/^(rifiuti|spazzatura|recupero)\b/.test(s)) { const S = kpis(d).waste; out.push({ kind: 'Risposta', icon: LuRecycle, label: S.n ? `Rifiuti: ${nf(S.kg / 1000, 1)} t in 12 mesi · ${nf(S.recovery * 100)}% a recupero` : 'Rifiuti: nessun formulario registrato', extra: 'apre ESG › Rifiuti', run: () => go('esg', 'rifiuti') }); }
-  if (/^(esg|sostenibilita|maturita|punteggio esg)\b/.test(s)) { const o = esgOverview(d); out.push({ kind: 'Risposta', icon: LuLeaf, label: `Maturità ESG ${nf(o.score.score)}/100 · ${o.score.level}`, extra: 'apre il cruscotto ESG', run: () => go('esg', 'cruscotto') }); }
-  if (/^(co2|emissioni|scope)\b/.test(s)) { const G = kpis(d).ghg; out.push({ kind: 'Risposta', icon: LuLeaf, label: `Emissioni: Scope 1 ${nf(G.scope1)} t · Scope 2 ${nf(G.scope2)} t · Scope 3 ${nf(G.scope3)} t CO₂e`, extra: 'apre il cruscotto ESG', run: () => go('esg', 'cruscotto') }); }
+  if (/^(esg|sostenibilita|maturita|punteggio esg)\b/.test(s)) { const o = esgOverview(d); out.push({ kind: 'Risposta', icon: LuLeaf, label: `Maturità ESG ${nf(o.score.score)}/100 · ${o.score.level}`, extra: 'apre il cruscotto ESG', run: () => go('esg', can('esg', 'cruscotto') ? 'cruscotto' : undefined) }); }
+  if (/^(co2|emissioni|scope)\b/.test(s)) { const G = kpis(d).ghg; out.push({ kind: 'Risposta', icon: LuLeaf, label: `Emissioni: Scope 1 ${nf(G.scope1)} t · Scope 2 ${nf(G.scope2)} t · Scope 3 ${nf(G.scope3)} t CO₂e`, extra: 'apre il cruscotto ESG', run: () => go('esg', can('esg', 'cruscotto') ? 'cruscotto' : undefined) }); }
   return out;
 }
 
@@ -114,14 +120,14 @@ export function Palette() {
       <div className="scrim" onClick={close} />
       <div className="pal" role="dialog" aria-modal="true" aria-label="Cerca o apri un comando">
         <div className="q"><LuSearch aria-hidden="true" />
-          <input ref={ref} value={q} onChange={e => { setQ(e.target.value); setSel(0); }} onKeyDown={onKey} placeholder="Cerca… oppure chiedi: «margine suino», «scorte mais», «richiamo M01», «e se mais +10%»" aria-label="Cerca" role="combobox" aria-expanded="true" aria-controls="pal-list" aria-activedescendant={'pal-' + sel} />
+          <input ref={ref} value={q} onChange={e => { setQ(e.target.value); setSel(0); }} onKeyDown={onKey} placeholder={`Cerca… oppure chiedi: ${META.labels?.palette || '«scorte», «richiamo»'}`} aria-label="Cerca" role="combobox" aria-expanded="true" aria-controls="pal-list" aria-activedescendant={'pal-' + sel} />
         </div>
         <ul id="pal-list" role="listbox">
           {results.map((it, i) => { const I = it.icon || LuArrowRight; return (
             <li key={i} id={'pal-' + i} role="option" aria-selected={i === sel} onMouseEnter={() => setSel(i)} onClick={() => run(it)}>
               <I aria-hidden="true" /><span>{it.label}{it.extra && <small> · {it.extra}</small>}</span><span className="g">{it.kind}</span>
             </li>); })}
-          {!results.length && <li aria-disabled="true"><span className="muted">Nessun risultato. Prova con un codice, un nome o «scorte mais».</span></li>}
+          {!results.length && <li aria-disabled="true"><span className="muted">Nessun risultato. Prova con un codice, un nome o {META.labels?.paletteEmpty || '«scorte»'}.</span></li>}
         </ul>
         <div className="hint"><span><kbd>↑</kbd> <kbd>↓</kbd> per scegliere</span><span><kbd>Invio</kbd> per aprire</span><span><kbd>Esc</kbd> per chiudere</span><span>Le risposte usano solo i dati di questo archivio.</span></div>
       </div>

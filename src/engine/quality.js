@@ -14,8 +14,20 @@ const TOL = {
 };
 export const TOLERANCE_NOTE = 'Tolleranze del Reg. (CE) 767/2009, all. IV, parte A (testo modificato dal Reg. UE 2017/2279), mangimi per animali da produzione alimentare.';
 
-/** Intervallo ammesso [min, max] per un valore dichiarato in etichetta. */
-export function toleranceRange(param, declared) {
+/* Agrofarmaci: tolleranze sul contenuto di sostanza attiva dichiarato (g/kg o g/L), secondo lo schema del manuale FAO/OMS
+ * delle specifiche (da verificare): fino a 25 ±15% (±25% per granuli e WG), oltre 25 fino a 100 ±10%, oltre 100 fino a 250 ±6%,
+ * oltre 250 fino a 500 ±5%, oltre 500 ±25 g. */
+export const AS_TOLERANCE_NOTE = 'Tolleranze sul contenuto di sostanza attiva secondo lo schema FAO/OMS delle specifiche degli agrofarmaci (da verificare sulla specifica del prodotto).';
+export function asToleranceRange(declared, form = '') {
+  if (declared == null || !(declared > 0)) return null;
+  const het = /^(WG|WDG|GR|DP|WP)$/i.test(String(form));
+  const d = declared <= 25 ? declared * (het ? 0.25 : 0.15) : declared <= 100 ? declared * 0.1 : declared <= 250 ? declared * 0.06 : declared <= 500 ? declared * 0.05 : 25;
+  return { min: declared - d, max: declared + d };
+}
+
+/** Intervallo ammesso [min, max] per un valore dichiarato in etichetta (titolo: contenuto di sostanza attiva degli agrofarmaci). */
+export function toleranceRange(param, declared, form) {
+  if (param === 'titolo') return asToleranceRange(declared, form);
   const t = TOL[param];
   if (!t || declared == null) return null;
   const band = t.find(b => declared < b[0]) || t[t.length - 1];
@@ -26,8 +38,8 @@ export function toleranceRange(param, declared) {
 }
 
 /** Verifica un'analisi rispetto al valore dichiarato. */
-export function checkAnalysis(param, value, declared) {
-  const r = toleranceRange(param, declared);
+export function checkAnalysis(param, value, declared, form) {
+  const r = toleranceRange(param, declared, form);
   if (!r || value == null) return { status: 'n/d' };
   if (value < r.min) return { status: 'difetto', ...r };
   if (value > r.max) return { status: 'eccesso', ...r };

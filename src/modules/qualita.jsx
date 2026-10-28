@@ -8,7 +8,7 @@ import { idx, appToday, signals, traceIndex, shippedByLot } from '../core/derive
 import { nf, sf, sum, dateIt, addDays, daysBetween, mean, round, norm, uid } from '../core/util.js';
 import { nextCode } from '../core/codes.js';
 import { download, toCSV, stamp } from '../core/io.js';
-import { checkAnalysis, toleranceRange, controlStats, TOLERANCE_NOTE } from '../engine/quality.js';
+import { checkAnalysis, toleranceRange, controlStats, TOLERANCE_NOTE, AS_TOLERANCE_NOTE } from '../engine/quality.js';
 import { recall } from '../engine/trace.js';
 import { profile, AFB1_LIMITS } from '../engine/nutrients.js';
 import { acceptIngLotOps, REJECT_REASONS } from '../engine/operations.js';
@@ -35,6 +35,13 @@ export function declaredFor(d, lot, I = idx(d)) {
 export function lotCheck(d, lot, I) {
   const a = lot.analyses?.[lot.analyses.length - 1];
   if (!a) return { status: 'n/d', items: [] };
+  // agrofarmaci: titolo di sostanza attiva contro il dichiarato riportato nell'analisi
+  if (a.values?.titolo != null) {
+    const form = I.prod[lot.productId]?.form;
+    const items = [{ id: 'titolo', label: `Sostanza attiva (${a.values.unita || 'g/kg'})`, value: a.values.titolo, declared: a.values.dichiarato, ...checkAnalysis('titolo', a.values.titolo, a.values.dichiarato, form) }];
+    const bad = items.filter(x => x.status === 'difetto' || x.status === 'eccesso');
+    return { status: bad.length ? 'fuori' : 'ok', items, bad, date: a.date, method: a.method };
+  }
   const dec = declaredFor(d, lot, I);
   const items = PARAMS.map(p => ({ ...p, value: a.values?.[p.id], declared: dec[p.id], ...checkAnalysis(p.id, a.values?.[p.id], dec[p.id]) }));
   const bad = items.filter(x => x.status === 'difetto' || x.status === 'eccesso');
@@ -82,7 +89,7 @@ function Lotti({ d, sel }) {
         <Kpi label="Lotti analizzati (90 gg)" value={recent.length ? nf(analyzed.length / recent.length * 100) : '—'} unit="%" foot="piano di campionamento" />
       </div>
       {sigs.length > 0 && <Panel title="Da decidere in qualità" flush><SignalList items={sigs} limit={3} /></Panel>}
-      <Panel title="Lotti di prodotto" sub={`Ultima analisi confrontata con i valori dichiarati · ${TOLERANCE_NOTE}`} flush
+      <Panel title="Lotti di prodotto" sub={`Ultima analisi confrontata con i valori dichiarati · ${d.lots.some(l => l.analyses?.[0]?.values?.titolo != null) ? AS_TOLERANCE_NOTE : TOLERANCE_NOTE}`} flush
         actions={<><Seg options={[{ id: '', label: 'Tutti' }, { id: 'in attesa', label: 'In attesa' }, { id: 'fuori', label: 'Fuori tolleranza' }, { id: 'bloccato', label: 'Bloccati' }]} value={st} onChange={setSt} label="Stato" />
           <Seg options={[{ id: 30, label: '30 gg' }, { id: 60, label: '60 gg' }, { id: 365, label: '12 mesi' }]} value={days} onChange={setDays} label="Periodo" />
           <SearchBox value={q} onChange={setQ} placeholder="Lotto o prodotto" id="lot-search" /></>}>

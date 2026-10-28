@@ -28,8 +28,13 @@ import { Commerciale } from '../modules/commerciale.jsx';
 import { Economia } from '../modules/economia.jsx';
 import { Esg } from '../modules/esg.jsx';
 import { Dati } from '../modules/dati.jsx';
+import { PageHead } from '../ui/ui.jsx';
+import { META } from '../editions/meta.js';
+import { PAGES as EDITION_PAGES, TAB_PAGES } from '../editions/app.js';
 
-const PAGES = { oggi: Oggi, direzione: Direzione, finanza: Finanza, gemello: Gemello, formulazione: Formulazione, acquisti: Acquisti, produzione: Produzione, qualita: Qualita, commerciale: Commerciale, economia: Economia, esg: Esg, dati: Dati };
+const PAGES = { oggi: Oggi, direzione: Direzione, finanza: Finanza, gemello: Gemello, formulazione: Formulazione, acquisti: Acquisti, produzione: Produzione, qualita: Qualita, commerciale: Commerciale, economia: Economia, esg: Esg, dati: Dati, ...EDITION_PAGES };
+/** Nome e versione mostrati: quelli dell'edizione (FitoOS 1.0) o di FeedOS con la versione dell'app. */
+const PRODUCT_VERSION = META.version || VERSION;
 import { VERSION } from './version.js';
 export { VERSION };
 
@@ -64,11 +69,16 @@ export function App() {
     return () => window.removeEventListener('keydown', onKey);
   }, []);
 
-  useEffect(() => { document.title = `${NAV[route.area]?.label || 'FeedOS'} · FeedOS 17`; }, [route.area]);
+  useEffect(() => { document.title = `${NAV[route.area]?.label || META.product} · ${META.product} ${META.version || VERSION.split('.')[0]}`; }, [route.area]);
 
   if (!ready) return <div className="content"><p className="muted">Apertura dell’archivio…</p></div>;
   const blocked = role.id === 'agente' && AGENT_HIDDEN.includes(route.area);
-  const Page = PAGES[route.area] || Oggi;
+  // scheda in più dell'edizione dentro un'area esistente (es. Commerciale › Campagne in FitoOS): testata dell'area + pagina della scheda
+  const TabPage = TAB_PAGES[`${route.area}.${route.tab}`];
+  const Page = TabPage ? EditionTab : (NAV[route.area] && PAGES[route.area]) || Oggi; // aree di un'altra edizione: Oggi
+  // una scheda nascosta in questa edizione (indirizzo vecchio o scritto a mano) apre la prima scheda dell'area
+  const tabs = NAV[route.area]?.tabs || [];
+  const page = route.tab && !TabPage && tabs.length && (META.hiddenTabs?.[route.area] || []).includes(route.tab) ? { ...route, tab: tabs[0].id, id: null } : route;
   return (
     <div className="app">
       <SkipLink />
@@ -77,7 +87,7 @@ export function App() {
         <Topbar d={d} route={route} role={role} theme={theme} />
         <Banners />
         <main className="content" id="contenuto" tabIndex={-1}>
-          <Guard key={route.area + '.' + (route.tab || '') + '.' + (route.id || '')}>{blocked ? <NotForRole area={route.area} /> : <Page route={route} />}</Guard>
+          <Guard key={route.area + '.' + (route.tab || '') + '.' + (route.id || '')}>{blocked ? <NotForRole area={route.area} /> : <Page route={page} />}</Guard>
         </main>
       </div>
       <MobileNav d={d} route={route} role={role} />
@@ -87,6 +97,18 @@ export function App() {
       <Modal />
       <Toasts />
     </div>
+  );
+}
+
+/** Scheda in più dell'edizione: la testata dell'area con tutte le sue schede, poi la pagina della scheda. */
+function EditionTab({ route }) {
+  const d = useData();
+  const A = AREA[route.area], Comp = TAB_PAGES[`${route.area}.${route.tab}`];
+  return (
+    <>
+      <PageHead title={A?.label} lead={A?.lead} tabs={NAV[route.area]?.tabs || []} tab={route.tab} onTab={t => go(route.area, t)} />
+      <Comp d={d} route={route} />
+    </>
   );
 }
 
@@ -173,11 +195,11 @@ function Sidebar({ d, route, role }) {
     <aside className="side" aria-label="Menu principale">
       <button className="brand" onClick={() => go('oggi')} title="Vai a Oggi">
         <span className="mark" aria-hidden="true">F</span>
-        <span><b>FeedOS</b><small>{d.settings?.company?.short || 'Mangimificio'} · {VERSION}</small></span>
+        <span><b>{META.product}</b><small>{d.settings?.company?.short || META.companyFallback} · {PRODUCT_VERSION}</small></span>
       </button>
       {demo ? (
         <div className="dataset demo" title="I dati sono inventati e generati dall’app: non rappresentano un’impresa reale.">
-          <b>Dati dimostrativi</b><span>Mangimificio di fantasia · al {dateIt(d.settings.demoAnchor)}</span>
+          <b>Dati dimostrativi</b><span>{META.labels?.demoCompany || 'Azienda di fantasia'} · al {dateIt(d.settings.demoAnchor)}</span>
         </div>
       ) : d.settings?.dataset === 'vuoto' ? (
         <div className="dataset"><b>Archivio vuoto</b><span>Inserisci i tuoi dati o carica la demo da «Dati».</span></div>
@@ -231,9 +253,9 @@ function Topbar({ d, route, role, theme }) {
   return (
     <>
       <header className="top">
-        <div className="crumbs"><span className="area-only">{d.settings?.company?.short || 'FeedOS'}</span><span className="area-only" aria-hidden="true">/</span><b>{N?.label}</b>{tabLabel && <><span className="area-only" aria-hidden="true">/</span><span className="area-only">{tabLabel}</span></>}</div>
+        <div className="crumbs"><span className="area-only">{d.settings?.company?.short || META.product}</span><span className="area-only" aria-hidden="true">/</span><b>{N?.label}</b>{tabLabel && <><span className="area-only" aria-hidden="true">/</span><span className="area-only">{tabLabel}</span></>}</div>
         <button className="cmd" onClick={() => uiStore.set({ palette: true })} aria-label="Cerca o apri un comando">
-          <LuSearch aria-hidden="true" /><span className="hide-m">Cerca una formula, un lotto, un cliente o un comando…</span><span className="show-m">Cerca o chiedi…</span><kbd>Ctrl K</kbd>
+          <LuSearch aria-hidden="true" /><span className="hide-m">{META.labels?.search || 'Cerca un lotto, un cliente o un comando…'}</span><span className="show-m">Cerca o chiedi…</span><kbd>Ctrl K</kbd>
         </button>
         <div className="tb">
           <select className="select hide-m" style={{ width: 150, height: 34 }} value={role.id} aria-label="Vista per ruolo"

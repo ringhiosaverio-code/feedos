@@ -1,8 +1,9 @@
 /* FeedOS 17 · preferenze d'interfaccia di questo browser (tema, dimensione, vista, periodo…).
  * Stanno fuori dall'archivio: non entrano in annulla/ripeti né nei backup e non ricalcolano i dati derivati. */
+import { META as EDITION } from '../editions/meta.js';
 import { useSyncExternalStore, useCallback, useRef } from 'react';
 
-const KEY = 'feedos16.prefs';
+const KEY = (EDITION.storageKey || 'feedos16') + '.prefs';
 const deepFreeze = o => { for (const v of Object.values(o)) if (v && typeof v === 'object') deepFreeze(v); return Object.freeze(o); };
 
 /** Periodo di partenza (core/period.js lo riesporta come DEFAULT_SPEC). */

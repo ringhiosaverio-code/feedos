@@ -19,14 +19,18 @@ import { governanceSignals, governanceReportSection } from './esg-governance.js'
 import { pianoSignals, pianoReportSection } from './esg-piano.js';
 import { rischiSignals, rischiReportSection } from './esg-rischi.js';
 import { ambienteSignals, ambienteReportSection } from './esg-ambiente.js';
+// edizione agrofarmaci (FitoOS): senza registrazioni non producono niente
+import { agroSignals, agroReportSection } from './agro-reg.js';
+import { campSignals } from './agro-camp.js';
 
 /** Fornitori di segnali, eseguiti da computeSignals dopo le regole incorporate. */
 export const SIGNAL_PROVIDERS = [budgetSignals, financeSignals, profitSignals, commercialSignals, purchasingSignals, productionSignals, kpiSignals, dqSignals,
-  climaSignals, pcfSignals, filieraSignals, reportSignals, personeSignals, governanceSignals, pianoSignals, rischiSignals, ambienteSignals];
+  climaSignals, pcfSignals, filieraSignals, reportSignals, personeSignals, governanceSignals, pianoSignals, rischiSignals, ambienteSignals, agroSignals, campSignals];
 
 /** Sezioni esterne del report CdA, in ordine (le sezioni proprie della Direzione stanno in report.js). */
 export const REPORT_SECTIONS = [
   { id: 'kpi', order: 10, build: kpiReportSection },
+  { id: 'agro-regolatorio', order: 35, build: agroReportSection },
   { id: 'redditivita', order: 40, build: profitReportSection },
   { id: 'commerciale', order: 45, build: commercialReportSection },
   { id: 'finanza', order: 50, build: financeReportSection },

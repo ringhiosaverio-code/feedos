@@ -24,9 +24,11 @@ const TARGETS = {
   'copertura-mp-gg': { min: 10, max: 30, warn: 5 },
 };
 
-export function demoPiattaforma(d, { today } = {}) {
+export function demoPiattaforma(d, opts = {}) { return piattaformaDemo(d, opts, TARGETS); }
+/** Obiettivi dei KPI dati (l'edizione agrofarmaci passa i suoi). */
+export function piattaformaDemo(d, { today } = {}, targetsCfg = TARGETS) {
   if (!today) return {};
   const cur = d.settings?.targets || {};
-  const targets = Object.fromEntries(Object.entries(TARGETS).filter(([k]) => !(k in cur)));
+  const targets = Object.fromEntries(Object.entries(targetsCfg).filter(([k]) => !(k in cur)));
   return { settings: { targets, dq: { history: [] } } };
 }

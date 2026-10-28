@@ -26,30 +26,34 @@ const weights = (cc, months) => months.map(m => (cc === 'cc-pers' && /-(06|12)$/
  * @param d archivio demo (sola lettura) · @param {{today, R}} today = ancora del demo, R = rng dell'estensore
  * @returns {{add: {costCenters, fixedCosts}, update: {products: [{id, varProcessCost}]}}}
  */
-export function demoCosts(d, { today, R = rng(16 + 101) } = {}) {
+export function demoCosts(d, opts = {}) { return costsDemo(d, opts, FEED_COSTS); }
+/* Struttura dei costi dello stabilimento: centri, costi annui, riparazione straordinaria. L'edizione agrofarmaci passa la sua. */
+export const FEED_COSTS = { centers: COST_CENTERS, annual: ANNUAL, extraRepair: EXTRA_REPAIR, repairCenter: 'cc-man', repairNote: 'Comprende la riparazione straordinaria della pressa (28.000 €)', noisy: NOISY, varShare: 0.32 };
+/** Estensore dei costi con la configurazione dello stabilimento (cfg, vedi FEED_COSTS). */
+export function costsDemo(d, { today, R = rng(16 + 101) } = {}, cfg = FEED_COSTS) {
   const last = addMonths(String(today).slice(0, 7), -1);
   const recent = Array.from({ length: 12 }, (_, k) => addMonths(last, k - 11));    // ultimi 12 mesi chiusi
   const earlier = recent.map(m => addMonths(m, -12));                             // i 12 precedenti
   const fixedCosts = [];
   for (const [months, k, isRecent] of [[earlier, 0.97, false], [recent, 1, true]]) {
-    for (const cc of COST_CENTERS) {
-      const target = Math.round(ANNUAL[cc.id] * k);
-      const extra = isRecent && cc.id === 'cc-man' ? EXTRA_REPAIR : 0;
+    for (const cc of cfg.centers) {
+      const target = Math.round(cfg.annual[cc.id] * k);
+      const extra = isRecent && cc.id === cfg.repairCenter ? cfg.extraRepair : 0;
       const w = weights(cc.id, months), W = w.reduce((s, x) => s + x, 0);
-      let noise = months.map(() => (NOISY.includes(cc.id) ? R.range(-0.03, 0.03) : 0));
+      let noise = months.map(() => (cfg.noisy.includes(cc.id) ? R.range(-0.03, 0.03) : 0));
       const mean = noise.reduce((s, x) => s + x, 0) / noise.length;
       noise = noise.map(x => x - mean);
       const amounts = months.map((m, i) => Math.round((target - extra) * w[i] / W * (1 + noise[i]) + (extra && /-02$/.test(m) ? extra : 0)));
       amounts[amounts.length - 1] += target - amounts.reduce((s, x) => s + x, 0); // il totale dell'anno torna esatto
       months.forEach((m, i) => fixedCosts.push({
         id: `fc-${m}-${cc.id.slice(3)}`, month: m, centerId: cc.id, kind: 'consuntivo', amount: amounts[i], source: 'demo',
-        note: extra && /-02$/.test(m) ? 'Comprende la riparazione straordinaria della pressa (28.000 €)' : '',
+        note: extra && /-02$/.test(m) ? cfg.repairNote : '',
       }));
     }
   }
   fixedCosts.sort((a, b) => (a.month < b.month ? -1 : a.month > b.month ? 1 : 0));
   return {
-    add: { costCenters: COST_CENTERS.map(c => ({ ...c })), fixedCosts },
-    update: { products: (d.products || []).map(p => ({ id: p.id, varProcessCost: round((+p.processCost || 0) * 0.32) })) },
+    add: { costCenters: cfg.centers.map(c => ({ ...c })), fixedCosts },
+    update: { products: (d.products || []).map(p => ({ id: p.id, varProcessCost: round((+p.processCost || 0) * cfg.varShare) })) },
   };
 }

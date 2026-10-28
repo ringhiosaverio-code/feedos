@@ -143,7 +143,7 @@ test('registro: i nove pacchetti della tabella fissa (id, schede, prefissi, sezi
   assert.equal(new Set(ESG_KPI_IDS).size, 31, 'KPI riservati unici');
   assert.ok(ESG_KPI_IDS.every(id => id.startsWith('esg-')));
   // raccolte: le 63 dello schema in coda, ciascuna di un solo pacchetto
-  const added = COLLECTIONS.slice(37), owned = ESG_PACKAGES.flatMap(p => p.colls);
+  const added = COLLECTIONS.slice(37, 100), owned = ESG_PACKAGES.flatMap(p => p.colls); // dopo le 63 ESG vengono le 10 dell'edizione agrofarmaci
   assert.equal(added.length, 63);
   assert.deepEqual([...added].sort(), [...owned].sort());
   assert.equal(new Set(owned).size, 63);

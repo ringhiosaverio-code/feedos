@@ -35,7 +35,15 @@ const ASSETS = [
 // calo fra due conte fisiche, in quota dei prelievi: cereali e coprodotti polverosi perdono umidità e polvere
 const SHRINK = { mais: 0.0035, sorgo: 0.003, farinaccio: 0.0025, soia44: 0.0012, colza: 0.0015, premix: 0 };
 
-export function demoProduzione(d, { today, R } = {}) {
+/* Configurazione dello stabilimento: componenti delle linee, cali delle materie prime, linea che si usura nelle ultime settimane,
+ * componenti a sostituzione, intervento aperto. Il mangimificio usa i valori qui sotto; l'edizione agrofarmaci passa i suoi. */
+export const FEED_PRODUZIONE = {
+  assets: ASSETS, shrink: SHRINK, cleanKinds: ['pellet'], wearLine: 'L2', wearKinds: ['trafila', 'rulli'], swapKinds: ['trafila', 'rulli', 'griglie mulino'],
+  fastSwapKind: 'griglie mulino', openWo: 'as-f1-mul', maintNote: 'Lubrificazione, ispezione di trafila e rulli',
+};
+export function demoProduzione(d, opts = {}) { return produzioneDemo(d, opts, FEED_PRODUZIONE); }
+/** Estensore di produzione con la configurazione dello stabilimento (cfg, vedi FEED_PRODUZIONE). */
+export function produzioneDemo(d, { today, R } = {}, cfg = FEED_PRODUZIONE) {
   if (!today || !R || !(d.runs || []).length) return {};
   const lines = d.lines || [], prod = byId(d.products || []);
   const years = [...new Set(d.runs.map(r => +r.date.slice(0, 4)))];
@@ -44,7 +52,7 @@ export function demoProduzione(d, { today, R } = {}) {
   const settings = { calendar: { holidays: [...hol], extraHours: {} } };
 
   // ---------- cespiti: ultimo intervento tale che il contatore sia alla quota voluta del piano ----------
-  const assets = ASSETS.map(([id, code, name, lineId, kind, lifeT, plan, replaceCost, frac, spec]) => {
+  const assets = cfg.assets.map(([id, code, name, lineId, kind, lifeT, plan, replaceCost, frac, spec]) => {
     let last;
     if (plan.unit === 'giorni') last = addDays(today, -Math.round(plan.every * frac));
     else {
@@ -69,7 +77,7 @@ export function demoProduzione(d, { today, R } = {}) {
     return m;
   };
   lines.forEach((l, li) => {
-    const pellet = l.kind === 'pellet';
+    const pellet = cfg.cleanKinds.includes(l.kind);
     let wi = 0;
     for (const w of weeks) {
       wi++;
@@ -87,10 +95,10 @@ export function demoProduzione(d, { today, R } = {}) {
       if (runH > 0) unpl += stop(l.id, pickDay(), 'micro', runH * 60 * R.range(0.02, 0.04), { note: 'Somma dei micro-fermi del turno' });
       if (pellet && rs.length) unpl += stop(l.id, pickDay(), 'pulizia', R.range(15, 35));
       // guasti: più frequenti sulla pellet 2 nelle ultime settimane, su trafila e rulli
-      const late = l.id === 'L2' && w >= wearFrom;
+      const late = l.id === cfg.wearLine && w >= wearFrom;
       const nBreak = R.chance(late ? 0.85 : 0.35) ? (late && R.chance(0.4) ? 2 : 1) : 0;
       for (let k = 0; k < nBreak; k++) {
-        const pool = (lineAssets[l.id] || []).filter(a => !late || a.kind === 'trafila' || a.kind === 'rulli');
+        const pool = (lineAssets[l.id] || []).filter(a => !late || cfg.wearKinds.includes(a.kind));
         const a = pool.length ? R.pick(pool) : null;
         const date = pickDay(), min = R.int(30, late ? 200 : 240);
         unpl += stop(l.id, date, 'guasto', min, { assetId: a?.id || null, note: a ? `${a.name}: ${R.pick(['vibrazioni anomale', 'intasamento', 'cuscinetto', 'sensore di temperatura', 'usura'])}` : '' });
@@ -100,8 +108,8 @@ export function demoProduzione(d, { today, R } = {}) {
       let plan = 0;
       if ((wi + li) % 4 === 0) {
         const date = work[work.length - 1];
-        plan = stop(l.id, date, 'manutenzione', 240, { note: 'Lubrificazione, ispezione di trafila e rulli' }) / 60;
-        tasks.push({ id: `wo-${++nw}`, createdAt: date, title: `Manutenzione programmata: ${l.name}`, area: 'produzione', owner: 'Manutenzione', due: date, status: 'fatto', priority: 'media', source: 'manutenzione', detail: 'Lubrificazione, ispezione di trafila e rulli (dato dimostrativo)', assetId: null, lineId: l.id, kind: 'preventiva', cost: round(R.range(280, 650), 0), downMin: 240, doneAt: date, link: { area: 'produzione', tab: 'manutenzione' } });
+        plan = stop(l.id, date, 'manutenzione', 240, { note: cfg.maintNote }) / 60;
+        tasks.push({ id: `wo-${++nw}`, createdAt: date, title: `Manutenzione programmata: ${l.name}`, area: 'produzione', owner: 'Manutenzione', due: date, status: 'fatto', priority: 'media', source: 'manutenzione', detail: cfg.maintNote + ' (dato dimostrativo)', assetId: null, lineId: l.id, kind: 'preventiva', cost: round(R.range(280, 650), 0), downMin: 240, doneAt: date, link: { area: 'produzione', tab: 'manutenzione' } });
       }
       // ore oltre il turno: straordinario nel calendario della linea
       const need = runH + unpl / 60 + plan;
@@ -114,14 +122,14 @@ export function demoProduzione(d, { today, R } = {}) {
 
   // ---------- interventi che hanno azzerato i contatori ----------
   for (const a of assets) {
-    const swap = a.kind === 'trafila' || a.kind === 'rulli' || a.kind === 'griglie mulino';
+    const swap = cfg.swapKinds.includes(a.kind);
     tasks.push({ id: `wo-${++nw}`, createdAt: a.lastServiceAt, title: `${swap ? 'Sostituzione' : 'Manutenzione preventiva'}: ${a.name}`, area: 'produzione', owner: 'Manutenzione', due: a.lastServiceAt, status: 'fatto', priority: 'media', source: 'manutenzione',
       detail: swap ? 'Sostituzione programmata (dato dimostrativo)' : 'Revisione del piano (dato dimostrativo)', assetId: a.id, kind: 'preventiva',
-      cost: swap ? a.replaceCost : round(R.range(350, 950), 0), downMin: a.kind === 'griglie mulino' ? 90 : swap ? 360 : 180, doneAt: a.lastServiceAt, link: { area: 'produzione', tab: 'manutenzione', id: a.id } });
+      cost: swap ? a.replaceCost : round(R.range(350, 950), 0), downMin: a.kind === cfg.fastSwapKind ? 90 : swap ? 360 : 180, doneAt: a.lastServiceAt, link: { area: 'produzione', tab: 'manutenzione', id: a.id } });
   }
 
   // un ordine di lavoro aperto: le griglie del mulino quasi a fine piano
-  const grid = assets.find(a => a.id === 'as-f1-mul');
+  const grid = assets.find(a => a.id === cfg.openWo);
   if (grid) tasks.push({ id: `wo-${++nw}`, createdAt: addDays(today, -2), title: `Sostituzione: ${grid.name}`, area: 'produzione', owner: 'Manutenzione', due: addDays(today, 6), status: 'aperto', priority: 'media', source: 'manutenzione', detail: `${grid.name} · linea ${grid.lineId}`, assetId: grid.id, kind: 'preventiva', cost: grid.replaceCost, downMin: 90, link: { area: 'produzione', tab: 'manutenzione', id: grid.id } });
 
   // ---------- conte fisiche di fine mese delle materie prime principali ----------
@@ -130,11 +138,11 @@ export function demoProduzione(d, { today, R } = {}) {
   const dates = [];
   for (let k = 0, x = endOfMonth(addDays(monthOf(today) + '-01', -1)); k < 6; k++, x = endOfMonth(addDays(x.slice(0, 7) + '-01', -1))) dates.unshift(x);
   let nc = 0;
-  for (const id of Object.keys(SHRINK).filter(x => (d.ingredients || []).some(i => i.id === x))) {
+  for (const id of Object.keys(cfg.shrink).filter(x => (d.ingredients || []).some(i => i.id === x))) {
     let gap = 0, prev = addDays(dates[0].slice(0, 7) + '-01', -1);
     for (const date of dates) {
       const book = bookAt(d, id, date);
-      gap -= SHRINK[id] * usedBetween(d, id, prev, date) * Math.max(0, 1 + R.normal(0, 0.2));
+      gap -= cfg.shrink[id] * usedBetween(d, id, prev, date) * Math.max(0, 1 + R.normal(0, 0.2));
       prev = date;
       if (!(book > 0.5)) continue;
       const measured = Math.max(0, book + gap + R.normal(0, book * 0.0015));

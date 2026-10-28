@@ -1,10 +1,13 @@
-"""Schermate di controllo: python3 tests/e2e/shot.py [larghezza altezza tema] hash1 hash2 ..."""
+"""Schermate di controllo: python3 tests/e2e/shot.py [larghezza altezza tema] [--file=FitoOS-demo.html] [--full] hash1 hash2 ...
+Si fotografa solo una build pubblica (la demo di FeedOS se non si indica il file); cartella: $SHOTS o shots/."""
 import asyncio, sys, time, os
 from pathlib import Path
 from playwright.async_api import async_playwright
 ROOT = Path(__file__).resolve().parents[2]
-BASE = (ROOT / 'dist' / 'FeedOS-16.html').as_uri()
 args = sys.argv[1:]
+FILE = next((a.split('=', 1)[1] for a in args if a.startswith('--file=')), 'FeedOS-16-demo.html'); args = [a for a in args if not a.startswith('--file=')]
+BASE = (ROOT / 'dist' / FILE).as_uri()
+OUT = os.environ.get('SHOTS') or 'shots'
 W, H, theme = 1440, 900, 'light'
 if args and args[0].isdigit(): W, H, theme = int(args[0]), int(args[1]), args[2]; args = args[3:]
 full = '--full' in args; args = [a for a in args if a != '--full']
@@ -20,7 +23,7 @@ async def main():
         for h in args or ['oggi']:
             await pg.evaluate(f"location.hash = '#{h}'"); await pg.wait_for_timeout(900)
             m = await pg.evaluate("() => ({sw: document.documentElement.scrollWidth, cw: document.documentElement.clientWidth, sh: document.documentElement.scrollHeight})")
-            name = f"shots/{h.replace('.', '_')}_{W}_{theme}.png"
+            name = f"{OUT}/{h.replace('.', '_')}_{W}_{theme}.png"
             await pg.screenshot(path=name, full_page=full)
             print(h, m, '→', name)
         print('errori:', errs[:12])

@@ -16,7 +16,7 @@ const n0 = v => (v == null || v === '' || !Number.isFinite(+v) ? 0 : +v);
 
 /** Sezioni dei modelli di report, in ordine. */
 export const REPORT_TEMPLATES = {
-  cda: ['sintesi', 'conto', 'ponte', 'budget', 'kpi', 'redditivita', 'commerciale', 'finanza', 'acquisti', 'produzione', 'esg-sintesi', 'dati'],
+  cda: ['sintesi', 'conto', 'ponte', 'budget', 'kpi', 'agro-regolatorio', 'redditivita', 'commerciale', 'finanza', 'acquisti', 'produzione', 'esg-sintesi', 'dati'],
   commerciale: ['sintesi', 'conto', 'redditivita', 'commerciale'],
   operations: ['sintesi', 'kpi', 'acquisti', 'produzione', 'dati'],
   esg: ['esg-sintesi', 'esg-clima', 'esg-impronta', 'esg-filiera', 'esg-ambiente', 'esg-persone', 'esg-governance', 'esg-piano', 'esg-rischi'],
@@ -26,6 +26,7 @@ export const SECTION_TITLES = {
   sintesi: 'Sintesi', conto: 'Conto economico', ponte: 'Scostamenti del margine', budget: 'Budget e stima di chiusura',
   kpi: 'Indicatori', redditivita: 'Redditività', commerciale: 'Commerciale', finanza: 'Finanza', acquisti: 'Acquisti', produzione: 'Produzione', dati: 'Qualità dei dati',
   'esg-sintesi': 'Sintesi ESG', 'esg-clima': 'Clima e GHG', 'esg-impronta': 'Impronta dei mangimi', 'esg-filiera': 'EUDR e fornitori', 'esg-ambiente': 'Registri ambientali',
+  'agro-regolatorio': 'Regolatorio',
   'esg-persone': 'Persone e sicurezza', 'esg-governance': 'Governance ed evidenze', 'esg-piano': 'Obiettivi e piano', 'esg-rischi': 'Rischi climatici',
 };
 

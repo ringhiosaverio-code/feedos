@@ -29,11 +29,22 @@ const noThesis = {
     b.onLoad({ filter: /.*/, namespace: 'vuoto' }, () => ({ contents: 'export const THESIS = null;', loader: 'js' }));
   },
 };
-async function bundle(full) {
+// edizione agrofarmaci (FitoOS): i moduli editions/meta.js e editions/app.js diventano quelli di editions/agrofarmaci/
+const edition = id => ({
+  name: 'edizione-' + id,
+  setup(b) {
+    b.onResolve({ filter: /(^|[\\/])editions[\\/](meta|app)\.js$/ }, a => {
+      const which = /meta\.js$/.test(a.path) ? 'meta' : 'app';
+      if (a.importer.includes(path.join('editions', id))) return null; // i file dell'edizione importano i propri
+      return { path: path.join(ROOT, 'src', 'editions', id, which + '.js') };
+    });
+  },
+});
+async function bundle(full, ed = null) {
   const r = await esbuild.build({
-    plugins: full ? [] : [noThesis],
+    plugins: [...(full ? [] : [noThesis]), ...(ed ? [edition(ed)] : [])],
     entryPoints: [path.join(ROOT, 'src/main.jsx')], bundle: true, minify: true, format: 'iife', write: false, jsx: 'automatic', target: ['es2020'],
-    define: { 'process.env.NODE_ENV': '"production"', __FULL__: String(full) }, nodePaths: [path.join(ROOT, 'node_modules')], legalComments: 'none', metafile: true,
+    define: { 'process.env.NODE_ENV': '"production"', __FULL__: String(full), __EDITION__: JSON.stringify(ed || 'mangimi') }, nodePaths: [path.join(ROOT, 'node_modules')], legalComments: 'none', metafile: true,
     logLevel: 'error',
   });
   return { js: r.outputFiles[0].text.replace(/<\/script/gi, '<\\/script'), meta: r.metafile };
@@ -49,11 +60,23 @@ const page = js => `<!doctype html><html lang="it"><head>${head}<style>${fontCss
 fs.writeFileSync(dist('FeedOS-16.html'), page(full.js));
 fs.writeFileSync(dist('FeedOS-16-demo.html'), page(pub.js));
 fs.writeFileSync(dist('artifact/feedos-16.html'), `<title>FeedOS 17</title><style>${fontCss}\n${css}</style><div id="root"></div><script>${pub.js}</script>`);
+// FitoOS (edizione agrofarmaci): solo la versione pubblica con l'azienda dimostrativa inventata
+const agro = await bundle(false, 'agrofarmaci');
+const AGRO_TITLE = 'FitoOS 1.0';
+const agroHead = head.replace('<title>FeedOS 17</title>', `<title>${AGRO_TITLE}</title>`)
+  .replace(/<meta name="description" content="[^"]*">/, '<meta name="description" content="FitoOS · gestione dell’azienda di agrofarmaci: registrazioni e sostanze attive, schede di sicurezza, Seveso e ADR, campagne e premi, controllo di gestione, finanza, produzione, qualità ed ESG.">');
+fs.writeFileSync(dist('FitoOS-demo.html'), `<!doctype html><html lang="it"><head>${agroHead}<style>${fontCss}\n${css}</style></head><body><div id="root"></div>${noscript.replace('FeedOS 16', 'FitoOS')}<script>${agro.js}</script></body></html>`);
+fs.writeFileSync(dist('artifact/fitoos.html'), `<title>${AGRO_TITLE}</title><style>${fontCss}\n${css}</style><div id="root"></div><script>${agro.js}</script>`);
 const kb = f => (fs.statSync(dist(f)).size / 1024).toFixed(0) + ' KB';
-console.log(`build in ${Date.now() - t0} ms · completa ${kb('FeedOS-16.html')} · pubblica ${kb('FeedOS-16-demo.html')} · artifact ${kb('artifact/feedos-16.html')}`);
+console.log(`build in ${Date.now() - t0} ms · completa ${kb('FeedOS-16.html')} · pubblica ${kb('FeedOS-16-demo.html')} · artifact ${kb('artifact/feedos-16.html')} · FitoOS ${kb('FitoOS-demo.html')}`);
 if (process.argv.includes('--meta')) console.log(await esbuild.analyzeMetafile(full.meta, { verbose: false }));
-const leak = ['Galtieri', 'Modugno', 'AVIGAL', 'Avigal', '89.450', '58.759.661'].filter(w => pub.js.includes(w));
+const LEAK = ['Galtieri', 'Modugno', 'AVIGAL', 'Avigal', '89.450', '58.759.661'];
+const leak = LEAK.filter(w => pub.js.includes(w));
 if (leak.length) { console.error('ATTENZIONE: la versione pubblica contiene', leak); process.exitCode = 1; }
+// FitoOS: nessun dato riservato e nessun marchio reale di aziende di agrofarmaci nel file pubblico
+const agroLeak = [...LEAK, 'Gowan', 'GOWAN', 'Isagro', 'ISAGRO'].filter(w => agro.js.includes(w));
+if (agroLeak.length) { console.error('ATTENZIONE: la versione FitoOS contiene', agroLeak); process.exitCode = 1; }
+if (Object.keys(agro.meta.inputs).some(f => /(^|[\\/])src[\\/]data[\\/]thesis\.js$/.test(f))) { console.error('ATTENZIONE: la versione FitoOS include thesis.js'); process.exitCode = 1; }
 // il modulo con i dati della tesi non deve entrare nella versione pubblica (controllo sugli ingressi del bundle, non solo sul testo)
 const thesisIn = Object.keys(pub.meta.inputs).filter(f => /(^|[\\/])src[\\/]data[\\/]thesis\.js$/.test(f));
 if (thesisIn.length) { console.error('ATTENZIONE: la versione pubblica include', thesisIn.join(', ')); process.exitCode = 1; }

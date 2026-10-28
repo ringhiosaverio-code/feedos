@@ -1,5 +1,6 @@
 /* FeedOS 17 · Stato dell'applicazione: dati per collezioni immutabili, cronologia (annulla/ripeti),
  * registro delle modifiche, salvataggio automatico, avvio sicuro (migrazioni, mai il demo sopra un archivio salvato). */
+import { META as EDITION } from '../editions/meta.js';
 import { useSyncExternalStore, useCallback, useRef } from 'react';
 import { loadData, saveData, saveSnapshot, storageMode } from './persist.js';
 import { uid, todayLocal } from './util.js';
@@ -66,7 +67,7 @@ export async function initStore(makeDefault, upgrade = d => d) {
 }
 
 // ---------- salvataggio ----------
-const SNAP_DAY_KEY = 'feedos16.lastSnapDay';
+const SNAP_DAY_KEY = (EDITION.storageKey || 'feedos16') + '.lastSnapDay';
 let memSnapDay = null;
 function scheduleSave() {
   if (state.readOnly) return; // sola lettura: niente scritture
@@ -108,7 +109,7 @@ function startLifecycle() {
   try { const s = navigator.storage; if (s?.persist) Promise.resolve(s.persisted?.()).then(p => p || s.persist()).catch(() => {}); } catch { /* ignora */ }
   // altre schede aperte sullo stesso archivio: vince l'ultimo salvataggio, quindi lo si segnala
   try {
-    const ch = new BroadcastChannel('feedos16'), me = uid('tab'), peers = new Set();
+    const ch = new BroadcastChannel(EDITION.storageKey || 'feedos16'), me = uid('tab'), peers = new Set();
     const upd = () => set({ otherTab: peers.size > 0 });
     ch.onmessage = e => {
       const m = e.data || {};

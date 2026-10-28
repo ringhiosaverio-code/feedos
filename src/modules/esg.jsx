@@ -33,7 +33,8 @@ const KPI_Q = Object.fromEntries(SURVEY_QUESTIONS.filter(q => q.kpi && q.type !=
 
 export function Esg({ route }) {
   const d = useData();
-  const tab = NAV.esg.tabs.some(t => t.id === route.tab) ? route.tab : 'cruscotto'; // la scheda «tesi» c'è solo nella versione completa
+  // la scheda «tesi» c'è solo nella versione completa; in un'edizione senza cruscotto si apre la prima scheda
+  const tab = NAV.esg.tabs.some(t => t.id === route.tab) ? route.tab : NAV.esg.tabs[0]?.id || 'cruscotto';
   const Page = ESG_PAGES[tab]; // schede dei pacchetti ESG (esg-pages.jsx), ciascuna isolata dagli errori
   return (
     <>

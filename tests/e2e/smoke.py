@@ -8,6 +8,7 @@ theme = sys.argv[2] if len(sys.argv) > 2 else 'light'
 FILE = sys.argv[3] if len(sys.argv) > 3 and sys.argv[3].endswith('.html') else 'FeedOS-16.html'
 BASE = (Path(__file__).resolve().parents[2] / 'dist' / FILE).as_uri()
 STARTER = 'starter' in sys.argv
+AGRO = FILE.startswith('FitoOS')  # edizione agrofarmaci: aree e schede proprie, niente parti del mangimificio
 ROUTES = ['oggi', 'oggi.cruscotto', 'oggi.attivita', 'oggi.registro',
   'direzione', 'direzione.sintesi', 'direzione.conto', 'direzione.ponte', 'direzione.budget', 'direzione.costi', 'direzione.chiusura', 'direzione.report',
   'finanza', 'finanza.crediti', 'finanza.cassa', 'finanza.circolante', 'finanza.rimanenze', 'finanza.parametri',
@@ -27,11 +28,19 @@ for _f in sorted((Path(__file__).resolve().parent).glob('routes-*.txt')):
     for _l in _f.read_text(encoding='utf-8').splitlines():
         _r = _l.strip()
         if _r and not _r.startswith('#') and _r not in ROUTES: ROUTES.append(_r)
+if AGRO:
+    HIDDEN = ('formulazione', 'gemello', 'esg.cruscotto', 'esg.passaporto', 'esg.filiera', 'esg.indicatori', 'esg.questionario', 'esg.tesi', 'esg.impronta',
+              'economia.scenari', 'qualita.analisi', 'acquisti.mercati')
+    SWAP = {'acquisti.fabbisogni.mais': 'acquisti.fabbisogni.cuoh', 'esg.vsme.questionari.q-caseificio-sila': 'esg.vsme.questionari.q-gdo-ortofrutta'}
+    ROUTES = [SWAP.get(r, r) for r in ROUTES if not any(r == h or r.startswith(h + '.') or r.startswith(h + '~') for h in HIDDEN)]
+    ROUTES += ['regolatorio', 'regolatorio.registrazioni', 'regolatorio.registrazioni.reg-fl50sc', 'regolatorio.sostanze', 'regolatorio.sostanze.rame',
+               'regolatorio.sds', 'regolatorio.sds.p-cu30wg', 'regolatorio.seveso', 'commerciale.campagne', 'commerciale.campagne.premi', 'commerciale.campagne.resi',
+               'esg.co2', 'esg.co2.vite', 'esg.co2.melo']
 PERIOD_AREAS = {'oggi', 'direzione', 'finanza', 'gemello', 'acquisti', 'produzione', 'qualita', 'commerciale', 'economia'}
 # scheda laterale: (tipo, ricerca nella barra comandi, tipo atteso del primo risultato)
-DRAWERS = [('product', 'lt18', 'Prodotto'), ('ingredient', 'mp01', 'Materia prima'), ('customer', 'cliente', 'Cliente'), ('offer', 'of-', 'Offerta'),
+DRAWERS = [('product', 'cuprarvo' if AGRO else 'lt18', 'Prodotto'), ('ingredient', 'mp01', 'Materia prima'), ('customer', 'cliente', 'Cliente'), ('offer', 'of-', 'Offerta'),
   ('complaint', 'rc-', 'Reclamo'), ('lot', 'lotto prodotto', 'Lotto prodotto'), ('ingLot', 'lotto materia prima', 'Lotto materia prima'),
-  ('agent', 'agente cosenza', 'Agente'), ('supplier', 'fornitore', 'Fornitore'), ('asset', 'componente', 'Componente')]
+  ('agent', 'agente benedetti' if AGRO else 'agente cosenza', 'Agente'), ('supplier', 'fornitore', 'Fornitore'), ('asset', 'componente', 'Componente')]
 OPTIONAL = {'supplier', 'asset'}  # nel demo compaiono quando i pacchetti aggiungono fornitori e componenti
 GUARD_JS = """() => {
   const t = s => [...document.querySelectorAll(s)].map(x => x.innerText);
@@ -91,7 +100,7 @@ async def main():
         print('schede aperte:', ', '.join(opened) or 'nessuna')
         # barra comandi con domanda
         await pg.keyboard.press('Control+k'); await pg.wait_for_timeout(200)
-        await pg.keyboard.type('e se mais +10%'); await pg.wait_for_timeout(250)
+        await pg.keyboard.type('e se rame +10%' if AGRO else 'e se mais +10%'); await pg.wait_for_timeout(250)
         first = await pg.evaluate("() => document.querySelector('.pal li')?.innerText") or ''
         await pg.keyboard.press('Enter'); await pg.wait_for_timeout(900)
         h = await pg.evaluate("() => location.hash + ' · ' + (document.querySelector('#eco-results .val')?.innerText || '')")

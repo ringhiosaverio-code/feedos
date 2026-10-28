@@ -18,7 +18,13 @@ const ADDED_18 = [
   'esgTargets', 'measures', 'sllLoans', 'taxonomyDossiers', // piano
   'esgAnswers', 'esgClosings', 'esgHistory', 'questionnaires', 'materiality', // report
 ];
-export const COLLECTIONS = [...BASE, ...ADDED_17, ...ADDED_18];
+// edizione agrofarmaci (FitoOS): stesso schema per le due edizioni, raccolte vuote nel mangimificio
+const ADDED_AGRO = [
+  'registrations', 'regUses', 'regEvents', 'activeSubstances', 'sdsDocs', 'sdsDispatches', // regolatorio
+  'campaigns', 'earlyOrders', 'returns', // campagne e premi
+  'cropProgrammes', // CO₂ dei programmi di difesa
+];
+export const COLLECTIONS = [...BASE, ...ADDED_17, ...ADDED_18, ...ADDED_AGRO];
 
 const isObj = x => !!x && typeof x === 'object' && !Array.isArray(x);
 const clone = o => (o == null || typeof o !== 'object' ? o : JSON.parse(JSON.stringify(o)));

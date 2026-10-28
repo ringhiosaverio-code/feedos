@@ -22,7 +22,15 @@ function marketIndex(d) {
   return m => out[m] ?? null;
 }
 
-export function demoDirezione(d, { today, R = rng(16 + 201) } = {}) {
+/* Commenti della direzione all'ultimo mese chiuso; l'edizione agrofarmaci passa i suoi. */
+export const FEED_DIREZIONE = {
+  sintesi: mese => `In ${mese} il margine di contribuzione per tonnellata scende ancora: il rincaro di mais e farina di soia non è stato trasferito sui listini. Proposta: revisione dei listini dal 1° novembre e coperture sulle materie prime principali fino a marzo.`,
+  budget: 'La stima di chiusura resta sotto il budget approvato a dicembre: si propone una revisione del budget con i nuovi prezzi delle materie prime.',
+  product: 'FeedOS',
+};
+export function demoDirezione(d, opts = {}) { return direzioneDemo(d, opts, FEED_DIREZIONE); }
+/** Estensore della direzione con la configurazione dell'azienda (cfg, vedi FEED_DIREZIONE). */
+export function direzioneDemo(d, { today, R = rng(16 + 201) } = {}, cfg = FEED_DIREZIONE) {
   if (!today || !(d.shipments || []).length) return {};
   const ctx = makeCtx(d, today);
   const first = firstFactDate(ctx.facts);
@@ -132,10 +140,10 @@ export function demoDirezione(d, { today, R = rng(16 + 201) } = {}) {
   for (let m = firstMonth; m <= lastClosed; m = addMonths(m, 1)) {
     const comments = {};
     let note = '';
-    if (m === firstMonth && first > m + '-01') { note = `Mese parziale: consegne dal ${dateIt(first)}`; comments.sintesi = `${note} (avvio di FeedOS). I confronti con questo mese non sono omogenei.`; }
+    if (m === firstMonth && first > m + '-01') { note = `Mese parziale: consegne dal ${dateIt(first)}`; comments.sintesi = `${note} (avvio di ${cfg.product}). I confronti con questo mese non sono omogenei.`; }
     if (m === lastClosed) {
-      comments.sintesi = `In ${monthLabel(m, false)} il margine di contribuzione per tonnellata scende ancora: il rincaro di mais e farina di soia non è stato trasferito sui listini. Proposta: revisione dei listini dal 1° novembre e coperture sulle materie prime principali fino a marzo.`;
-      comments.budget = 'La stima di chiusura resta sotto il budget approvato a dicembre: si propone una revisione del budget con i nuovi prezzi delle materie prime.';
+      comments.sintesi = cfg.sintesi(monthLabel(m, false));
+      comments.budget = cfg.budget;
     }
     const snap = snapshotMonth(d, ctx, m, { by: 'Direzione (demo)', at: `${addMonths(m, 1)}-05T16:30:00.000Z`, comments, dq });
     if (note) snap.note = note;

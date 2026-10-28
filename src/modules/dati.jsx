@@ -1,5 +1,6 @@
 /* FeedOS 17 · Dati: archivio (backup, ripristino, istantanee, demo), importazione guidata da CSV e da FeedOS 15, anagrafiche,
  * qualità dei dati, registro delle modifiche, impostazioni dell'impresa, degli obiettivi dei KPI, dell'energia e dell'aspetto. */
+import { META } from '../editions/meta.js';
 import React, { useEffect, useRef, useState } from 'react';
 import { LuDownload, LuUpload, LuRefreshCw, LuDatabase, LuCamera, LuTrash2, LuRotateCcw, LuFileSpreadsheet, LuShieldCheck, LuTriangleAlert, LuCheck, LuInfo } from 'react-icons/lu';
 import { useData, useStore, store, toast, getState } from '../core/store.js';
@@ -49,7 +50,7 @@ function Archivio({ d, hi }) {
   const refresh = () => listSnapshots().then(setSnaps);
   useEffect(() => { refresh(); quota().then(setQ); }, [d]);
   const counts = [['Materie prime', d.ingredients], ['Formule', d.formulas], ['Prodotti', d.products], ['Clienti', d.customers], ['Lotti di prodotto', d.lots], ['Lotti di materie prime', d.ingLots], ['Registrazioni di produzione', d.runs], ['Consegne', d.shipments], ['Reclami', d.complaints], ['Offerte', d.offers]];
-  const backup = () => { download(`feedos16-backup-${stamp()}.json`, JSON.stringify({ format: 'feedos16', version: VERSION, exportedAt: new Date().toISOString(), data: getState().data }), 'application/json'); markBackup(); toast('Backup esportato: conservalo fuori dal browser'); };
+  const backup = () => { download(`${META.storageKey || 'feedos16'}-backup-${stamp()}.json`, JSON.stringify({ format: 'feedos16', version: VERSION, exportedAt: new Date().toISOString(), data: getState().data }), 'application/json'); markBackup(); toast('Backup esportato: conservalo fuori dal browser'); };
   const restore = async e => {
     const f = e.target.files?.[0]; e.target.value = '';
     if (!f) return;
