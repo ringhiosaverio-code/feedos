@@ -17,11 +17,14 @@ import {
   PCF_TAB, LINK, A, has, fin, num, isObj, inP, ISO, cached, pcfSettings, PCF_DEFAULTS, pcfPack, packInfo, packList, ingredientEf, pcf, packagingFactor, packagingFor, landM2a,
   millEnergy, weightedPcf, customerTotals, recalcAlerts, activeSnapshots, packagingSummary, isBulk, versionLines, originLabel, BOUNDARY_LABEL,
 } from './esg-pcf-core.js';
-import { productMacc, annualVolume } from './esg-pcf-formula.js';
+import { productMacc, annualVolume, lowCarbonFrontier } from './esg-pcf-formula.js';
+import { customerStatement, exportTexts } from './esg-pcf-exchange.js';
 import { CO_CLASSES } from '../data/pack-pcf.js';
 
 // funzioni condivise (contratto §4) e quelle che servono alla pagina
 export { ingredientEf, pcf, packagingFactor, packagingFor, landM2a, millEnergy, weightedPcf, customerTotals, recalcAlerts, packagingSummary, pcfSettings, PCF_DEFAULTS, pcfPack, PCF_TAB };
+// per gli altri pacchetti (piano: leve con t CO₂e e € all'anno; governance: testi esportati da controllare; report: dichiarazioni ai clienti)
+export { productMacc, lowCarbonFrontier, customerStatement, exportTexts };
 
 const pctTxt = (v, k = 0) => (v == null || !Number.isFinite(v) ? '—' : `${nf(v * 100, k)}%`);
 const todayOf = (d, ctx) => (ctx && typeof ctx.today === 'string' && ISO.test(ctx.today) ? ctx.today : esgToday(d));
