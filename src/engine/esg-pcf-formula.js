@@ -53,7 +53,7 @@ function problemFor(d, formula, opts) {
   const ings = lpIngredients(d, opts);
   const ratios = [...A(spec.ratios)];
   if (fin(opts.hepMax)) ratios.push({ num: 'HEPN', den: 'PG', max: +opts.hepMax });
-  return { P: { ingredients: ings, spec: { ...spec, ratios }, lines: A(formula.lines), options: { contaminant: contaminantFor(formula.species || spec.species) } }, ings, byId: Object.fromEntries(ings.map(i => [i.id, i])), spec };
+  return { P: { ingredients: ings, spec: { ...spec, ratios }, lines: A(formula.lines), options: { contaminant: contaminantFor(formula.species || spec.species), exclude: A(opts.exclude) } }, ings, byId: Object.fromEntries(ings.map(i => [i.id, i])), spec };
 }
 
 /**
@@ -64,7 +64,7 @@ function problemFor(d, formula, opts) {
 export function lowCarbonFrontier(d, formulaOrId, opts = {}) {
   const formula = typeof formulaOrId === 'string' ? A(d?.formulas).find(f => f && f.id === formulaOrId) : formulaOrId;
   if (!formula) return null;
-  const o = { objective: OBJECTIVES[opts.objective] ? opts.objective : 'co2', choices: isObj(opts.choices) ? opts.choices : {}, hepMax: fin(opts.hepMax) ? +opts.hepMax : null, points: Math.max(3, Math.min(12, Math.round(+opts.points || 9))), date: opts.date || null, hepScenario: opts.hepScenario || 'med' };
+  const o = { objective: OBJECTIVES[opts.objective] ? opts.objective : 'co2', choices: isObj(opts.choices) ? opts.choices : {}, hepMax: fin(opts.hepMax) ? +opts.hepMax : null, points: Math.max(3, Math.min(12, Math.round(+opts.points || 9))), date: opts.date || null, hepScenario: opts.hepScenario || 'med', exclude: A(opts.exclude).filter(has).sort() };
   const key = `front|${formula.id}|${formula.version}|${JSON.stringify(o)}`;
   return cached(key, [d?.ingredients, d?.efIngredients, d?.supplierPcfs, d?.specs, d?.formulas, d?.ingCircular, d?.settings], () => {
     const pb = problemFor(d, formula, o);
@@ -147,6 +147,10 @@ export const LEVERS = {
   coprodotti: { label: 'Più coprodotti dell’agroindustria (+10 punti)', short: 'Coprodotti' },
   grassi: { label: 'Grassi senza olio di soia o di palma', short: 'Fonte di grasso' },
 };
+/** Farine di soia convenzionali (con cambio d'uso del suolo oltre il 10% del fattore) tra le materie prime attive: per il filtro «solo soia DCF». */
+export function conventionalSoy(d) {
+  return lpIngredients(d, { objective: 'co2' }).filter(i => familyOf(d, i) === 'soia-farina' && (i._lucOnly ?? i._luc) > 0.1 * i._co2).map(i => i.id);
+}
 /** Volume annuo di un prodotto (t vendute negli ultimi 365 giorni; altrimenti prodotte). */
 export function annualVolume(d, productId) {
   const today = esgToday(d), from = addDays(today, -365);
