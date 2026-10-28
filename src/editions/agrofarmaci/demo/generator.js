@@ -8,7 +8,7 @@ import { PV_PROFILE } from '../../../engine/energy.js';
 import { rng, iso, addDays, mondayOf, monthOf, parse, round, byId, sum, dayOfYear } from '../../../core/util.js';
 import { COLLECTIONS, DEFAULT_SETTINGS } from '../../../core/schema.js';
 
-export const AGRO_DEMO_VERSION = 1;
+export const AGRO_DEMO_VERSION = 2; // 2: prove di campo, illustrazioni e prezzi della concorrenza
 
 /* Stagionalità: somma di campane sul giorno dell'anno (distanza circolare), normalizzata a media 1 sull'anno. */
 const bump = (doy, c, w) => { const x = Math.min(Math.abs(doy - c), 365 - Math.abs(doy - c)); return Math.exp(-0.5 * (x / w) ** 2); };

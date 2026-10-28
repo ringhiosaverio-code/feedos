@@ -1,12 +1,13 @@
 /* FeedOS 17 · Salvataggio locale: IndexedDB (principale), localStorage (riserva), memoria (ultima risorsa).
  * I dati restano nel browser di questo dispositivo. Istantanee automatiche giornaliere e manuali:
- * i dati in 'snap', i soli metadati in 'snapmeta' (l'elenco non legge mai gli archivi interi). */
+ * i dati in 'snap', i soli metadati in 'snapmeta' (l'elenco non legge mai gli archivi interi). Le foto (prove di campo, confezioni)
+ * stanno in 'media', fuori dall'archivio: non appesantiscono i salvataggi e le istantanee; il backup le porta con sé. */
 import { META as EDITION } from '../editions/meta.js';
 import { setPrefs } from './prefs.js';
 
 // nomi dall'edizione (FeedOS: 'feedos16', invariato per gli archivi già salvati; DifesaOS: archivio separato)
 const KEYP = EDITION.storageKey || 'feedos16';
-const DB = KEYP, DB_VERSION = 2, STORE = 'kv', SNAP = 'snap', META = 'snapmeta', LS_KEY = KEYP + '.data', MAX_AUTO = 10;
+const DB = KEYP, DB_VERSION = 3, STORE = 'kv', SNAP = 'snap', META = 'snapmeta', MEDIA = 'media', LS_KEY = KEYP + '.data', MAX_AUTO = 10;
 let dbp = null;
 let mode = 'idb';
 
@@ -21,6 +22,7 @@ function openDb() {
         const db = r.result;
         if (!db.objectStoreNames.contains(STORE)) db.createObjectStore(STORE);
         if (!db.objectStoreNames.contains(SNAP)) db.createObjectStore(SNAP, { keyPath: 'id' });
+        if (!db.objectStoreNames.contains(MEDIA)) db.createObjectStore(MEDIA, { keyPath: 'id' }); // versione 3: foto
         if (!db.objectStoreNames.contains(META)) {
           const meta = db.createObjectStore(META, { keyPath: 'id' });
           // una tantum (versione 1 → 2): metadati delle istantanee già salvate
@@ -122,3 +124,45 @@ export function markBackup() { setPrefs({ lastBackupAt: new Date().toISOString()
 export async function quota() {
   try { const e = await navigator.storage?.estimate?.(); return e ? { used: e.usage, total: e.quota } : null; } catch { return null; }
 }
+
+// ---------- foto (archivio «media») ----------
+// senza IndexedDB le foto restano solo in memoria fino alla chiusura della pagina (l'interfaccia lo dice)
+const memMedia = new Map();
+const idbOk = () => mode === 'idb';
+/** Salva una foto {id, dataUrl, w, h, bytes, …}. → 'idb' | 'memory' */
+export async function putMedia(rec) {
+  if (!rec?.id) return null;
+  if (idbOk()) { try { await tx(MEDIA, 'readwrite', s => s.put(rec)); return 'idb'; } catch { /* in memoria */ } }
+  memMedia.set(rec.id, rec);
+  return 'memory';
+}
+/** Foto per id (null se assente). */
+export async function getMedia(id) {
+  if (!id) return null;
+  if (memMedia.has(id)) return memMedia.get(id);
+  if (!idbOk()) return null;
+  try { return (await tx(MEDIA, 'readonly', s => s.get(id))) || null; } catch { return null; }
+}
+/** Più foto insieme: → [rec] nell'ordine degli id trovati. */
+export async function getMediaMany(ids) { return (await Promise.all([...new Set(ids || [])].map(getMedia))).filter(Boolean); }
+export async function deleteMedia(id) { memMedia.delete(id); if (idbOk()) { try { await tx(MEDIA, 'readwrite', s => s.delete(id)); } catch { /* ignora */ } } }
+/** Elenco delle foto salvate (id e peso, senza le immagini). */
+export async function listMedia() {
+  const mem = [...memMedia.values()].map(r => ({ id: r.id, bytes: r.bytes || 0 }));
+  if (!idbOk()) return mem;
+  try {
+    const out = [];
+    await tx(MEDIA, 'readonly', s => { s.openCursor().onsuccess = e => { const c = e.target.result; if (!c) return; out.push({ id: c.value.id, bytes: c.value.bytes || (c.value.dataUrl || '').length * 0.75 }); c.continue(); }; });
+    return [...out, ...mem.filter(m => !out.some(o => o.id === m.id))];
+  } catch { return mem; }
+}
+/** Foto che nessun archivio usa più (né quello attuale né le istantanee): si possono eliminare. used: id usati dall'archivio attuale. */
+export async function unusedMedia(used) {
+  const keep = new Set(used || []);
+  for (const m of await listSnapshots()) {
+    const x = await getSnapshot(m.id);
+    for (const ph of x?.data?.photos || []) if (ph?.mediaId) keep.add(ph.mediaId);
+  }
+  return (await listMedia()).filter(m => !keep.has(m.id));
+}
+export const mediaPersistent = () => idbOk();

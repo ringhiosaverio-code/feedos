@@ -1,7 +1,7 @@
 /* DifesaOS · Estensori del demo dell'azienda di agrofarmaci inventata «Arvale Dimostrativa S.p.A.».
  * Stessi estensori di FeedOS dove il dominio è comune (costi, commerciale, acquisti, produzione, finanza, redditività,
  * direzione, obiettivi, ESG), con la configurazione dell'edizione; gli estensori propri (regolatorio, campagne, programmi
- * di difesa) aggiungono le raccolte dell'edizione. Contratto e regola «solo aggiunte» come in data/demo/extend.js. */
+ * di difesa, prove di campo e prezzi della concorrenza) aggiungono le raccolte dell'edizione. Contratto e regola «solo aggiunte» come in data/demo/extend.js. */
 import { costsDemo } from '../../../data/demo/costs.js';
 import { commercialeDemo } from '../../../data/demo/commerciale.js';
 import { acquistiDemo } from '../../../data/demo/acquisti.js';
@@ -21,6 +21,7 @@ import { RIVALS_AGRO } from './catalog.js';
 import { demoRegolatorio } from './regolatorio.js';
 import { demoCampagne } from './campagne.js';
 import { demoProgrammi } from './programmi.js';
+import { demoProve } from './prove.js';
 
 /* ---------- costi: centri e costi annui (totale circa 14,6 M€) ---------- */
 const COST_CENTERS = [
@@ -205,6 +206,7 @@ export const AGRO_EXTENDERS = [
   ['piattaforma', (d, o) => piattaformaDemo(d, o, AGRO_TARGETS), 801],
   ['clima', climaAgro, 901],
   ['programmi', demoProgrammi, 2901],
+  ['prove', demoProve, 3101],
   ['ambiente', demoAmbiente, 1701],
   ['persone', demoPersone, 1301],
   ['governance', demoGovernance, 1401],

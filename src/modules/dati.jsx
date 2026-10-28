@@ -10,7 +10,7 @@ import { ROLES, ROLE } from '../core/roles.js';
 import { nf, sf, dateIt, round, norm } from '../core/util.js';
 import { PM_LABEL, pmIn, nfPm, SMALL_UNITS } from '../core/units.js';
 import { download, toCSV, parseCSV, num, readFile, stamp } from '../core/io.js';
-import { listSnapshots, getSnapshot, deleteSnapshot, saveSnapshot, quota, storageMode, markBackup } from '../core/persist.js';
+import { listSnapshots, getSnapshot, deleteSnapshot, saveSnapshot, quota, storageMode, markBackup, getMediaMany, putMedia } from '../core/persist.js';
 import { usePrefs, setPrefs } from '../core/prefs.js';
 import { demoData, starterData } from '../data/demo/index.js';
 import { migrateF15, detectF15 } from '../core/migrate.js';
@@ -51,20 +51,26 @@ function Archivio({ d, hi }) {
   const refresh = () => listSnapshots().then(setSnaps);
   useEffect(() => { refresh(); quota().then(setQ); }, [d]);
   const counts = [['Materie prime', d.ingredients], ['Formule', d.formulas], ['Prodotti', d.products], ['Clienti', d.customers], ['Lotti di prodotto', d.lots], ['Lotti di materie prime', d.ingLots], ['Registrazioni di produzione', d.runs], ['Consegne', d.shipments], ['Reclami', d.complaints], ['Offerte', d.offers]];
-  const backup = () => download(`${META.storageKey || 'feedos16'}-backup-${stamp()}.json`, JSON.stringify({ format: 'feedos16', version: VERSION, exportedAt: new Date().toISOString(), data: getState().data }), 'application/json', { notify: false })
-    .then(ok => { if (ok) { markBackup(); toast('Backup esportato: conservalo fuori dal browser'); } });
+  // il backup porta con sé le foto usate dall'archivio (stanno fuori dall'archivio, nel browser)
+  const backup = async () => {
+    const data = getState().data;
+    const media = await getMediaMany((data.photos || []).map(x => x.mediaId).filter(Boolean));
+    const ok = await download(`${META.storageKey || 'feedos16'}-backup-${stamp()}.json`, JSON.stringify({ format: 'feedos16', version: VERSION, exportedAt: new Date().toISOString(), data, ...(media.length ? { media } : {}) }), 'application/json', { notify: false });
+    if (ok) { markBackup(); toast(`Backup esportato${media.length ? ` con ${nf(media.length)} foto` : ''}: conservalo fuori dal browser`); }
+  };
   const restore = async e => {
     const f = e.target.files?.[0]; e.target.value = '';
     if (!f) return;
     try {
-      if (f.size > 60e6) throw new Error('File troppo grande (massimo 60 MB).');
+      if (f.size > 150e6) throw new Error('File troppo grande (massimo 150 MB).');
       const raw = await readFile(f);
       if (/"(?:__proto__|constructor|prototype)"\s*:/.test(raw)) throw new Error('Il file contiene chiavi non ammesse.');
       const j = JSON.parse(raw);
       if (detectF15(j)) { toast('È un file di FeedOS 15: usa «Importa › Da FeedOS 15»', 'err'); go('dati', 'importa'); return; }
       const data = j.format === 'feedos16' ? j.data : j.settings?.schema != null || Array.isArray(j.formulas) ? j : null;
       if (!data || !Array.isArray(data.formulas)) throw new Error('Formato non riconosciuto: serve un backup di FeedOS 16 o 17.');
-      confirm('Ripristinare il backup?', <p>L’archivio attuale verrà sostituito dal backup del {j.exportedAt ? dateIt(j.exportedAt.slice(0, 10)) : 'file scelto'}. Prima viene salvata un’istantanea dei dati attuali.</p>, async () => { if (await store.load(data, 'Ripristino da backup')) toast('Backup ripristinato'); refresh(); }, { ok: 'Ripristina' });
+      const media = Array.isArray(j.media) ? j.media.filter(m => m && typeof m.id === 'string' && /^data:image\/(jpeg|png|webp);base64,/.test(m.dataUrl || '')) : [];
+      confirm('Ripristinare il backup?', <p>L’archivio attuale verrà sostituito dal backup del {j.exportedAt ? dateIt(j.exportedAt.slice(0, 10)) : 'file scelto'}. Prima viene salvata un’istantanea dei dati attuali.</p>, async () => { for (const m of media) await putMedia(m); if (await store.load(data, 'Ripristino da backup')) toast(`Backup ripristinato${media.length ? ` con ${nf(media.length)} foto` : ''}`); refresh(); }, { ok: 'Ripristina' });
     } catch (err) { toast('Ripristino non riuscito: ' + err.message, 'err'); }
   };
   const regenerate = () => confirm('Rigenerare il mangimificio dimostrativo?', <p>Il mangimificio di fantasia viene ricreato con la data di oggi. L’archivio attuale viene prima salvato in un’istantanea.</p>, async () => { if (await store.load(demoData(), 'Demo rigenerata')) { toast('Dati dimostrativi rigenerati'); go('oggi'); } }, { ok: 'Rigenera' });

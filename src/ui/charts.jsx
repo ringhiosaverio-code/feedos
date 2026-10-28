@@ -196,8 +196,8 @@ export function StackBar({ parts, height = 22, showLabels = true, ariaLabel, uni
   );
 }
 
-/** Cascata: dal prezzo al margine, o dal costo delle materie prime al costo pieno. steps: [{label,value,kind:'total'|'neg'|'pos'}] */
-export function Waterfall({ steps, height = 240, unit = '€/t', decimals = 2, ariaLabel }) {
+/** Cascata: dal prezzo al margine, o dal costo delle materie prime al costo pieno. steps: [{label,value,kind:'total'|'neg'|'pos'}]; labelDec: decimali delle etichette (prezzi al kg). */
+export function Waterfall({ steps, height = 240, unit = '€/t', decimals = 2, ariaLabel, labelDec }) {
   const box = useRef(null);
   const W = useWidth(box);
   const [hover, setHover] = useState(null);
@@ -226,7 +226,7 @@ export function Waterfall({ steps, height = 240, unit = '€/t', decimals = 2, a
               <rect className="hit" x={padL + slot * i} y={padT} width={slot} height={height - padT - padB} />
               <rect x={cx - bw / 2} y={top} width={bw} height={h} rx="3" fill={b.color || col} opacity={hover == null || hover === i ? 1 : .6} />
               {i < n - 1 && <line x1={cx + bw / 2} x2={cx + slot - bw / 2} y1={y(b.to)} y2={y(b.to)} stroke="var(--axis)" strokeWidth="1" />}
-              <text x={cx} y={top - 5} textAnchor="middle" className="lbl-strong" style={{ fontSize: 11 }}>{b.kind === 'total' ? nf(b.value, 0) : (b.value > 0 ? '+' : '−') + nf(Math.abs(b.value), b.value > -10 && b.value < 10 ? 1 : 0)}</text>
+              <text x={cx} y={top - 5} textAnchor="middle" className="lbl-strong" style={{ fontSize: 11 }}>{b.kind === 'total' ? nf(b.value, labelDec ?? 0) : (b.value > 0 ? '+' : '−') + nf(Math.abs(b.value), labelDec ?? (b.value > -10 && b.value < 10 ? 1 : 0))}</text>
               <text x={cx} y={height - 24} textAnchor="middle" className="lbl-ink" style={{ fontSize: 10.5 }}>{wrap(b.label)[0]}</text>
               <text x={cx} y={height - 11} textAnchor="middle" className="lbl-ink" style={{ fontSize: 10.5 }}>{wrap(b.label)[1]}</text>
             </g>

@@ -1,0 +1,39 @@
+/* DifesaOS · area Prodotti: report di prodotto, foto delle prove, moduli delle prove e delle rilevazioni di prezzo. */
+.pr-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 10px; margin: 6px 0 10px; }
+.pr-ph { margin: 0; min-width: 0; }
+.pr-ph-img { position: relative; display: block; width: 100%; aspect-ratio: 4 / 3; padding: 0; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: var(--surface-2); cursor: default; }
+button.pr-ph-img { cursor: zoom-in; }
+button.pr-ph-img:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.pr-ph-img img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.pr-ph figcaption { font-size: 12px; line-height: 1.35; margin-top: 4px; color: var(--ink-2); overflow-wrap: anywhere; }
+.pr-ph-tag { position: absolute; left: 6px; top: 6px; font-size: 10.5px; padding: 1px 7px; border-radius: 9px; background: rgba(0, 0, 0, .55); color: #fff; }
+.pr-ph-miss { display: grid; place-items: center; gap: 6px; height: 100%; padding: 10px; font-size: 12px; color: var(--ink-3); text-align: center; }
+.pr-lightbox { position: fixed; z-index: 70; left: 50%; top: 6vh; transform: translateX(-50%); width: min(920px, calc(100% - 32px)); max-height: 88vh; overflow: auto; background: var(--surface); border-radius: 14px; box-shadow: var(--shadow-lg); padding: 14px 16px; display: grid; gap: 10px; }
+.pr-lightbox img { width: 100%; max-height: 62vh; object-fit: contain; border-radius: 8px; background: var(--surface-2); }
+.pr-lb-edit { display: grid; gap: 8px; }
+.pr-pack { position: relative; margin: 0; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; background: var(--surface-2); aspect-ratio: 4 / 3; }
+.pr-pack img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.pr-cover { display: grid; grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr); gap: 18px; align-items: start; margin-bottom: 12px; }
+.pr-title { font: 800 30px/1.1 var(--f-display, var(--f-sans)); margin: 2px 0 10px; letter-spacing: -0.01em; }
+.pr-kpis { margin: 10px 0; }
+.pr-summary h3, .pr-h3 { font: 700 13px/1.2 var(--f-sans); text-transform: uppercase; letter-spacing: .03em; margin: 14px 0 6px; color: var(--ink); }
+.pr-summary p { margin: 6px 0; line-height: 1.5; }
+.pr-list { margin: 4px 0; padding-left: 18px; } .pr-list li { margin: 4px 0; line-height: 1.45; }
+.pr-report { display: grid; gap: 16px; }
+.pr-report .print-page { min-width: 0; }
+.pr-form { display: grid; gap: 10px; padding: 12px 14px; border-bottom: 1px solid var(--line); background: var(--surface-2); border-radius: 10px; margin: 8px 0; }
+.pr-form-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 10px 14px; }
+.pr-values td, .pr-values th { padding: 4px 6px; }
+.pr-values .input { min-width: 64px; }
+.pr-pass { display: grid; grid-template-columns: auto minmax(120px, 1fr) auto; gap: 10px; align-items: center; margin-bottom: 10px; }
+.pr-pass input[type=range] { width: 100%; accent-color: var(--accent); }
+@media (max-width: 720px) {
+  .pr-cover { grid-template-columns: minmax(0, 1fr); }
+  .pr-pass { grid-template-columns: minmax(0, 1fr); }
+  .pr-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media print {
+  .pr-report { display: block; }
+  .pr-grid { grid-template-columns: repeat(3, 1fr); }
+  .pr-ph-img { border-color: #ccc; }
+}

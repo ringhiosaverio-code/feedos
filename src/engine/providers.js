@@ -22,10 +22,12 @@ import { ambienteSignals, ambienteReportSection } from './esg-ambiente.js';
 // edizione agrofarmaci (DifesaOS): senza registrazioni non producono niente
 import { agroSignals, agroReportSection } from './agro-reg.js';
 import { campSignals } from './agro-camp.js';
+import { proveSignals } from './agro-prove.js';
+import { risparmiSignals } from './agro-risparmi.js';
 
 /** Fornitori di segnali, eseguiti da computeSignals dopo le regole incorporate. */
 export const SIGNAL_PROVIDERS = [budgetSignals, financeSignals, profitSignals, commercialSignals, purchasingSignals, productionSignals, kpiSignals, dqSignals,
-  climaSignals, pcfSignals, filieraSignals, reportSignals, personeSignals, governanceSignals, pianoSignals, rischiSignals, ambienteSignals, agroSignals, campSignals];
+  climaSignals, pcfSignals, filieraSignals, reportSignals, personeSignals, governanceSignals, pianoSignals, rischiSignals, ambienteSignals, agroSignals, campSignals, proveSignals, risparmiSignals];
 
 /** Sezioni esterne del report CdA, in ordine (le sezioni proprie della Direzione stanno in report.js). */
 export const REPORT_SECTIONS = [

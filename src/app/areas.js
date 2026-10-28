@@ -1,7 +1,7 @@
 /* FeedOS 17 · Aree dell'applicazione: icona, nome, descrizione, periodo globale e schede.
  * Fonte unica: nav.js (NAV), roles.js (AREA_META) e il router (AREAS, da areaIds.js) derivano da qui.
  * period: true mostra la barra del periodo nella testata. La scheda «tesi» esiste solo nella versione completa. */
-import { LuHouse, LuLandmark, LuWallet, LuFactory, LuFlaskConical, LuShoppingCart, LuCog, LuShieldCheck, LuHandshake, LuEuro, LuLeaf, LuDatabase, LuScale } from 'react-icons/lu';
+import { LuHouse, LuLandmark, LuWallet, LuFactory, LuFlaskConical, LuShoppingCart, LuCog, LuShieldCheck, LuHandshake, LuEuro, LuLeaf, LuDatabase, LuScale, LuPackage } from 'react-icons/lu';
 import { AREA_IDS } from '../core/areaIds.js';
 import { META } from '../editions/meta.js';
 
@@ -39,6 +39,9 @@ const DEFS = {
   // edizione agrofarmaci (DifesaOS): registrazioni, sostanze attive, schede di sicurezza, Seveso e ADR
   regolatorio: { icon: LuScale, label: 'Regolatorio', period: false, lead: 'Registrazioni dei prodotti con usi in etichetta e finestre di vendita e uso, sostanze attive e rinnovi, schede di sicurezza e invii ai clienti, Seveso e trasporto ADR.',
     tabs: [T('registrazioni', 'Registrazioni'), T('sostanze', 'Sostanze attive'), T('sds', 'Schede di sicurezza'), T('seveso', 'Seveso e ADR'), T('fonti', 'Regole e fonti')] },
+  // edizione agrofarmaci (DifesaOS): report di prodotto, prove di campo, costi e concorrenza
+  prodotti: { icon: LuPackage, label: 'Prodotti', period: false, lead: 'Report di prodotto stampabili con usi, prove di campo e foto; archivio delle prove con la statistica; costi, prezzi della concorrenza a ettaro e leve di risparmio per avere più margine o un prezzo più basso.',
+    tabs: [T('report', 'Report prodotto'), T('prove', 'Prove di campo'), T('risparmi', 'Costi e concorrenza')] },
   dati: { icon: LuDatabase, label: 'Dati', period: false, lead: 'Archivio, salvataggi, importazioni, anagrafiche, qualità dei dati, registro delle modifiche e impostazioni.',
     tabs: [T('archivio', 'Archivio'), T('importa', 'Importa'), T('anagrafiche', 'Anagrafiche'), T('qualita', 'Qualità dei dati'), T('registro', 'Registro modifiche'), T('impostazioni', 'Impostazioni')] },
 };

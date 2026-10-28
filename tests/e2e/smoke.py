@@ -37,7 +37,9 @@ if AGRO:
     ROUTES = [SWAP.get(r, r) for r in ROUTES if not any(r == h or r.startswith(h + '.') or r.startswith(h + '~') for h in HIDDEN)]
     ROUTES += ['regolatorio', 'regolatorio.registrazioni', 'regolatorio.registrazioni.reg-fl50sc', 'regolatorio.sostanze', 'regolatorio.sostanze.rame',
                'regolatorio.sds', 'regolatorio.sds.p-cu30wg', 'regolatorio.seveso', 'regolatorio.fonti', 'commerciale.campagne', 'commerciale.campagne.premi', 'commerciale.campagne.resi',
-               'esg.co2', 'esg.co2.vite', 'esg.co2.melo']
+               'esg.co2', 'esg.co2.vite', 'esg.co2.melo',
+               'prodotti', 'prodotti.report', 'prodotti.report.p-ba25wg', 'prodotti.report.p-zodp', 'prodotti.prove', 'prodotti.prove.tr-2025-02', 'prodotti.prove.tr-2027-08',
+               'prodotti.risparmi', 'prodotti.risparmi.p-te100ec', 'prodotti.risparmi.p-bs40']
 PERIOD_AREAS = {'oggi', 'direzione', 'finanza', 'gemello', 'acquisti', 'produzione', 'qualita', 'commerciale', 'economia'}
 # scheda laterale: (tipo, ricerca nella barra comandi, tipo atteso del primo risultato)
 DRAWERS = [('product', 'cuprarvo' if AGRO else 'lt18', 'Prodotto'), ('ingredient', 'mp01', 'Materia prima'), ('customer', 'cliente', 'Cliente'), ('offer', 'of-', 'Offerta'),

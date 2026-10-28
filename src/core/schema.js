@@ -23,6 +23,7 @@ const ADDED_AGRO = [
   'registrations', 'regUses', 'regEvents', 'activeSubstances', 'sdsDocs', 'sdsDispatches', // regolatorio
   'campaigns', 'earlyOrders', 'returns', // campagne e premi
   'cropProgrammes', // CO₂ dei programmi di difesa
+  'fieldTrials', 'photos', 'competitorPrices', // prodotti: prove di campo, foto, prezzi della concorrenza
 ];
 export const COLLECTIONS = [...BASE, ...ADDED_17, ...ADDED_18, ...ADDED_AGRO];
 

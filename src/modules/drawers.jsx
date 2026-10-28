@@ -44,7 +44,7 @@ function ProductD({ d, id }) {
   const parts = c.parts.filter(x => x.v > 0.01);
   return (
     <Drawer title={p.name} sub={`Prodotto · ${p.code}`} icon={<span className="dicon"><LuBoxes /></span>} wide
-      actions={<>{NAV.formulazione && <Btn icon={LuFlaskConical} onClick={() => nav('formulazione', 'formule', p.formulaId)}>Formula</Btn>}{NAV.esg?.tabs.some(t => t.id === 'passaporto') && <Btn icon={LuLeaf} onClick={() => nav('esg', 'passaporto', p.id)}>Passaporto</Btn>}<Btn kind="primary" icon={LuArrowRight} onClick={() => nav('economia', 'margini', p.id)}>Margini</Btn></>}>
+      actions={<>{NAV.formulazione && <Btn icon={LuFlaskConical} onClick={() => nav('formulazione', 'formule', p.formulaId)}>Formula</Btn>}{NAV.esg?.tabs.some(t => t.id === 'passaporto') && <Btn icon={LuLeaf} onClick={() => nav('esg', 'passaporto', p.id)}>Passaporto</Btn>}{NAV.prodotti && <Btn icon={LuFileText} onClick={() => nav('prodotti', 'report', p.id)}>Report</Btn>}<Btn kind="primary" icon={LuArrowRight} onClick={() => nav('economia', 'margini', p.id)}>Margini</Btn></>}>
       <Kv items={[['Forma e confezione', `${p.form} · ${p.packaging}`], ['Linea', I.line[p.lineId]?.name], ['Formula', f ? `${f.code} · versione ${f.version}` : '—'], ['Volume', `${nf(V[id] || 0)} t negli ultimi 12 mesi`]]} />
       <div className="dsec"><div className="eyebrow">Costo pieno di oggi · {fmtUp(c.total, p, 1)}</div>
         <StackBar parts={parts.map((x, i) => ({ key: x.k, label: x.k, value: x.v, color: SERIES[i] }))} ariaLabel="Composizione del costo" />

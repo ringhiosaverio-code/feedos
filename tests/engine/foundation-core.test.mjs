@@ -81,7 +81,7 @@ test('toCSV neutralizza le celle che sembrano formule', () => {
 /* ---------------- schema 17 ---------------- */
 test('schema 17: raccolte, impostazioni di base, archivio vuoto', () => {
   assert.equal(SCHEMA_VERSION, 17);
-  assert.equal(COLLECTIONS.length, 110, '23 di base + 14 dello schema 17 + 63 della fondazione 18 + 10 dell’edizione agrofarmaci');
+  assert.equal(COLLECTIONS.length, 113, '23 di base + 14 dello schema 17 + 63 della fondazione 18 + 13 dell’edizione agrofarmaci');
   for (const c of ['costCenters', 'fixedCosts', 'budget', 'closings', 'salesHistory', 'invoices', 'payments', 'suppliers', 'priceLists', 'stops', 'assets', 'stockCounts', 'adjustments', 'standards']) assert.ok(COLLECTIONS.includes(c), c);
   const e = emptyData();
   assert.equal(e.settings.schema, 17);
@@ -401,7 +401,7 @@ test('avvio con un archivio 16: istantanea prima di migrare, migrazione, prefere
   assert.equal(getPrefs().theme, 'dark'); assert.equal(getPrefs().size, 'aula');
   const P = await import('../../src/core/persist.js');
   const list = await P.listSnapshots();
-  assert.equal(idb._version('feedos16'), 2);
+  assert.equal(idb._version('feedos16'), 3, 'versione 3: archivio delle foto («media»)');
   assert.ok(list.some(s => s.label === 'Istantanea manuale' && s.size === 123), 'metadati delle istantanee della versione 1 ricostruiti');
   const pre = list.find(s => s.label === 'Prima della migrazione allo schema 17');
   assert.ok(pre && !pre.auto && pre.size > 1000);

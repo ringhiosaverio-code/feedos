@@ -294,7 +294,7 @@ test('contratti: esportazioni e forme dei risultati dei pacchetti', () => {
   isSection(dataquality.dqReportSection(D, ctx, P, C), 'dqReportSection');
   // registri: ordine fisso, ogni sezione è null o ben formata
   assert.deepEqual(SIGNAL_PROVIDERS.map(f => f.name), ['budgetSignals', 'financeSignals', 'profitSignals', 'commercialSignals', 'purchasingSignals', 'productionSignals', 'kpiSignals', 'dqSignals',
-    'climaSignals', 'pcfSignals', 'filieraSignals', 'reportSignals', 'personeSignals', 'governanceSignals', 'pianoSignals', 'rischiSignals', 'ambienteSignals', 'agroSignals', 'campSignals']);
+    'climaSignals', 'pcfSignals', 'filieraSignals', 'reportSignals', 'personeSignals', 'governanceSignals', 'pianoSignals', 'rischiSignals', 'ambienteSignals', 'agroSignals', 'campSignals', 'proveSignals', 'risparmiSignals']);
   assert.deepEqual(REPORT_SECTIONS.map(r => [r.id, r.order]), [['kpi', 10], ['agro-regolatorio', 35], ['redditivita', 40], ['commerciale', 45], ['finanza', 50], ['acquisti', 60], ['produzione', 70],
     ['esg-sintesi', 80], ['esg-clima', 81], ['esg-impronta', 82], ['esg-filiera', 83], ['esg-ambiente', 84], ['esg-persone', 85], ['esg-governance', 86], ['esg-piano', 87], ['esg-rischi', 88], ['dati', 90]]);
   for (const r of REPORT_SECTIONS) isSection(r.build(D, ctx, P, C), r.id);

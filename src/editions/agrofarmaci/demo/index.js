@@ -24,5 +24,19 @@ export function starterData() {
   return d;
 }
 
-/** Un demo salvato da una versione precedente dell'edizione si rigenera alla stessa data (nessun passo intermedio ancora). */
-export function upgradeDemo(d) { return d; }
+/**
+ * Passi di aggiornamento di un demo salvato da una versione precedente dell'edizione (settings.demoVersion), dopo migrateData:
+ * ogni passo aggiunge con i suoi estensori (stesso seme, stessa data del demo), non cancella.
+ */
+export const AGRO_DEMO_UPGRADES = [
+  { to: 2, label: 'prove di campo, illustrazioni e prezzi della concorrenza', up: d => applyDemoExtenders(d, d.settings.demoAnchor || todayLocal(), 26, { only: ['prove'], list: AGRO_EXTENDERS }) },
+];
+
+/** Demo di una versione precedente: applica i passi mancanti senza toccare il resto. */
+export function upgradeDemo(d) {
+  const v = d?.settings?.dataset === 'demo' ? d.settings.demoVersion || 1 : AGRO_DEMO_VERSION;
+  if (v >= AGRO_DEMO_VERSION) return d;
+  let out = d;
+  for (const step of AGRO_DEMO_UPGRADES) if (step.to > v && step.to <= AGRO_DEMO_VERSION) out = step.up(out);
+  return { ...out, settings: { ...out.settings, demoVersion: AGRO_DEMO_VERSION } };
+}
