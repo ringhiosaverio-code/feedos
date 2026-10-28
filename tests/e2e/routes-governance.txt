@@ -1,1 +1,11 @@
 # FeedOS 18 · Governance ed evidenze: percorsi in più per tests/e2e/smoke.py, uno per riga (es. esg.governance.sezione). Le righe con # sono commenti.
+esg.governance.panoramica
+esg.governance.calendario
+esg.governance.calendario.profilo
+esg.governance.politiche
+esg.governance.organi
+esg.governance.231
+esg.governance.certificati-permessi
+esg.governance.evidenze
+esg.governance.claim
+esg.governance.legale
