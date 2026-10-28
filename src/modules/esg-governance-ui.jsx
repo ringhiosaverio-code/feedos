@@ -11,7 +11,7 @@ import { COLL_LABEL_GOVERNANCE } from '../data/fields-governance.js';
 
 export const pctTxt = (v, d = 0) => (v == null || !Number.isFinite(+v) ? '—' : `${nf(v * 100, d)}%`);
 export const eurTxt = v => (v == null || !Number.isFinite(+v) ? '—' : `${nf(v, 0)} €`);
-export const mbTxt = b => (b == null || !Number.isFinite(+b) ? '—' : b >= 1048576 ? `${nf(b / 1048576, 1)} MB` : `${nf(Math.max(1, b / 1024), 0)} KB`);
+export const mbTxt = b => (b == null || !Number.isFinite(+b) ? '—' : b >= 1048576 ? `${nf(b / 1048576, 1)} MB` : b > 0 ? `${nf(Math.max(1, b / 1024), 0)} KB` : '0 KB');
 export const undoToast = text => toast(text, 'ok', { label: 'Annulla', fn: () => store.undo() });
 export const dayTxt = n => (n == null ? '' : n === 0 ? 'oggi' : n === 1 ? 'domani' : n === -1 ? 'ieri' : n > 0 ? `tra ${nf(n)} giorni` : `da ${nf(-n)} giorni`);
 /** Scarica righe in CSV (separatore punto e virgola, virgola decimale). */

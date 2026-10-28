@@ -50,7 +50,7 @@ export function Politiche({ d, P, today }) {
           </table>
         </div>
       </Panel>
-      <div className="split">
+      <div className="stack">
         <Panel title="Registro delle politiche" sub="Codici, politiche, pratiche e iniziative con approvazione, riesame e responsabile" flush actions={<Btn small kind="primary" icon={LuPlus} onClick={() => open(null)}>Nuova politica</Btn>}>
           <Table rows={rows} pageSize={20} exportName="politiche-esg" onRow={open} cols={[
             { key: 'title', label: 'Titolo', render: p => <span className="ego-wrap"><b>{p.title}</b><span className="sub">{MATTER_LABEL[p.matter] || p.matter} · {p.kind}{p.public ? ' · pubblica' : ''}</span></span>, csv: p => p.title },
@@ -61,14 +61,18 @@ export function Politiche({ d, P, today }) {
             { key: 'act', label: '', nosort: true, csv: false, render: p => (p.st.active ? <span onClick={e => e.stopPropagation()}><Btn small kind="ghost" icon={LuCircleCheck} onClick={() => review(p)} title="Registra il riesame di oggi">Riesaminata</Btn></span> : null) },
           ]} />
         </Panel>
-        <Panel title="Diritti umani nella forza lavoro (C6)" sub="Codice di condotta o politica, temi coperti e meccanismo di reclamo">
-          <Kv items={[['Codice o politica', c6.code ? `sì · ${c6.codeSrc}` : 'no'], ['Meccanismo di reclamo', c6.grievance ? 'sì (canale di segnalazione attivo)' : 'no']]} />
-          <ul className="ego-c6">{C6_TOPICS.map(t => { const k = { 'lavoro minorile': 'childLabour', 'lavoro forzato': 'forcedLabour', tratta: 'trafficking', discriminazione: 'discrimination', 'prevenzione infortuni': 'accidents' }[t]; return <li key={t}><Tick on={!!c6.topics[k]} /> {t}</li>; })}</ul>
-          <p className="xs muted">Contano le politiche attive sui temi «forza lavoro propria» e «condotta»; il codice dei fornitori vale per la catena del valore (B2).</p>
-          <h3 className="ego-h3">C2 · responsabile e descrizione</h3>
-          <p className="small">{dp['C2.accountable']?.value ? <>Livello più alto responsabile: <b>{dp['C2.accountable'].value}</b></> : 'Responsabile non indicato'}</p>
-          <ResponsabileC2 d={d} />
-        </Panel>
+        <div className="ego-two">
+          <Panel title="Diritti umani nella forza lavoro (C6)" sub="Codice di condotta o politica, temi coperti e meccanismo di reclamo">
+            <Kv items={[['Codice o politica', c6.code ? `sì · ${c6.codeSrc}` : 'no'], ['Meccanismo di reclamo', c6.grievance ? 'sì (canale di segnalazione attivo)' : 'no']]} />
+            <ul className="ego-c6">{C6_TOPICS.map(t => { const k = { 'lavoro minorile': 'childLabour', 'lavoro forzato': 'forcedLabour', tratta: 'trafficking', discriminazione: 'discrimination', 'prevenzione infortuni': 'accidents' }[t]; return <li key={t}><Tick on={!!c6.topics[k]} /> {t}</li>; })}</ul>
+            <p className="xs muted">Contano le politiche attive sui temi «forza lavoro propria» e «condotta»; il codice dei fornitori vale per la catena del valore (B2).</p>
+          </Panel>
+          <Panel title="Descrizione e responsabile (C2)" sub="Testo per il report, ricavato dalle politiche attive">
+            <p className="small">{dp['C2.accountable']?.value ? <>Livello più alto responsabile: <b>{dp['C2.accountable'].value}</b></> : 'Responsabile non indicato'}</p>
+            <ResponsabileC2 d={d} />
+            <p className="small ego-mt ego-clamp">{dp['C2.description']?.value || 'Nessuna politica attiva da descrivere.'}</p>
+          </Panel>
+        </div>
       </div>
       {ed && (
         <RecordDrawer d={d} coll="policies" rec={ed.id ? ed : null} onClose={() => setEd(null)} labelOf={p => p.title}
@@ -106,13 +110,13 @@ export function Organi({ d, P, today }) {
     <>
       <div className="kpis">
         <Kpi label="Componenti" value={nf(b.members)} foot={`al ${dateIt(P.to)}`} />
-        <Kpi label="Rapporto donne/uomini (C9)" value={b.ratio == null ? '—' : nf(b.ratio, 2)} foot={`${b.women} donne, ${b.men} uomini`} />
+        <Kpi label="Rapporto donne/uomini (C9)" value={b.ratio == null ? '—' : nf(b.ratio, 2)} foot={`${b.women} ${b.women === 1 ? 'donna' : 'donne'}, ${b.men} ${b.men === 1 ? 'uomo' : 'uomini'}`} />
         <Kpi label="Indipendenti" value={nf(b.independent)} foot={b.members ? pctTxt(b.independent / b.members) : ''} />
         <Kpi label="Esecutivi" value={nf(b.executive)} />
         <Kpi label="Con competenze di sostenibilità" value={nf(b.esgSkill)} />
       </div>
       {mismatch && <div className="note maize small">Il questionario ESG indica {sv['gv-board-n']} componenti di cui {sv['gv-board-w']} donne: il registro ne ha {b.members} e {b.women}. Il C9 usa il registro.</div>}
-      <div className="split">
+      <div className="stack">
         <Panel title="Organo amministrativo" sub="Componenti per ruolo, senza nomi: genere, ruolo esecutivo, indipendenza e competenze" flush actions={<Btn small kind="primary" icon={LuPlus} onClick={() => setEd({})}>Componente</Btn>}>
           <Table rows={all} pageSize={20} exportName="organo-amministrativo" onRow={x => setEd(x)} cols={[
             { key: 'role', label: 'Ruolo', render: x => <b>{x.role}</b> }, { key: 'gender', label: 'Genere' },
@@ -163,7 +167,7 @@ export function Modello231({ d, P, today }) {
             { key: 'area', label: 'Area', render: c => <span className="ego-wrap"><b>{c.area}</b><span className="sub">{c.risk}</span></span>, csv: c => c.area },
             { key: 'control', label: 'Controllo', render: c => <span className="ego-wrap">{c.control}<span className="sub">{c.owner}</span></span> },
             { key: 'outcome', label: 'Esito', render: c => <Chip kind={OUT_KIND[c.outcome] || 'outline'}>{c.outcome || 'non testato'}</Chip> },
-            { key: 'next', label: 'Prossima verifica', render: c => (c.next ? <ExpChip state={c.nextState === 'valido' ? 'valido' : c.nextState} days={daysBetween(today, c.next)} /> : '—'), csv: c => c.next || '', sort: c => c.next || '9999' },
+            { key: 'next', label: 'Prossima verifica', render: c => { if (!c.next) return '—'; const n = daysBetween(today, c.next); return n < 0 ? <Chip kind="crit">scaduta {dayTxt(n)}</Chip> : n <= 30 ? <Chip kind="warn">{dayTxt(n)}</Chip> : <span>{dateIt(c.next)}<span className="sub">{dayTxt(n)}</span></span>; }, csv: c => c.next || '', sort: c => c.next || '9999' },
             { key: 'act', label: '', nosort: true, csv: false, render: c => <span onClick={e => e.stopPropagation()}><Btn small kind="ghost" icon={LuCircleCheck} onClick={() => tested(c, c.outcome && c.outcome !== 'non testato' ? c.outcome : 'efficace')} title="Registra la verifica di oggi con l’ultimo esito">Verificato</Btn></span> },
           ]} />
         </Panel>
@@ -180,7 +184,7 @@ export function Modello231({ d, P, today }) {
           </Panel>
           <Panel title="Relazioni dell’Organismo di vigilanza" flush actions={<Btn small icon={LuPlus} onClick={() => setOdv({})}>Relazione</Btn>}>
             <Table rows={[...(d.odvReports || [])].sort((a, b) => (a.date < b.date ? 1 : -1))} pageSize={10} onRow={r => setOdv(r)} cols={[
-              { key: 'date', label: 'Data', render: r => dt(r.date) }, { key: 'summary', label: 'Sintesi', render: r => <span className="ego-wrap">{r.summary}<span className="sub">{r.period}{r.findings ? ` · ${r.findings} rilievi` : ''}</span></span> },
+              { key: 'date', label: 'Data', render: r => dt(r.date) }, { key: 'summary', label: 'Sintesi', render: r => <span className="ego-wrap">{r.summary}<span className="sub">{r.period}{r.findings ? ` · ${r.findings} ${+r.findings === 1 ? 'rilievo' : 'rilievi'}` : ''}</span></span> },
             ]} />
           </Panel>
         </div>

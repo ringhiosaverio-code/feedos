@@ -48,7 +48,7 @@ const guessKind = name => {
   if (/certific|iso|attestat/.test(n)) return 'certificato';
   if (/politic|codice|procedur|policy/.test(n)) return 'politica';
   if (/verbal|riunion|relazion/.test(n)) return 'verbale';
-  if (/analis|rapporto di prova|prova|lab/.test(n)) return 'analisi';
+  if (/analis|rapporto di prova|laborator/.test(n)) return 'analisi';
   if (/contratt|polizz|ccnl/.test(n)) return 'contratto';
   if (/\.geojson$/.test(n)) return 'GeoJSON';
   if (/\.(jpe?g|png|heic)$/.test(n)) return 'foto';
@@ -93,7 +93,7 @@ export function Evidenze({ d, P, today }) {
   return (
     <>
       <div className="kpis">
-        <Kpi label="Documenti registrati" value={nf(rows0.filter(e => e.state !== 'sostituita').length)} foot={`${rows0.filter(e => e.state === 'sostituita').length} versioni precedenti conservate`} />
+        <Kpi label="Documenti registrati" value={nf(rows0.filter(e => e.state !== 'sostituita').length)} foot={(n => `${n} ${n === 1 ? 'versione precedente conservata' : 'versioni precedenti conservate'}`)(rows0.filter(e => e.state === 'sostituita').length)} />
         <Kpi label="Datapoint del VS con evidenza" value={pctTxt(cov.share)} status={cov.share == null ? undefined : cov.share >= 0.8 ? 'ok' : cov.share >= 0.6 ? 'warn' : 'bad'} target="80%" foot={`${cov.covered.length} di ${cov.ids.length} obbligatori`} />
         <Kpi label="In scadenza o scaduti" value={nf(rows0.filter(e => ['in scadenza', 'scaduta'].includes(e.state)).length)} status={rows0.some(e => e.state === 'scaduta') ? 'warn' : 'ok'} foot="entro 60 giorni" />
         <Kpi label="Allegati nel browser" value={usage ? mbTxt(usage.used) : '—'} foot={`su ${nf(BLOB_MAX_TOTAL / 1048576)} MB · ${usage ? `${usage.files} file` : 'lettura…'}`} />
@@ -120,7 +120,7 @@ export function Evidenze({ d, P, today }) {
           </Panel>
           <Panel title="Spazio degli allegati" sub={usage?.mode === 'memoria' ? 'Questo browser non salva gli allegati: restano finché la pagina è aperta' : 'Nel database del browser, fuori dal backup JSON'}>
             <div className="ego-meter" role="meter" aria-valuemin={0} aria-valuemax={BLOB_MAX_TOTAL} aria-valuenow={usage?.used || 0} aria-label="Spazio usato dagli allegati"><i style={{ width: `${Math.min(100, ((usage?.used || 0) / BLOB_MAX_TOTAL) * 100)}%` }} /></div>
-            <p className="small ego-mt"><LuHardDrive aria-hidden="true" /> {mbTxt(usage?.used || 0)} usati su {nf(BLOB_MAX_TOTAL / 1048576)} MB · {usage?.files || 0} allegati</p>
+            <p className="small ego-mt"><LuHardDrive aria-hidden="true" /> {mbTxt(usage?.used || 0)} usati su {nf(BLOB_MAX_TOTAL / 1048576)} MB · {usage?.files || 0} {usage?.files === 1 ? 'allegato' : 'allegati'}</p>
             <p className="xs muted">{T('governance.evidence.local').replace('FeedOS', EDITION.product)}</p>
           </Panel>
         </div>
@@ -284,7 +284,7 @@ function AuditPack({ d, P, today }) {
       const datapoints = collectDatapoints(d, P).datapoints;
       const calendar = collectCalendar(d, today).filter(c => c.date >= addDays(P.from, 0) && c.date <= addDays(today, 365));
       let factors = [];
-      try { factors = factorRegistry(d).filter(x => x.inUse !== false); } catch { factors = []; }
+      try { factors = factorRegistry(d); } catch { factors = []; }
       const packs = packStatus(d, [PACK_CLIMA, PACK_FILIERA, PACK_REPORT, PACK_GOVERNANCE]);
       const attachments = [];
       if (att) for (const e of (d.evidence || []).filter(x => x.storage === 'archivio' && !x.supersededBy)) { const b = await getBlob(e.id); if (b?.bytes) attachments.push({ id: e.id, name: e.fileName || e.id, bytes: b.bytes }); }
@@ -325,7 +325,7 @@ export function Dichiarazioni({ d, today }) {
   return (
     <>
       <div className="kpis">
-        <Kpi label="Dichiarazioni nel registro" value={nf(rows.length)} foot={`${rows.filter(c => c.status === 'pubblicato').length} pubblicate`} />
+        <Kpi label="Dichiarazioni nel registro" value={nf(rows.length)} foot={(n => `${n} ${n === 1 ? 'pubblicata' : 'pubblicate'}`)(rows.filter(c => c.status === 'pubblicato').length)} />
         <Kpi label="Bloccate" value={nf(rows.filter(c => c.check.verdict === 'bloccata' && c.status !== 'ritirato').length)} status={rows.some(c => c.check.verdict === 'bloccata' && c.status === 'pubblicato') ? 'bad' : rows.some(c => c.check.verdict === 'bloccata') ? 'warn' : 'ok'} foot="da riformulare prima dell’uso" />
         <Kpi label="Da rivedere" value={nf(rows.filter(c => c.check.verdict === 'da rivedere' && c.status !== 'ritirato').length)} />
         <Kpi label="Pubblicate senza evidenze" value={nf(rows.filter(c => c.status === 'pubblicato' && !(c.evidenceIds || []).length).length)} status={rows.some(c => c.status === 'pubblicato' && !(c.evidenceIds || []).length) ? 'warn' : 'ok'} foot="regola R45" />
@@ -334,7 +334,7 @@ export function Dichiarazioni({ d, today }) {
         <Panel title="Controlla un testo" sub={T('governance.claim.intro')} id="ego-claim-check">
           <textarea className="input ego-ta" rows={4} value={text} onChange={e => setText(e.target.value)} placeholder="Incolla il testo di un’etichetta, una scheda tecnica, una pagina del sito o un’offerta" aria-label="Testo da controllare" />
           <div className="row gap-s ego-mt">
-            <Select value={channel} onChange={setChannel} ariaLabel="Dove compare" options={CLAIM_CHANNELS} />
+            <Select value={channel} onChange={setChannel} ariaLabel="Dove compare" options={CLAIM_CHANNELS} className="ego-sel" />
             <Btn small kind="primary" icon={LuPlus} onClick={add} disabled={!text.trim()}>Aggiungi al registro</Btn>
             {live && <VerdictChip verdict={live.verdict} />}
           </div>
@@ -342,7 +342,7 @@ export function Dichiarazioni({ d, today }) {
         </Panel>
         <Panel title="Regole applicate" sub={`Pacchetto «governance» · valido al ${dateIt(PACK_GOVERNANCE.validAsOf)}`}>
           <ul className="ego-rules">
-            <li><b>Neutralità e compensazioni</b>: «carbon neutral», «a impatto zero», «CO₂ neutro», «climate positive» sono sempre bloccate. {T('governance.claim.offset')}</li>
+            <li><b>Neutralità e compensazioni</b>: «carbon neutral», «a impatto zero», «CO₂ neutro», «climate positive» sono sempre bloccate, anche con evidenze o crediti di compensazione.</li>
             <li><b>Asserzioni generiche</b> («green», «eco», «sostenibile», «rispettoso dell’ambiente»): solo con un’eccellenza ambientale riconosciuta (Ecolabel UE o marchio di tipo I).</li>
             <li><b>Marchi di sostenibilità</b>: solo se basati su uno schema di certificazione o istituiti da un’autorità pubblica.</li>
             <li><b>Impegni futuri</b> («net zero entro…»): solo con un piano pubblico, misurabile e verificato da un esperto indipendente.</li>

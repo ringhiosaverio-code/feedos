@@ -90,7 +90,7 @@ export function checkClaim(text, ctx = {}) {
   const ev = Array.isArray(c.evidence) ? c.evidence : [];
   const fm = s.match(FUTURE_RE);
   const thisYear = +String(c.today || (d ? esgToday(d) : '2026')).slice(0, 4) || 2026;
-  const future = !!fm && +fm[2] >= thisYear && FUTURE_TOPIC.test(s);
+  const future = !!fm && +fm[2] >= thisYear && (FUTURE_TOPIC.test(s) || /\d\s?%/.test(s));
   const excellence = hasExcellence(ev);
   for (const r of RULES) {
     for (const h of findAll(r.re, s)) {

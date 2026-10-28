@@ -114,7 +114,7 @@ function Panoramica({ d, P, S, today }) {
       <div className="kpis" id="ego-kpis">
         <Kpi label="Adempimenti fatti nei tempi" value={pctTxt(S.obligations.onTime)} status={S.obligations.onTime == null ? undefined : S.obligations.onTime >= 0.95 ? 'ok' : S.obligations.onTime >= 0.85 ? 'warn' : 'bad'} target="95%" foot={P.short} onClick={() => go('esg', 'governance', 'calendario')} />
         <Kpi label="Temi B2 con una politica" value={`${S.b2.rows.filter(x => x.covered).length}/${S.b2.rows.length}`} status={S.b2.share >= 0.8 ? 'ok' : S.b2.share >= 0.5 ? 'warn' : 'bad'} foot={S.b2.drafts ? `${S.b2.drafts} in bozza` : 'nessuna bozza'} onClick={() => go('esg', 'governance', 'politiche')} />
-        <Kpi label="Rapporto donne/uomini nel CdA" value={S.board.ratio == null ? '—' : nf(S.board.ratio, 2)} foot={`${S.board.women} donne su ${S.board.members} componenti (C9)`} onClick={() => go('esg', 'governance', 'organi')} />
+        <Kpi label="Rapporto donne/uomini nel CdA" value={S.board.ratio == null ? '—' : nf(S.board.ratio, 2)} foot={`${S.board.women} ${S.board.women === 1 ? 'donna' : 'donne'} su ${S.board.members} componenti (C9)`} onClick={() => go('esg', 'governance', 'organi')} />
         <Kpi label="Certificati e permessi in scadenza" value={nf(S.expiries.filter(x => x.coll !== 'evidence').length)} status={S.expiries.some(x => x.coll !== 'evidence') ? 'warn' : 'ok'} foot="entro 90 giorni (permessi 180)" onClick={() => go('esg', 'governance', 'certificati-permessi')} />
         <Kpi label="Controlli 231 verificati" value={`${S.m231.tested}/${S.m231.controls}`} status={S.m231.weak ? 'warn' : 'ok'} foot={S.m231.weak ? `${S.m231.weak} da migliorare` : 'ultimi 12 mesi'} onClick={() => go('esg', 'governance', '231')} />
       </div>
@@ -140,7 +140,7 @@ function Panoramica({ d, P, S, today }) {
       </div>
       <Panel title="Profilo usato per l’applicabilità" sub="Dati dell’archivio che decidono quali obblighi valgono; si correggono nel calendario (Profilo dell’impresa)"
         actions={<Btn small kind="ghost" icon={LuArrowRight} onClick={() => go('esg', 'governance', 'calendario.profilo')}>Correggi</Btn>}>
-        <Kv items={[['Settore', `${pr.sectorLabel} (NACE ${pr.nace})`], ['Dipendenti', pr.employees == null ? 'non noti' : `${nf(pr.employees)} · ${pr.employeesSrc}`], ['Ricavi degli ultimi 12 mesi', `${nf(pr.revenue12 / 1e6, 1)} M€`],
+        <Kv items={[['Settore', SECTORS[pr.sector] && SECTORS[pr.sector].nace.slice(0, 2) !== String(pr.nace).slice(0, 2) ? <span>{pr.sectorLabel} · <span className="ego-warn-t">NACE {pr.nace} nelle impostazioni del report: per questo settore di solito {SECTORS[pr.sector].nace}</span></span> : `${pr.sectorLabel} (NACE ${pr.nace})`], ['Dipendenti', pr.employees == null ? 'non noti' : `${nf(pr.employees)} · ${pr.employeesSrc}`], ['Ricavi degli ultimi 12 mesi', `${nf(pr.revenue12 / 1e6, 1)} M€`],
           ['Caratteristiche', <span className="ego-flags">{Object.entries(pr.flags).filter(([, v]) => v).map(([k]) => <Chip key={k} kind="outline">{FLAG_LABEL[k] || k}</Chip>)}</span>]]} />
       </Panel>
       <Panel title="Metodo e limiti">
@@ -158,6 +158,7 @@ function openItem(c) {
 }
 
 /* ================= calendario ================= */
+const cap = s => String(s).charAt(0).toUpperCase() + String(s).slice(1);
 const KIND_COLOR = { scadenza: 'var(--s1)', rinnovo: 'var(--s2)', controllo: 'var(--s3)', traguardo: 'var(--s4)' };
 const KINDS = ['scadenza', 'rinnovo', 'controllo', 'traguardo'];
 const WINDOWS = [{ id: '30', label: '30 giorni' }, { id: '90', label: '90 giorni' }, { id: '180', label: '180 giorni' }, { id: '365', label: '12 mesi' }];
@@ -212,7 +213,7 @@ function Calendario({ d, P, S, today, pick }) {
           </div>
           {months.length ? months.map(([m, xs]) => (
             <section key={m} className="ego-month" aria-label={monthLabel(m, false)}>
-              <h3>{monthLabel(m, false)}<span className="xs muted"> · {xs.length} {xs.length === 1 ? 'voce' : 'voci'}</span></h3>
+              <h3>{cap(monthLabel(m, false))}<span className="xs muted"> · {xs.length} {xs.length === 1 ? 'voce' : 'voci'}</span></h3>
               <ul className="ego-cal">
                 {xs.map(c => {
                   const o = oblOf(c);
