@@ -1,1 +1,8 @@
 # FeedOS 18 · Registri ambientali: percorsi in più per tests/e2e/smoke.py, uno per riga (es. esg.ambiente.sezione). Le righe con # sono commenti.
+esg.ambiente.sintesi
+esg.ambiente.acqua-scarichi
+esg.ambiente.rentri
+esg.ambiente.aria
+esg.ambiente.energia-prestazioni
+esg.ambiente.anomalie
+esg.ambiente.bilancio-materiali

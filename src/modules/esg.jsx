@@ -18,6 +18,7 @@ import { balance, aggregate, intensityAt, scope1PerKg, DEFAULTS, GRID_FACTORS } 
 import { PageHead, Panel, Table, Chip, Kpi, Field, Select, Empty, SearchBox, filterRows, Seg, Kv, Cls } from '../ui/ui.jsx';
 import { Columns, LineChart, Sankey, Legend, SERIES } from '../ui/charts.jsx';
 import { NAV } from '../app/nav.js';
+import { META } from '../editions/meta.js';
 import { Cruscotto, Questionario, Acqua, Rifiuti, openQuestion } from './sostenibilita.jsx';
 import { SURVEY_QUESTIONS } from '../data/survey.js';
 import { ESG_PAGES } from './esg-pages.jsx';
@@ -26,6 +27,7 @@ import { SlotGuard } from './slots.jsx';
 // Solo la versione completa contiene i dati della tesi: nella pubblica TH è null e il modulo dei dati non entra nel file.
 const TH = __FULL__ ? THESIS : null;
 const FULL = !!TH;
+const FEED = (META.sector || 'mangimi') !== 'agrofarmaci'; // il testo con mangimi e questionario è della versione mangimi
 const SRC = { auto: { kind: 'good', label: 'dai dati' }, questionario: { kind: 'violet', label: 'questionario' }, manuale: { kind: 'accent', label: 'inserito' }, tesi: { kind: 'maize', label: 'tesi' } };
 const SRC_ICON = { auto: LuDatabase, questionario: LuClipboardList, manuale: LuPencil, tesi: LuFileText };
 // indicatore del registro → domanda del questionario che lo alimenta
@@ -38,7 +40,7 @@ export function Esg({ route }) {
   const Page = ESG_PAGES[tab]; // schede dei pacchetti ESG (esg-pages.jsx), ciascuna isolata dagli errori
   return (
     <>
-      <PageHead title={FULL ? 'ESG e tesi' : 'ESG'} lead={`Quanto è sostenibile lo stabilimento, misurato con i dati di ogni giorno: clima ed emissioni, impronta dei mangimi, filiera, acqua e rifiuti, persone, governance, obiettivi e rischi. Il questionario guidato completa ciò che i dati non dicono e alimenta i 49 indicatori ${FULL ? 'della tesi' : 'ESG'}, l’impronta dei mangimi e il report VSME.`}
+      <PageHead title={FULL ? 'ESG e tesi' : 'ESG'} lead={FEED ? `Quanto è sostenibile lo stabilimento, misurato con i dati di ogni giorno: clima ed emissioni, impronta dei mangimi, filiera, acqua e rifiuti, persone, governance, obiettivi e rischi. Il questionario guidato completa ciò che i dati non dicono e alimenta i 49 indicatori ${FULL ? 'della tesi' : 'ESG'}, l’impronta dei mangimi e il report VSME.` : NAV.esg.lead}
         tabs={NAV.esg.tabs} tab={tab} onTab={t => go('esg', t)} />
       {Page && <SlotGuard key={tab}><Page d={d} route={route} /></SlotGuard>}
       {tab === 'cruscotto' && <Cruscotto d={d} />}

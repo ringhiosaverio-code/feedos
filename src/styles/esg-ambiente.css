@@ -1,2 +1,46 @@
-/* FeedOS 18 · Registri ambientali (pacchetto WP9): stile del pacchetto, solo classi con il prefisso proprio e token del tema (var(--…)).
- * Il file viene incluso da build.mjs senza import. */
+/* FeedOS 18 · ESG › Registri ambientali (pacchetto WP9): stile della scheda. Prefisso eam-; solo token del tema (var(--…));
+ * spaziature in multipli di 8 px; pesi del testo 400 e 600; niente maiuscolo, niente gradienti né bagliori. */
+
+.eam { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.eam .kpis.eam-kpis { margin-bottom: 0; }
+.eam-two { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; align-items: start; }
+.eam-two > * { min-width: 0; }
+.eam-settings { flex-wrap: wrap; align-items: center; gap: 8px; }
+.eam-settings .small { color: var(--muted); }
+.eam-note { margin-top: 8px; color: var(--muted); }
+.eam-foot { display: flex; flex-direction: column; gap: 16px; margin-top: 16px; }
+.eam-foot .eam-actions { flex-wrap: wrap; }
+.eam-link { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }
+.eam-wrap { display: flex; flex-direction: column; gap: 0; min-width: 0; overflow-wrap: anywhere; }
+.eam-wrap .sub { color: var(--muted); font-size: 12px; line-height: 1.4; }
+.eam-an-line { display: block; font-size: 12px; color: var(--ink-2); line-height: 1.6; }
+.eam-model { color: var(--ink-2); line-height: 1.6; margin: 0 0 16px; }
+.eam-model b { font-weight: 600; color: var(--ink); }
+
+/* analisi di uno scarico: una riga per parametro */
+.eam-analyses { border: 1px solid var(--line); border-radius: var(--r); padding: 16px; margin: 0; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.eam-analyses legend { padding: 0 8px; color: var(--muted); }
+.eam-an { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr) auto; gap: 8px; align-items: center; }
+.eam-check { display: inline-flex; align-items: center; gap: 8px; }
+.eam-err { margin-top: 8px; }
+
+/* grafici dei camini: uno per camino, con il limite */
+.eam-charts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.eam-chart { margin: 0; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.eam-chart figcaption { color: var(--ink-2); }
+
+/* riferimento di settore: due barre con la scala */
+.eam-gauges { display: flex; flex-direction: column; gap: 16px; }
+.eam-gauge { display: flex; flex-direction: column; gap: 8px; }
+
+/* stampa: la scheda si stampa come il riepilogo (la barra e i pulsanti restano sullo schermo) */
+.eam-print-t { width: 100%; border-collapse: collapse; }
+.eam-print-t th, .eam-print-t td { text-align: left; padding: 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+
+@media (max-width: 720px) {
+  .eam-two { grid-template-columns: minmax(0, 1fr); }
+  .eam-charts { grid-template-columns: minmax(0, 1fr); }
+  .eam-an { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .eam-an > .input[aria-label^='Parametro'] { grid-column: 1 / -1; }
+  .eam-analyses { padding: 16px; }
+}

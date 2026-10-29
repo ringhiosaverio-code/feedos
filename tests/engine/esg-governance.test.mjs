@@ -365,7 +365,8 @@ test('demo FeedOS: almeno 15 scadenze con norma, fonte e «valido al»; nessuna 
   const cal = E.governanceCalendarItems(D, today);
   const obl = cal.filter(c => c.key.startsWith('gov:obl:') && !c.key.startsWith('gov:obl:ci:')); // gli adempimenti propri dell'azienda non hanno «valido al»
   assert.ok(cal.length >= 15, `${cal.length} scadenze`);
-  assert.ok(obl.length >= 12);
+  assert.ok(obl.length >= 11, `${obl.length} adempimenti nel calendario`); // le scadenze già in un'altra scheda (ambiente «stack», persone «ot23», piano «iper») sono «altrove»
+  assert.ok(E.obligationsFor(D, today).some(o => o.via?.key === 'stack' && o.status === 'altrove'), 'il controllo al camino è nel calendario dell’ambiente');
   for (const c of obl) { assert.ok(c.law && c.source && /^\d{4}-\d{2}-\d{2}$/.test(c.validAsOf), c.key); assert.equal(c.link.tab, 'governance'); }
   assert.ok(!cal.some(c => c.govStatus === 'scaduto'));
   // niente doppioni con le schede che hanno già la data (F-gas nel clima, EUDR nella filiera)

@@ -17,6 +17,7 @@ import { inventory, ets2Exposure, factor, plantLocation } from './esg-clima.js';
 import { productMacc, pcfOn } from './esg-pcf.js';
 import { soyShares } from './esg-filiera.js';
 import { safetyRates } from './esg-persone.js';
+import { rentriSummary } from './esg-ambiente-calc.js';
 import { waterStats, wasteStats } from './sustainability.js';
 import { programmeCo2 } from './agro-co2.js';
 import { PACK_PIANO, LEVERS, INCENTIVES } from '../data/pack-piano.js';
@@ -154,6 +155,9 @@ function liveValue(d, metric, P) {
       return w && w.intensity != null && w.nMonths >= 9 ? { value: w.intensity * 1000, quality: 'calcolato', source: 'registro dell’acqua', method: 'm³ prelevati × 1.000 ÷ tonnellate prodotte nei mesi confrontabili' } : null;
     }
     case 'recupero': {
+      // recupero finale (R1–R12) dai registri RENTRI: l'operazione R13 (messa in riserva) non è un recupero finale
+      const rs = safe(() => rentriSummary(d, esgToday(d), P), null);
+      if (rs && rs.total > 0 && rs.finalRecoveryPct != null) return { value: rs.finalRecoveryPct * 100, quality: 'calcolato', source: 'registri RENTRI', method: 'kg avviati a recupero finale (R1–R12) ÷ kg dei registri RENTRI del periodo' };
       const w = safe(() => wasteStats(d, P), null);
       return w && w.n > 0 && w.recovery != null ? { value: w.recovery * 100, quality: 'calcolato', source: 'registro dei rifiuti', method: 'kg a recupero ÷ kg di rifiuti del periodo' } : null;
     }
