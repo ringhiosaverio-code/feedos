@@ -50,8 +50,8 @@ async function bundle(full, ed = null) {
   return { js: r.outputFiles[0].text.replace(/<\/script/gi, '<\\/script'), meta: r.metafile };
 }
 const FAVICON = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" rx="8" fill="#101A14"/><rect y="25" width="32" height="7" fill="#D5940F"/><text x="16" y="21" font-family="Arial Narrow,Arial" font-weight="700" font-size="18" fill="#EDF1EC" text-anchor="middle">F</text></svg>');
-const head = `<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>FeedOS 17</title><meta name="description" content="FeedOS 17 · sistema operativo del mangimificio: controllo di gestione, finanza, formulazione, acquisti, produzione, qualità, commerciale, economia ed ESG."><link rel="icon" href="${FAVICON}"><meta name="theme-color" content="#101A14">`;
-const noscript = `<noscript><div style="max-width:640px;margin:40px auto;font:15px/1.5 Arial,sans-serif;padding:20px">FeedOS 16 ha bisogno di JavaScript. Apri il file con Chrome, Edge, Safari o Firefox.</div></noscript>`;
+const head = `<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>FeedOS 18</title><meta name="description" content="FeedOS 17 · sistema operativo del mangimificio: controllo di gestione, finanza, formulazione, acquisti, produzione, qualità, commerciale, economia ed ESG."><link rel="icon" href="${FAVICON}"><meta name="theme-color" content="#101A14">`;
+const noscript = `<noscript><div style="max-width:640px;margin:40px auto;font:15px/1.5 Arial,sans-serif;padding:20px">FeedOS 18 ha bisogno di JavaScript. Apri il file con Chrome, Edge, Safari o Firefox.</div></noscript>`;
 
 const t0 = Date.now();
 const full = await bundle(true);
@@ -59,11 +59,11 @@ const pub = await bundle(false);
 const page = js => `<!doctype html><html lang="it"><head>${head}<style>${fontCss}\n${css}</style></head><body><div id="root"></div>${noscript}<script>${js}</script></body></html>`;
 fs.writeFileSync(dist('FeedOS-16.html'), page(full.js));
 fs.writeFileSync(dist('FeedOS-16-demo.html'), page(pub.js));
-fs.writeFileSync(dist('artifact/feedos-16.html'), `<title>FeedOS 17</title><style>${fontCss}\n${css}</style><div id="root"></div><script>${pub.js}</script>`);
+fs.writeFileSync(dist('artifact/feedos-16.html'), `<title>FeedOS 18</title><style>${fontCss}\n${css}</style><div id="root"></div><script>${pub.js}</script>`);
 // DifesaOS (edizione agrofarmaci): solo la versione pubblica con l'azienda dimostrativa inventata
 const agro = await bundle(false, 'agrofarmaci');
 const AGRO_TITLE = 'DifesaOS 1.0';
-const agroHead = head.replace('<title>FeedOS 17</title>', `<title>${AGRO_TITLE}</title>`)
+const agroHead = head.replace('<title>FeedOS 18</title>', `<title>${AGRO_TITLE}</title>`)
   .replace(/<meta name="description" content="[^"]*">/, '<meta name="description" content="DifesaOS · gestione dell’azienda di agrofarmaci: registrazioni e sostanze attive, schede di sicurezza, Seveso e ADR, campagne e premi, controllo di gestione, finanza, produzione, qualità ed ESG.">');
 fs.writeFileSync(dist('DifesaOS-demo.html'), `<!doctype html><html lang="it"><head>${agroHead}<style>${fontCss}\n${css}</style></head><body><div id="root"></div>${noscript.replace('FeedOS 16', 'DifesaOS')}<script>${agro.js}</script></body></html>`);
 fs.writeFileSync(dist('artifact/difesaos.html'), `<title>${AGRO_TITLE}</title><style>${fontCss}\n${css}</style><div id="root"></div><script>${agro.js}</script>`);
