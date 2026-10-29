@@ -72,11 +72,11 @@ function NewQuestionnaire({ d, P, today }) {
         <label className="field"><span>Scadenza</span><input type="date" className="input" value={m.dueAt} onChange={e => set('dueAt', e.target.value)} /></label>
         <label className="field"><span>Modello</span><Select value={m.template} onChange={v => set('template', v)} options={TEMPLATES} ariaLabel="Modello" /></label>
       </div>
-      <div className="row" style={{ marginTop: 12 }}>
+      <div className="row" style={{ marginTop: 16 }}>
         <Btn kind="primary" icon={LuPlus} onClick={() => create(templateItems(d, m.template))}>Crea dal modello</Btn>
         <label className="btn"><LuUpload aria-hidden="true" />Importa da CSV<input type="file" accept=".csv,.txt,text/csv" className="erp-file" onChange={onFile} /></label>
       </div>
-      {imp && <div className="note" style={{ marginTop: 12 }}>
+      {imp && <div className="note" style={{ marginTop: 16 }}>
         «{imp.name}»: {imp.items.length} domande lette (colonna «{imp.columns.text}»); {imp.auto} collegate in automatico a un datapoint, le altre da controllare o oltre il VS.
         <div className="row" style={{ marginTop: 8 }}><Btn small kind="primary" icon={LuSave} onClick={() => create(imp.items)}>Aggiungi il questionario</Btn><Btn small kind="ghost" onClick={() => setImp(null)}>Annulla</Btn></div>
       </div>}
@@ -107,7 +107,7 @@ function QDetail({ d, q, today }) {
       <Panel title={q.title} sub={`${q.requester || '—'} · ${Q_KINDS[q.kind] || q.kind} · esercizio ${q.periodKey || '—'}`}
         actions={<Select value={q.status || 'in compilazione'} onChange={v => upd({ status: v, ...(v === 'inviato' ? { sentAt: today } : {}) }, `Questionario «${q.title}»: ${v}`)} options={Q_STATUS} ariaLabel="Stato del questionario" />}>
         {q.note && <p className="small muted">{q.note}</p>}
-        {f.stats.transcribe > 0 && <div className="note" style={{ marginBottom: 10 }}>Voci da trascrivere: il testo delle voci del Documento PMI-Banche va importato nella sezione Banche (modello CSV) <StatusChip status="da trascrivere" />.</div>}
+        {f.stats.transcribe > 0 && <div className="note" style={{ marginBottom: 8 }}>Voci da trascrivere: il testo delle voci del Documento PMI-Banche va importato nella sezione Banche (modello CSV) <StatusChip status="da trascrivere" />.</div>}
         <div className="erp-q">
           {f.items.map((it, k) => (
             <article key={`${it.qid}-${k}`} className="erp-qi">
@@ -170,7 +170,7 @@ export function Materialita({ d, P, rep }) {
     <Panel title="Analisi di materialità">
       <Empty icon={LuScale} title={`Nessuna valutazione per «${P.label}»`}>
         La libreria del settore propone {lib.length} impatti, rischi e opportunità con punteggi di partenza da rivedere (gravità, estensione, irrimediabilità, probabilità, rilevanza finanziaria).
-        <div className="row" style={{ justifyContent: 'center', marginTop: 10 }}><Btn kind="primary" icon={LuScale} onClick={() => seed(null)}>Valuta con la libreria</Btn>{prev && <Btn onClick={() => seed(prev)}>Riporta da {prev}</Btn>}</div>
+        <div className="row" style={{ justifyContent: 'center', marginTop: 8 }}><Btn kind="primary" icon={LuScale} onClick={() => seed(null)}>Valuta con la libreria</Btn>{prev && <Btn onClick={() => seed(prev)}>Riporta da {prev}</Btn>}</div>
       </Empty>
     </Panel>
   );

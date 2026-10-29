@@ -130,12 +130,11 @@ function TwinSvg({ T, mode, compact }) {
   return (
     <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`Gemello digitale: ${nf(T.prod)} t prodotte, ${nf(T.shipT)} t consegnate, ${nf(T.b.co2PerT, 2)} kg CO₂ per tonnellata`} style={{ width: '100%', height: 'auto', display: 'block' }}>
       <defs>
-        <linearGradient id="gSilo" x1="0" x2="1"><stop offset="0" stopColor="var(--surface-3)" /><stop offset=".5" stopColor="var(--surface)" /><stop offset="1" stopColor="var(--surface-3)" /></linearGradient>
         <pattern id="pv" width="10" height="10" patternUnits="userSpaceOnUse"><rect width="10" height="10" fill="var(--s1)" opacity=".85" /><path d="M0 5H10M5 0V10" stroke="var(--surface)" strokeWidth="1" opacity=".6" /></pattern>
       </defs>
       {/* fondo: pianta dello stabilimento */}
       <rect x="180" y="150" width="880" height="400" rx="18" fill="var(--surface-2)" stroke="var(--line)" />
-      {!compact && <text x="200" y="176" className="eyebrow" style={{ fontSize: 11, letterSpacing: '.12em', fill: 'var(--muted)', fontWeight: 700 }}>STABILIMENTO</text>}
+      {!compact && <text x="200" y="176" className="eyebrow" style={{ fontSize: 12, fill: 'var(--muted)', fontWeight: 600 }}>Stabilimento</text>}
 
       {/* energia */}
       <g className="node" onClick={nav('esg', 'energia')} tabIndex={compact ? -1 : 0} aria-label="Rete elettrica">
@@ -170,7 +169,7 @@ function TwinSvg({ T, mode, compact }) {
         const low = s.cover != null && s.cover < s.safety;
         return (
           <g key={s.id} className="node" onClick={nav('acquisti', 'scorte', s.id)} tabIndex={compact ? -1 : 0} aria-label={`${s.name}: ${nf(s.stock)} t, ${nf(s.cover)} giorni`}>
-            <rect className="shape" x={x} y={top} width="30" height={h} rx="7" fill="url(#gSilo)" stroke="var(--line-2)" strokeWidth="1.5" />
+            <rect className="shape" x={x} y={top} width="30" height={h} rx="7" fill="var(--surface-3)" stroke="var(--line-2)" strokeWidth="1.5" />
             <rect x={x + 2} y={top + h - 2 - (h - 4) * f} width="26" height={(h - 4) * f} rx="5" fill={low ? 'var(--serious)' : 'var(--maize)'} opacity=".85" />
             <path d={`M${x} ${top + h} L${x + 11} ${top + h + 12} L${x + 19} ${top + h + 12} L${x + 30} ${top + h}`} fill="var(--line-2)" />
             {!compact && <text x={x + 15} y={top - (i % 2 ? 22 : 8)} textAnchor="middle" style={{ fontSize: 10.5 }} className="lbl-ink">{s.short}</text>}
@@ -218,7 +217,7 @@ function TwinSvg({ T, mode, compact }) {
 
       {/* prodotti finiti */}
       <g className="node" onClick={nav('qualita', 'lotti')} tabIndex={compact ? -1 : 0} aria-label="Prodotti finiti">
-        <rect className="shape" x="1015" y={Y - 60} width="70" height="120" rx="10" fill="url(#gSilo)" stroke="var(--line-2)" strokeWidth="1.5" />
+        <rect className="shape" x="1015" y={Y - 60} width="70" height="120" rx="10" fill="var(--surface-3)" stroke="var(--line-2)" strokeWidth="1.5" />
         <rect x="1025" y={Y + 18} width="50" height="12" rx="2" fill="var(--maize)" opacity=".7" /><rect x="1025" y={Y + 32} width="50" height="12" rx="2" fill="var(--maize)" opacity=".5" />
         {!compact && tl(1050, Y - 76, 'Prodotti finiti', val('costo', `costo pieno ${nf(T.cost.total, 1)} €/t`), 'middle')}
       </g>

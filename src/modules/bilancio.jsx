@@ -121,7 +121,7 @@ function NewCount({ d, today }) {
   if (!opts.length) return null;
   return (
     <Panel title="Nuova conta fisica" sub="Silos e magazzino misurati: la differenza con il libro alla stessa data diventa una rettifica quando la registri">
-      <div className="stack" style={{ gap: 10 }}>
+      <div className="stack" style={{ gap: 8 }}>
         <div className="form">
           <Field label="Materia prima"><Select value={f.ingId} onChange={v => set({ ingId: v })} options={opts.map(i => ({ id: i.id, label: i.name }))} /></Field>
           <Field label="Data"><input type="date" className="input" value={f.date} max={today} onChange={e => set({ date: e.target.value })} /></Field>

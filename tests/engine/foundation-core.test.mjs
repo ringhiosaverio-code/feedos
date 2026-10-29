@@ -354,7 +354,7 @@ test('nextCode: formati storici, anno, contatore che non riusa i numeri cancella
 
 /* ---------------- preferenze ---------------- */
 test('preferenze: valori di base, seme solo per le chiavi mancanti, notifiche', () => {
-  assert.deepEqual(getPrefs().period, { preset: '12m', from: null, to: null, compare: 'prec' });
+  assert.deepEqual(getPrefs().period, { preset: 'mese-chiuso', from: null, to: null, compare: 'prec' });
   assert.equal(getPrefs().agentId, null);
   assert.deepEqual(getPrefs().tableViews, {});
   assert.equal(PREF_DEFAULTS.role, 'direzione');

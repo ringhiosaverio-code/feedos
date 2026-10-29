@@ -36,9 +36,9 @@ export function Flags({ s }) {
   if (!s) return null;
   return (
     <span className="efl-flags">
-      <Chip kind={s.eudrOk ? 'good' : 'crit'} title={s.eudrOk ? 'Requisiti EUDR del ruolo soddisfatti' : 'Requisiti EUDR mancanti'}>EUDR {s.eudrOk ? '✓' : '✗'}</Chip>
+      <Chip kind={s.eudrOk ? 'good' : 'crit'} title={s.eudrOk ? 'Requisiti EUDR del ruolo soddisfatti' : 'Requisiti EUDR mancanti'} icon={s.eudrOk ? LuCheck : LuX}>EUDR</Chip>
       <Chip kind={s.dcf ? 'good' : s.dcfMB ? 'accent' : 'outline'} title="Senza deforestazione e conversione: fisica (IP o segregata) o in bilancio di massa">{s.dcf ? 'DCF' : s.dcfMB ? 'DCF bil. massa' : 'DCF —'}</Chip>
-      <Chip kind={s.ssg ? 'good' : 'outline'} title="Schema che supera il benchmark FEFAC SSG">{s.ssg ? 'SSG ✓' : 'SSG —'}</Chip>
+      <Chip kind={s.ssg ? 'good' : 'outline'} title="Schema che supera il benchmark FEFAC SSG" icon={s.ssg ? LuCheck : undefined}>{s.ssg ? 'SSG' : 'SSG —'}</Chip>
     </span>
   );
 }

@@ -128,7 +128,7 @@ function TrialDrawer({ d, t, today }) {
       </div>
       <div className="dsec"><div className="eyebrow">Conclusioni</div>
         <textarea className="input" rows={4} value={notes} onChange={e => setNotes(e.target.value)} placeholder="Risultato e indicazione d’uso (entra nella scheda per i clienti)" aria-label="Conclusioni della prova" />
-        <div className="row gap-s" style={{ justifyContent: 'flex-end', marginTop: 6 }}><Btn small kind="primary" disabled={notes.trim() === (t.conclusions || '')} onClick={saveNotes}>Salva le conclusioni</Btn></div>
+        <div className="row gap-s" style={{ justifyContent: 'flex-end', marginTop: 8 }}><Btn small kind="primary" disabled={notes.trim() === (t.conclusions || '')} onClick={saveNotes}>Salva le conclusioni</Btn></div>
         {t.author && <p className="small muted">Responsabile: {t.author}</p>}
       </div>
     </Drawer>

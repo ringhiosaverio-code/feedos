@@ -110,7 +110,7 @@ export function ReportCda({ d }) {
           <Seg label="Confronto" value={cmpMode} onChange={setCmp} options={CMP} />
           {r.header.closed ? <Chip kind="accent" icon={LuSnowflake}>mese chiuso</Chip> : <Chip kind="warn">mese non chiuso: numeri provvisori</Chip>}
         </div>
-        {r.header.failed?.length > 0 && <div className="note warn" style={{ marginTop: 10 }}>Sezioni non disponibili per un errore nei dati: {r.header.failed.map(f => f.title).join(', ')}. Il resto del report è completo.</div>}
+        {r.header.failed?.length > 0 && <div className="note warn" style={{ marginTop: 8 }}>Sezioni non disponibili per un errore nei dati: {r.header.failed.map(f => f.title).join(', ')}. Il resto del report è completo.</div>}
       </Panel>
       <div className="dz-report">
         {!r.sections.length && <Panel title={TEMPLATE_LABELS[tpl]}><Empty icon={LuFileText} title="Nessuna sezione con dati per questo modello">Le sezioni compaiono quando i dati che le alimentano sono registrati{tpl === 'esg' ? ' nelle schede ESG' : ''}.</Empty></Panel>}

@@ -213,7 +213,7 @@ function Sostanze({ d, today, route }) {
         <Kpi label="Non rinnovate" value={nf(rows.filter(a => a.status === 'non rinnovata').length)} foot="prodotti in revoca" status={rows.some(a => a.status === 'non rinnovata') ? 'bad' : 'ok'} />
       </div>
       <Panel title="Scadenze delle approvazioni" sub={`Da oggi a 6 anni; la barra arriva alla scadenza dell’approvazione europea${d.settings?.dataset === 'demo' ? ' (date dimostrative)' : ''}`} id="as-timeline">
-        <div className="stack" style={{ gap: 6 }}>
+        <div className="stack" style={{ gap: 8 }}>
           {rows.map(a => {
             const w = a.days == null ? 100 : Math.max(0, Math.min(100, (a.days / maxDays) * 100));
             const kind = a.days == null ? 'none' : a.days < 0 ? 'crit' : a.status === 'in rinnovo' ? 'warn' : a.cfs ? 'maize' : 'good';
@@ -221,12 +221,12 @@ function Sostanze({ d, today, route }) {
               <button key={a.id} className="linkish" style={{ display: 'grid', gridTemplateColumns: 'minmax(110px, 30%) 1fr', gap: 8, alignItems: 'center', textAlign: 'left', width: '100%' }} onClick={() => go('regolatorio', 'sostanze', a.id)}>
                 <span className="small" style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}><b>{a.name}</b> <span className="muted">{a.moa}</span></span>
                 <span style={{ position: 'relative', height: 14, background: 'var(--line)', borderRadius: 7, overflow: 'hidden' }} title={a.approvalExpiry ? `${dateIt(a.approvalExpiry)} · ${a.status}` : `scadenza non inserita · ${a.status}`}>
-                  <span style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: `${a.days != null && a.days < 0 ? 100 : w}%`, background: kind === 'none' ? 'repeating-linear-gradient(45deg, var(--line), var(--line) 4px, transparent 4px, transparent 8px)' : `var(--${kind === 'crit' ? 's2' : kind === 'warn' ? 's5' : kind === 'maize' ? 's4' : 's3'})`, opacity: a.days != null && a.days < 0 ? 0.35 : 0.85 }} />
+                  <span style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: `${a.days != null && a.days < 0 ? 100 : w}%`, background: kind === 'none' ? 'transparent' : `var(--${kind === 'crit' ? 's2' : kind === 'warn' ? 's5' : kind === 'maize' ? 's4' : 's3'})`, opacity: a.days != null && a.days < 0 ? 0.35 : 0.85 }} />
                 </span>
               </button>);
           })}
         </div>
-        <p className="small muted">Verde approvata, giallo candidata alla sostituzione, arancio in rinnovo, rosso scaduta o non rinnovata, tratteggio scadenza non inserita. Dopo il rinnovo di una sostanza le registrazioni dei prodotti vanno rinnovate entro {AGRO_RULES.art43Months} mesi (art. 43).</p>
+        <p className="small muted">Verde approvata, giallo candidata alla sostituzione, arancio in rinnovo, rosso scaduta o non rinnovata, barra vuota scadenza non inserita. Dopo il rinnovo di una sostanza le registrazioni dei prodotti vanno rinnovate entro {AGRO_RULES.art43Months} mesi (art. 43).</p>
       </Panel>
       <Panel title="Sostanze attive" flush>
         <Table rows={rows} selected={sel?.id} onRow={a => go('regolatorio', 'sostanze', a.id)} exportName="sostanze-attive" cols={[
@@ -270,7 +270,7 @@ function CopperCalc({ d }) {
     <Panel title="Bilancio del rame per ettaro" sub="Massimo 28 kg di rame metallo per ettaro in 7 anni (Reg. UE 2018/1981); molti Stati membri fissano anche 4 kg all’anno. Vale l’etichetta del prodotto" id="as-copper">
       {!cu.length ? <Empty title="Nessun prodotto rameico" /> : (
         <div className="stack">
-          <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 10 }}>
+          <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 8 }}>
             <Field label="Prodotto"><Select value={pid} onChange={setPid} options={cu.map(x => ({ id: x.id, label: x.name }))} /></Field>
             <Field label={`Dose (${p?.uom === 'L' ? 'L' : 'kg'}/ha)`}><NumInput value={dose} onChange={v => setDose(v ?? 0)} decimals={2} min={0} ariaLabel="Dose per ettaro" /></Field>
             <Field label="Trattamenti all’anno"><NumInput value={n} onChange={v => setN(v ?? 0)} decimals={0} min={0} ariaLabel="Trattamenti all’anno" /></Field>
@@ -380,11 +380,11 @@ function Seveso({ d, today }) {
       </div>
       <div className="split">
         <Panel title="Prima di produrre per la campagna" sub="Simula una produzione in più a magazzino e guarda gli indici" id="sev-sim">
-          <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 10 }}>
+          <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 8 }}>
             <Field label="Prodotto"><Select value={pid} onChange={setPid} options={(d.products || []).filter(p => (p.hazard?.seveso || []).length).map(p => ({ id: p.id, label: `${p.name} (${p.hazard.seveso.join(', ')})` }))} /></Field>
             <Field label="Tonnellate in più"><NumInput value={addT} onChange={v => setAddT(v ?? 0)} decimals={0} min={0} ariaLabel="Tonnellate in più" /></Field>
           </div>
-          {sim && <div className="kpis two" style={{ marginTop: 10 }}>
+          {sim && <div className="kpis two" style={{ marginTop: 8 }}>
             {sim.groups.filter(g => g.hi > 0.01).map(g => { const b = sv.groups.find(x => x.id === g.id); return <Kpi key={g.id} label={g.label} value={pct(g.hi, 0)} foot={`oggi ${pct(b.hi, 0)} della soglia superiore`} status={g.hi >= 1 && b.hi < 1 ? 'bad' : 'ok'} />; })}
             <Kpi label="Soglia" value={sim.tier} foot={sim.tier !== sv.tier ? `cambia da «${sv.tier}»` : 'invariata'} status={sim.tier !== sv.tier ? 'bad' : 'ok'} />
           </div>}
@@ -437,7 +437,7 @@ function Fonti({ d }) {
       </Panel>
       <Panel title="Stime dell’azienda" sub="Non sono regole: probabilità e parametri usati per ricavi a rischio e piani di smaltimento. Si salvano nell’archivio" id="reg-estimates"
         actions={<Btn small kind="ghost" icon={LuRotateCcw} onClick={reset} disabled={!Object.keys(saved).length}>Valori di partenza</Btn>}>
-        <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 }}>
+        <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 16 }}>
           {AGRO_ESTIMATES.map(e => (
             <Field key={e.key} label={`${e.label} (${e.unit})`}>
               <NumInput id={`est-${e.key.replace(/[^a-z]/gi, '')}`} value={(getPath(R, e.key) ?? 0) * e.scale} decimals={e.scale === 100 ? 0 : 0} min={e.min} max={e.max}

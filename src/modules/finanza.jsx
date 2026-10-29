@@ -3,7 +3,7 @@
  * le rimanenze sono una valorizzazione gestionale, non fiscale.
  * Contratto della fondazione: export Finanza({route}) e la sezione della scheda cliente CustomerCredit({d, id}). */
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { LuMail, LuPrinter, LuX, LuArrowRight, LuInbox, LuCoins, LuFileText, LuCalendar } from 'react-icons/lu';
+import { LuMail, LuPrinter, LuX, LuArrowRight, LuInbox, LuCoins, LuFileText, LuCalendar, LuTrendingUp } from 'react-icons/lu';
 import { useData, store, toast, openDrawer, closeDrawer } from '../core/store.js';
 import { go } from '../core/router.js';
 import { usePrefs } from '../core/prefs.js';
@@ -70,7 +70,7 @@ function NoData({ title = 'Nessun credito da mostrare' }) {
     <Panel>
       <Empty icon={LuInbox} title={title}>
         <p>I crediti nascono dalle consegne ai clienti (stimati) o dalle fatture e dagli incassi importati da Dati › Importa.</p>
-        <div className="row" style={{ justifyContent: 'center', marginTop: 10 }}><Btn kind="primary" onClick={() => go('dati', 'importa')}>Importa fatture e incassi</Btn></div>
+        <div className="row" style={{ justifyContent: 'center', marginTop: 8 }}><Btn kind="primary" onClick={() => go('dati', 'importa')}>Importa fatture e incassi</Btn></div>
       </Empty>
     </Panel>
   );
@@ -185,7 +185,7 @@ function Crediti({ d, sel }) {
             { key: 'exposure', label: 'Esposizione', align: 'r', render: r => <>{eur(r.exposure)}<span className="sub">aperti {mila(r.open)}{r.uninvoiced > 0.5 ? ` · da fatt. ${mila(r.uninvoiced)}` : ''}{r.offers > 0.5 ? ` · offerte ${mila(r.offers)}` : ''}</span></> },
             { key: 'creditLimit', label: 'Fido', align: 'r', width: 150, csv: r => r.creditLimit ?? '', render: r => r.creditLimit ? <div className="fin-bullet" title={`Esposizione ${eur(r.exposure)} su fido ${eur(r.creditLimit)}`}><Bullet value={r.exposure} lo={0} hi={Math.max(r.creditLimit, r.exposure) * 1.08} max={r.creditLimit} /><span className="sub">{eur(r.creditLimit)}</span></div> : <span className="muted">non fissato</span> },
             { key: 'util', label: 'Utilizzo', align: 'r', csv: r => (r.util == null ? '' : Math.round(r.util * 1000) / 10), render: r => r.util == null ? '—' : <span className={r.util >= 1 ? 'chip crit' : r.util >= 0.9 ? 'chip warn' : ''}>{pct(r.util, 0)}</span> },
-            { key: 'avgDelay', label: 'Ritardo medio', align: 'r', csv: r => Math.round(r.avgDelay * 10) / 10, render: r => r.nPaid12 ? <>{nf(r.avgDelay)} gg{r.delay3 != null && r.delay3 > r.avgDelay + 5 && <span className="sub fin-worse" title="Ritardo degli ultimi 3 mesi">↗ {nf(r.delay3)} gg (3 mesi)</span>}</> : <span className="muted">—</span> },
+            { key: 'avgDelay', label: 'Ritardo medio', align: 'r', csv: r => Math.round(r.avgDelay * 10) / 10, render: r => r.nPaid12 ? <>{nf(r.avgDelay)} gg{r.delay3 != null && r.delay3 > r.avgDelay + 5 && <span className="sub fin-worse" title="Ritardo degli ultimi 3 mesi"><LuTrendingUp aria-hidden="true" /> {nf(r.delay3)} gg (3 mesi)</span>}</> : <span className="muted">—</span> },
             { key: 'score', label: 'Rischio', align: 'r', csv: r => `${r.riskClass} ${Math.round(r.score)}`, render: r => <span className={`rk rk-${r.riskClass}`} title={riskTip(r)}>{r.riskClass} · {nf(r.score)}{r.insoluta && <i className="fin-ins" aria-label="insoluto"> ins.</i>}</span> },
             { key: 'overdue', label: 'Scaduto', align: 'r', render: r => r.overdue > 0.5 ? <>{eur(r.overdue)}<span className="sub">{r.overdue60 > 0.5 ? `oltre 60 gg ${mila(r.overdue60)} mila` : `da ${daysBetween(r.oldestDue, today)} gg`}</span></> : <span className="muted">—</span> },
             { key: 'act', label: <span className="sr">Azioni</span>, nosort: true, csv: false, render: r => (

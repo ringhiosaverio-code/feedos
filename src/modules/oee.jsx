@@ -74,7 +74,7 @@ export function OeeFermi({ d, sel }) {
           const x = S.byLine[l.id];
           return (
             <button key={l.id} className={`kpi linecard ${l.id === lineId ? 'on' : ''}`} onClick={() => go('produzione', 'oee', l.id === lineId ? undefined : l.id)} aria-pressed={l.id === lineId}>
-              <span className="lbl">{x.oee != null && <i className="kdot" style={{ background: x.oee >= target ? 'var(--good)' : x.oee >= target - 0.1 ? 'var(--warn)' : 'var(--crit)' }} aria-hidden="true" />}{l.name}{x.saturated && <Chip kind="warn" title="Carico pianificato delle prossime 8 settimane oltre l’85% della capacità utile: un’ora persa è margine perso">satura</Chip>}</span>
+              <span className="lbl">{l.name}{x.oee != null && x.oee < target && <span className="sr"> (sotto l’obiettivo)</span>}{x.saturated && <Chip kind="warn" title="Carico pianificato delle prossime 8 settimane oltre l’85% della capacità utile: un’ora persa è margine perso">satura</Chip>}</span>
               <span className="val">{p1(x.oee)}<small>% OEE</small></span>
               <span className="foot"><span>D {p1(x.A)}% · P {p1(x.P)}% · Q {p1(x.Q)}%</span></span>
               <span className="foot"><span>{x.gapEur > 0 ? `${eurTxt(x.gapEur)} recuperabili · 1 punto = ${eurTxt(x.eurPerPoint)}` : 'All’obiettivo'}</span></span>
@@ -190,7 +190,7 @@ function StopLog({ d, P, lineId }) {
   };
   return (
     <Panel title="Registro dei fermi" sub={`${nf(rows.length)} fermi nel periodo${lineId ? ` · ${line[lineId]?.name}` : ''} · i guasti con il componente alimentano MTBF e MTTR della manutenzione`} id="oee-log">
-      <div className="form" style={{ marginBottom: 12 }}>
+      <div className="form" style={{ marginBottom: 16 }}>
         <Field label="Data"><input type="date" className="input" value={f.date} max={today} onChange={e => set({ date: e.target.value })} /></Field>
         <Field label="Linea"><Select value={f.lineId} onChange={v => set({ lineId: v, assetId: '' })} options={lines.map(l => ({ id: l.id, label: l.name }))} /></Field>
         <Field label="Causa"><Select value={f.reason} onChange={v => set({ reason: v })} options={STOP_REASONS.map(r => ({ id: r.id, label: r.label + (r.planned ? ' (programmato)' : '') }))} /></Field>
@@ -198,7 +198,7 @@ function StopLog({ d, P, lineId }) {
         {f.reason === 'guasto' && <Field label="Componente"><Select value={f.assetId} onChange={v => set({ assetId: v })} options={[{ id: '', label: '—' }, ...assets.map(a => ({ id: a.id, label: a.name }))]} /></Field>}
         <Field label="Nota"><input className="input" value={f.note} onChange={e => set({ note: e.target.value })} placeholder="facoltativa" /></Field>
       </div>
-      <div className="row" style={{ marginBottom: 12 }}><Btn kind="primary" icon={LuPlus} onClick={save}>Registra il fermo</Btn></div>
+      <div className="row" style={{ marginBottom: 16 }}><Btn kind="primary" icon={LuPlus} onClick={save}>Registra il fermo</Btn></div>
       <Table rows={rows} pageSize={10} exportName="fermi" cols={[
         { key: 'date', label: 'Data', render: r => dateIt(r.date) },
         { key: 'lineId', label: 'Linea', render: r => line[r.lineId]?.name || r.lineId, csv: r => line[r.lineId]?.name || r.lineId },

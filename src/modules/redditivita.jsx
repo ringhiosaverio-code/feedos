@@ -82,11 +82,11 @@ function ClientiView({ d, pr, cp, cur }) {
           <LineChart labels={cp.whale.points.map(p => nf(p.x * 100, 0) + '%')} height={240} unit="%" decimals={0} markLast={false}
             series={[{ key: 'w', label: 'Margine cumulato', color: 'var(--s3)', values: cp.whale.points.map(p => p.y * 100) }]}
             refs={[{ y: 100, label: 'totale', kind: 'muted' }]} ariaLabel="Curva della balena dei clienti" />
-          <p className="small muted" style={{ marginTop: 6 }}>Picco al {nf((cp.peakPct || 0) * 100)}%: i clienti oltre il picco riducono il margine complessivo di {kEur(Math.max(0, (cp.peakPct || 1) - 1) * (cp.totals?.net || 0))}.</p>
+          <p className="small muted" style={{ marginTop: 8 }}>Picco al {nf((cp.peakPct || 0) * 100)}%: i clienti oltre il picco riducono il margine complessivo di {kEur(Math.max(0, (cp.peakPct || 1) - 1) * (cp.totals?.net || 0))}.</p>
         </Panel>
         <Panel title="Matrice dei clienti" sub={`Tonnellate (asse orizzontale, scala logaritmica) e margine netto per tonnellata; obiettivo ${fmtPm(target, 0)} · clic per la scheda`}>
           <Quadrant rows={rows} target={target} median={cp.median} onPick={r => openDrawer('customer', r.id)} />
-          <div className="legend" style={{ marginTop: 6 }}>{Object.keys(QUADRANTS).map(q => <span key={q} title={QHINT[q]}><i style={{ background: QCOLOR[q] }} />{q} ({rows.filter(r => r.quadrant === q).length})</span>)}</div>
+          <div className="legend" style={{ marginTop: 8 }}>{Object.keys(QUADRANTS).map(q => <span key={q} title={QHINT[q]}><i style={{ background: QCOLOR[q] }} />{q} ({rows.filter(r => r.quadrant === q).length})</span>)}</div>
         </Panel>
       </div>
       {cur && <Panel title={`Dal prezzo al margine netto · ${cur.name}`} sub="Per tonnellata, nel periodo: costi effettivi dei lotti, trasporto ripartito per distanza e consegne">
@@ -95,7 +95,7 @@ function ClientiView({ d, pr, cp, cur }) {
       <Panel title="Clienti" sub="Clic per la scheda del cliente · ordinabile · esportabile" flush>
         <Table rows={rows} exportName="redditivita-clienti" selected={cur?.id} onRow={r => openDrawer('customer', r.id)} initialSort={{ key: 'net', dir: 'desc' }} pageSize={25} cols={[
           { key: 'name', label: 'Cliente', render: r => <><b>{r.name}</b><span className="sub">{r.code} · {r.city}</span></>, csv: r => r.name },
-          { key: 'quadrant', label: 'Azione', render: r => <Chip title={QHINT[r.quadrant]}><i className="dot" style={{ background: QCOLOR[r.quadrant], marginRight: 4 }} />{r.quadrant}</Chip>, csv: r => r.quadrant },
+          { key: 'quadrant', label: 'Azione', render: r => <Chip title={QHINT[r.quadrant]}><i className="dot" style={{ background: QCOLOR[r.quadrant], marginRight: 8 }} />{r.quadrant}</Chip>, csv: r => r.quadrant },
           { key: 'tonnes', label: 't', align: 'r', render: r => nf(r.tonnes), csv: r => r.tonnes },
           { key: 'net', label: 'Netto', align: 'r', render: r => <span className={r.net < 0 ? 'chip crit' : ''}>{kEur(r.net)}</span>, csv: r => r.net },
           { key: 'netT', label: `Netto ${PM_LABEL}`, align: 'r', render: r => t1(r.netT), csv: r => pm(r.netT) },
@@ -210,7 +210,7 @@ function LossPanel({ d, pr, cp }) {
   const L = useMemo(() => (sel ? lossImpact(d, pr.ctx, pr.P, kind === 'cliente' ? { customerId: sel, lossRate: rate / 100 } : { agentId: sel, lossRate: rate / 100 }) : null), [d, pr.ctx, pr.P, kind, sel, rate]);
   return (
     <Panel title="E se perdiamo…" sub="Effetto sull’EBIT di perdere una quota dei volumi di un cliente o del portafoglio di un agente: si perde il margine e i costi fissi si spalmano su meno tonnellate">
-      <div className="stack" style={{ gap: 10 }}>
+      <div className="stack" style={{ gap: 8 }}>
         <Seg options={[{ id: 'cliente', label: 'Cliente' }, { id: 'agente', label: 'Agente' }]} value={kind} onChange={k => { setKind(k); setId(''); }} label="Chi" />
         <Field label={kind === 'cliente' ? 'Cliente' : 'Agente'}><Select value={sel} onChange={setId} options={opts} ariaLabel="Chi si perde" /></Field>
         <Field label={`Volumi persi: ${nf(rate)}%`}><input className="range" type="range" min="10" max="100" step="5" value={rate} onChange={e => setRate(+e.target.value)} aria-label="Quota dei volumi persa" /></Field>

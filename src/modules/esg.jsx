@@ -147,7 +147,7 @@ function Energia({ d }) {
           <Sankey nodes={nodes} links={links} height={300} unit="MWh" ariaLabel="Flussi di energia dello stabilimento" />
         </Panel>
         <Panel title="Fattore di emissione della rete" sub="Metodo location-based (GHG Protocol Scope 2)">
-          <div className="stack" style={{ gap: 10 }}>
+          <div className="stack" style={{ gap: 8 }}>
             <Field label="Fattore usato nei calcoli"><Select value={en.gridFactor || ''} onChange={setFactor} options={[...(!GRID_FACTORS.some(g => g.id === en.gridFactor) ? [{ id: '', label: `Personalizzato · ${nf((+en.feGrid || 0) * 1000, 1)} g/kWh` }] : []), ...GRID_FACTORS.map(g => ({ id: g.id, label: `${g.label} · ${nf(g.value * 1000, 1)} g/kWh` }))]} id="esg-factor" /></Field>
             <p className="small muted">{GRID_FACTORS.find(g => g.id === en.gridFactor)?.src || 'Valore inserito nelle impostazioni.'} Il GPL usa {nf(f.feGpl, 4)} kg CO₂/kg; lo Scope 1 aggiunge CH₄ e N₂O di combustione ({nf(scope1PerKg(f), 4)} kg CO₂e/kg).</p>
             <Kv items={[['CO₂ da elettricità di rete', `${nf(B.co2Grid, 1)} t`], ['CO₂ da GPL', `${nf(B.co2Gpl, 1)} t (${nf((B.gplShare || 0) * 100)}% del totale)`], ['Energia per tonnellata', `${nf(B.energyPerT, 1)} kWh/t (elettrica + termica)`]]} />

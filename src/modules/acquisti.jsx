@@ -2,7 +2,7 @@
  * come arrivi condizionati, scorta di sicurezza statistica e capitale liberabile, copertura e rischio di prezzo delle materie prime A,
  * scorte in giorni di copertura, ordini (anche parziali) con il fornitore, fornitori qualificati, varianze e quotazioni. */
 import React, { useMemo, useState } from 'react';
-import { LuPlus, LuTruck, LuPackageCheck, LuTriangleAlert, LuCheck, LuDownload, LuX, LuShoppingCart } from 'react-icons/lu';
+import { LuPlus, LuTruck, LuPackageCheck, LuTriangleAlert, LuCheck, LuDownload, LuX, LuShoppingCart, LuDiamond, LuArrowDown } from 'react-icons/lu';
 import { useData, store, toast, openDrawer } from '../core/store.js';
 import { go } from '../core/router.js';
 import { idx, mrp, appToday, signals, ctxOf } from '../core/derived.js';
@@ -91,7 +91,7 @@ function Fabbisogni({ d, sel }) {
           { key: 'x', label: '', nosort: true, render: p => <Btn small kind={p.late || daysBetween(today, p.orderBy) <= 7 ? 'primary' : ''} icon={LuShoppingCart} onClick={e => { e.stopPropagation(); createPO(p); }}>Emetti</Btn> },
         ]} empty="Nessun ordine da emettere nei prossimi 7 giorni: le scorte e gli ordini aperti coprono il piano." />
       </Panel>
-      <Panel title="Scorta proiettata settimana per settimana" sub="Giorni di copertura a fine settimana, contando gli ordini aperti e quelli pianificati · ▲ arrivo · ◆ lotto in quarantena (arrivo condizionato all’analisi) · bordo rosso: consegna del fornitore in ritardo" flush id="acq-heat"
+      <Panel title="Scorta proiettata settimana per settimana" sub="Giorni di copertura a fine settimana, contando gli ordini aperti e quelli pianificati · freccia: arrivo · rombo: lotto in quarantena (arrivo condizionato all’analisi) · bordo rosso: consegna del fornitore in ritardo" flush id="acq-heat"
         actions={<Legend items={[{ label: 'Coperto', color: 'color-mix(in srgb, var(--good) 30%, var(--surface))' }, { label: 'Sotto sicurezza', color: 'var(--warn)' }, { label: 'Scoperto', color: 'var(--crit)' }]} />}>
         <Heat M={M} I={I} sel={sel} />
       </Panel>
@@ -115,7 +115,7 @@ function Heat({ M, I, sel }) {
               {r.cells.map(c => (
                 <td key={c.week} className={`hc ${c.status} ${c.overdue ? 'late' : ''}`} title={`Settimana del ${dateIt(c.week)}: fabbisogno ${nf(c.need, 1)} t · arrivi ${nf(c.in, 1)} t${c.conditional ? ` (di cui ${nf(c.conditional, 1)} t in quarantena)` : ''}${c.overdue ? ` · ${nf(c.overdue, 1)} t di consegne in ritardo` : ''} · ordini pianificati ${nf(c.planned, 1)} t · scorta finale ${nf(c.end, 1)} t`}>
                   <span>{c.status === 'rottura' ? `−${nf(Math.abs(c.end), c.end > -10 ? 1 : 0)} t` : c.cover == null ? '—' : `${nf(Math.min(c.cover, 99))}${c.cover > 99 ? '+' : ''} gg`}</span>
-                  {(c.in > 0 || c.planned > 0) && <i className={`in ${c.planned > 0 ? 'plan' : ''}`} aria-label={c.planned > 0 ? 'ordine pianificato' : c.conditional ? 'arrivo condizionato' : 'arrivo confermato'}>{c.conditional && !c.planned ? '◆' : '▲'}</i>}
+                  {(c.in > 0 || c.planned > 0) && <i className={`in ${c.planned > 0 ? 'plan' : ''}`} aria-label={c.planned > 0 ? 'ordine pianificato' : c.conditional ? 'arrivo condizionato' : 'arrivo confermato'}>{c.conditional && !c.planned ? <LuDiamond aria-hidden="true" /> : <LuArrowDown aria-hidden="true" />}</i>}
                 </td>
               ))}
             </tr>
@@ -150,7 +150,7 @@ function IngDetail({ d, r, M, onClose, onOrder }) {
             refs={[{ y: r.safety, label: 'sicurezza', kind: 'muted' }, ...(r.ssStat != null ? [{ y: r.ssStat, label: 'statistica', kind: 'warn' }] : []), { y: 0, label: 'zero', kind: 'crit' }]} ariaLabel={`Scorta proiettata di ${ing.name}`} />
           <Legend items={[{ label: 'Con gli ordini pianificati', color: 'var(--s1)', line: true }, { label: 'Senza nuovi ordini', color: 'var(--s2)', line: true }]} />
         </div>
-        <div className="stack" style={{ gap: 10 }}>
+        <div className="stack" style={{ gap: 8 }}>
           <Kv items={[['Scorta oggi', `${nf(r.stock, 1)} t`], ['Scorta di sicurezza', `${nf(r.safety, 1)} t (${ing.safetyDays} giorni)`],
             r.ssStat != null ? ['Scorta statistica', `${nf(r.ssStat, 1)} t (${nf(r.ssStatDays, 1)} giorni) · classe ${r.cls || '—'}, consegna ${nf(r.ltDays, 1)} ± ${nf(r.sdLT, 1)} gg`] : null,
             ['Fabbisogno 8 settimane', `${nf(r.totalNeed, 1)} t`],
@@ -313,7 +313,7 @@ function NuovoOrdine({ d }) {
   const sc = sup && score[sup.id];
   return (
     <Panel title="Nuovo ordine" sub="Dopo l’emissione entra nei fabbisogni">
-      <div className="stack" style={{ gap: 12 }}>
+      <div className="stack" style={{ gap: 16 }}>
         <Field label="Materia prima"><Select value={ing} onChange={v => { setIng(v); setPrice(null); setSupId(''); }} options={d.ingredients.map(x => ({ id: x.id, label: x.name }))} id="po-ing" /></Field>
         {sups.length > 0 && <Field label="Fornitore" hint={sup?.minOrderT ? `ordine minimo ${nf(sup.minOrderT)} t` : ''}><Select value={sup?.id || ''} onChange={setSupId} options={sups.map(x => ({ id: x.id, label: `${x.name}${score[x.id]?.cls ? ` · classe ${score[x.id].cls}` : ''}${x.approval && x.approval !== 'qualificato' ? ` · ${x.approval}` : ''}` }))} id="po-sup" /></Field>}
         <div className="form">
@@ -345,7 +345,7 @@ function Arrivo({ d, po, onDone }) {
   };
   return (
     <Panel title={`Arrivo ${po.code}`} sub={`${ing?.name} · ${po.supplier}${po.status === 'parziale' ? ` · mancano ${nf(openQty(po), 1)} t` : ''}`} actions={<Btn small kind="ghost" icon={LuX} title="Chiudi" onClick={onDone} />}>
-      <div className="stack" style={{ gap: 12 }}>
+      <div className="stack" style={{ gap: 16 }}>
         <div className="form">
           <Field label="Quantità ricevuta (t)"><NumInput value={t} onChange={setT} decimals={2} id="rc-t" /></Field>
           <Field label="Data"><input type="date" className="input" value={date} max={today} onChange={e => setDate(e.target.value)} /></Field>
@@ -412,7 +412,7 @@ function Mercati({ d, sel }) {
           <Legend items={[{ label: 'Quotazione', color: 'var(--s1)', line: true }, { label: 'Previsione', color: 'var(--s2)', line: true }, { label: 'Banda P10–P90', color: 'color-mix(in srgb, var(--s1) 25%, transparent)' }]} />
         </Panel>
         <Panel title="Quanto fidarsi della previsione" sub="Verifica sui dati passati (backtest a origine mobile, orizzonte 4 settimane)">
-          <div className="stack" style={{ gap: 12 }}>
+          <div className="stack" style={{ gap: 16 }}>
             <Kv items={[['Errore medio (MAPE)', `${nf(cur.bt.mape * 100, 1)}%`], ['Metodo ingenuo («come oggi»)', `${nf(cur.naive * 100, 1)}%`], ['Distorsione media', `${cur.bt.bias > 0 ? '+' : ''}${nf(cur.bt.bias, 1)} €/t`], ['Valori reali dentro la banda', `${nf(cur.bt.coverage * 100)}% (atteso ≈ 80%)`], ['Prove', `${cur.bt.n} previsioni verificate`]]} />
             <div className={`note ${beats ? 'good' : 'maize'}`}>{beats ? 'Il modello ha sbagliato meno del metodo ingenuo: la tendenza stimata aggiunge informazione.' : 'Il modello non batte il metodo ingenuo: per questa materia prima conviene leggere la previsione come «prezzo stabile» con la sua banda di incertezza.'}</div>
             <p className="small muted">Metodo: livellamento esponenziale con tendenza (Holt), parametri scelti sui dati. Non è un consiglio d’acquisto: serve a dare un ordine di grandezza del rischio di prezzo.</p>

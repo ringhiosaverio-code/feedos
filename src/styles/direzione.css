@@ -4,29 +4,29 @@
    ============================================================ */
 
 /* barra degli strumenti delle schede */
-.dz-tools { display: flex; align-items: center; gap: 8px 12px; flex-wrap: wrap; }
+.dz-tools { display: flex; align-items: center; gap: 8px 16px; flex-wrap: wrap; }
 .dz-tools .lbl { font-size: 12px; font-weight: 600; color: var(--ink-2); }
 .dz-tools .select { width: auto; max-width: 100%; }
 .dz-tools .sp { flex: 1; }
-.dz-head-chips { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.dz-head-chips { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
 
 /* definizione al passaggio del mouse o alla messa a fuoco */
-.dz-def { position: relative; display: inline-flex; align-items: center; gap: 4px; cursor: help; outline: none; }
+.dz-def { position: relative; display: inline-flex; align-items: center; gap: 8px; cursor: help; outline: none; }
 .dz-def > svg { width: 13px; height: 13px; color: var(--muted); flex: none; }
 .dz-def:hover > svg, .dz-def:focus-visible > svg { color: var(--accent); }
-.dz-def:focus-visible { border-radius: 4px; box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 45%, transparent); }
-.dz-tip { display: none; position: absolute; z-index: 20; left: 0; top: calc(100% + 6px); width: max-content; max-width: min(300px, 78vw); padding: 8px 10px; border-radius: 8px;
-  background: var(--surface); border: 1px solid var(--line-2); box-shadow: var(--shadow); color: var(--ink-2); font: 500 12px/1.45 var(--f-sans); text-transform: none; letter-spacing: 0; white-space: normal; text-align: left; }
+.dz-def:focus-visible { border-radius: 4px; outline: 2px solid var(--accent); outline-offset: 2px; }
+.dz-tip { display: none; position: absolute; z-index: 20; left: 0; top: calc(100% + 6px); width: max-content; max-width: min(300px, 78vw); padding: 8px 8px; border-radius: 8px;
+  background: var(--surface); border: 1px solid var(--line-2); box-shadow: var(--shadow); color: var(--ink-2); font: 400 12px/1.45 var(--f-sans); text-transform: none; letter-spacing: 0; white-space: normal; text-align: left; }
 .dz-def:hover > .dz-tip, .dz-def:focus > .dz-tip { display: block; }
-th .dz-tip { font-weight: 500; }
+th .dz-tip { font-weight: 400; }
 
 /* cascata orizzontale (si legge anche a 375 px) */
-.dz-hw { display: grid; gap: 1px; }
-.dz-hw-row { display: grid; grid-template-columns: minmax(104px, 32%) minmax(0, 1fr) 96px; align-items: center; gap: 10px; padding: 4px 0; border-radius: 6px; }
+.dz-hw { display: grid; gap: 0; }
+.dz-hw-row { display: grid; grid-template-columns: minmax(104px, 32%) minmax(0, 1fr) 96px; align-items: center; gap: 8px; padding: 8px 0; border-radius: 6px; }
 .dz-hw-row.pick { cursor: pointer; }
 .dz-hw-row.pick:hover { background: var(--surface-2); }
-.dz-hw-lbl { font-size: 12.5px; color: var(--ink-2); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: flex; align-items: center; gap: 4px; }
-.dz-hw-row.total .dz-hw-lbl { color: var(--ink); font-weight: 700; }
+.dz-hw-lbl { font-size: 12.5px; color: var(--ink-2); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: flex; align-items: center; gap: 8px; }
+.dz-hw-row.total .dz-hw-lbl { color: var(--ink); font-weight: 600; }
 .dz-hw-track { position: relative; height: 20px; }
 .dz-hw-zero { position: absolute; top: -3px; bottom: -3px; width: 1px; background: var(--axis); }
 .dz-hw-bar { position: absolute; top: 4px; height: 12px; border-radius: 3px; min-width: 2px; background: var(--s3); }
@@ -35,34 +35,34 @@ th .dz-tip { font-weight: 500; }
 .dz-hw-bar.total.negt { background: var(--crit); }
 .dz-hw-link { position: absolute; top: 18px; height: 6px; border-left: 1px dashed var(--axis); }
 .dz-hw-val { text-align: right; font-size: 12.5px; font-variant-numeric: tabular-nums; font-weight: 600; white-space: nowrap; }
-.dz-hw-row.total .dz-hw-val { font-weight: 700; }
+.dz-hw-row.total .dz-hw-val { font-weight: 600; }
 .dz-hw-val.neg { color: var(--serious-ink); }
 .dz-hw-val.pos { color: var(--good-ink); }
 .dz-hw-row.total .dz-hw-val.neg, .dz-hw-row.total .dz-hw-val.pos { color: var(--ink); }
-.dz-hw-sub { display: block; font-size: 11px; color: var(--muted); font-weight: 500; }
+.dz-hw-sub { display: block; font-size: 11px; color: var(--muted); font-weight: 400; }
 
 /* colonne mensili con valori negativi e mesi in corso tratteggiati */
 .dz-mb .zero { stroke: var(--axis); stroke-width: 1.2; }
 .dz-mb .open-l { font-size: 10px; fill: var(--muted); font-style: italic; }
-.dz-legend { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 12px; color: var(--ink-2); margin-top: 6px; }
-.dz-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.dz-legend { display: flex; flex-wrap: wrap; gap: 8px 16px; font-size: 12px; color: var(--ink-2); margin-top: 8px; }
+.dz-legend span { display: inline-flex; align-items: center; gap: 8px; }
 .dz-legend i { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
-.dz-legend i.hatch { background-color: transparent !important; background-image: repeating-linear-gradient(45deg, currentColor 0 2px, transparent 2px 5px) !important; border: 1px solid currentColor; }
+.dz-legend i.hatch { background: transparent !important; border: 1px dashed currentColor; }
 .dz-legend i.outline { background: transparent !important; border: 1.5px solid currentColor; }
 
 /* conto economico */
-.dz-pnl table.t td { padding-top: 7px; padding-bottom: 7px; }
-.dz-pnl tr:has(.dz-tot) td { font-weight: 700; background: var(--surface-2); border-top: 1px solid var(--line-2); }
+.dz-pnl table.t td { padding-top: 8px; padding-bottom: 8px; }
+.dz-pnl tr:has(.dz-tot) td { font-weight: 600; background: var(--surface-2); border-top: 1px solid var(--line-2); }
 .dz-pnl tr:has(.dz-tot.key) td { background: color-mix(in srgb, var(--accent-soft) 60%, var(--surface)); }
 .dz-pnl tr:has(.dz-ch) td { font-size: 12.5px; color: var(--ink-2); background: color-mix(in srgb, var(--surface-2) 45%, var(--surface)); }
 .dz-pnl tr:has(.dz-memo) td { font-style: italic; color: var(--ink-2); border-top: 1px dashed var(--line-2); }
-.dz-pnl .dz-lbl { display: inline-flex; align-items: center; gap: 6px; min-width: 0; white-space: nowrap; }
-.dz-pnl .dz-ch { padding-left: 26px; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.dz-pnl .dz-lbl { display: inline-flex; align-items: center; gap: 8px; min-width: 0; white-space: nowrap; }
+.dz-pnl .dz-ch { padding-left: 24px; display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; }
 .dz-exp { display: inline-grid; place-items: center; width: 18px; height: 18px; border-radius: 5px; color: var(--muted); flex: none; }
 .dz-exp svg { width: 14px; height: 14px; transition: transform .15s var(--ease); }
 .dz-exp.on svg { transform: rotate(90deg); }
 .dz-exp.none { visibility: hidden; }
-.dz-d { font-weight: 700; font-size: 12px; }
+.dz-d { font-weight: 600; font-size: 12px; }
 .dz-d.good { color: var(--good-ink); }
 .dz-d.bad { color: var(--crit-ink); }
 .dz-pct { color: var(--muted); }
@@ -72,50 +72,50 @@ th .dz-tip { font-weight: 500; }
 .dz-read p { font-size: 13.5px; color: var(--ink); line-height: 1.5; }
 .dz-read p + p { color: var(--ink-2); }
 .dz-check { font-size: 11.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
-.dz-oneline { display: flex; gap: 12px; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; }
+.dz-oneline { display: flex; gap: 16px; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; }
 .dz-oneline p { flex: 1; min-width: 240px; font-size: 13.5px; }
 
 /* periodi del ponte */
-.dz-periods { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
-.dz-per { border: 1px solid var(--line); border-radius: 9px; padding: 9px 11px; display: grid; gap: 6px; background: var(--surface-2); min-width: 0; }
+.dz-periods { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.dz-per { border: 1px solid var(--line); border-radius: 9px; padding: 8px 8px; display: grid; gap: 8px; background: var(--surface-2); min-width: 0; }
 .dz-per b { font-size: 13px; }
 .dz-per .eyebrow { font-size: 10.5px; }
 
 /* budget */
-.dz-var { display: inline-block; font-size: 11px; font-weight: 700; padding: 1px 6px; border-radius: 9px; margin-left: 6px; background: var(--surface-3); color: var(--ink-2); white-space: nowrap; }
+.dz-var { display: inline-block; font-size: 11px; font-weight: 600; padding: 0 8px; border-radius: 9px; margin-left: 8px; background: var(--surface-3); color: var(--ink-2); white-space: nowrap; }
 .dz-var.good { background: var(--good-soft); color: var(--good-ink); }
 .dz-var.bad { background: var(--crit-soft); color: var(--crit-ink); }
-.dz-sliders { display: grid; gap: 12px; }
+.dz-sliders { display: grid; gap: 16px; }
 .dz-sliders .slider .row { flex-wrap: nowrap; }
-.dz-preview { display: grid; gap: 8px; padding: 12px 14px; border-radius: var(--r); border: 1px solid var(--line); background: var(--surface-2); position: sticky; top: 0; z-index: 2; }
+.dz-preview { display: grid; gap: 8px; padding: 16px 16px; border-radius: var(--r); border: 1px solid var(--line); background: var(--surface-2); position: sticky; top: 0; z-index: 2; }
 .dz-preview .kv { font-size: 12.5px; }
-.dz-cols2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 18px; }
+.dz-cols2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 16px; }
 
 /* costi fissi */
-.dz-grid table.t td, .dz-grid table.t th { padding: 5px 6px; }
+.dz-grid table.t td, .dz-grid table.t th { padding: 8px 8px; }
 .dz-grid table.t td:first-child, .dz-grid table.t th:first-child { position: sticky; left: 0; background: var(--surface); z-index: 1; }
 .dz-grid table.t th:first-child { background: var(--surface-2); z-index: 2; }
 .dz-grid .input.num.slim { width: 78px; min-width: 78px; }
-.dz-grid tr.grp td { background: var(--surface-2); font-weight: 700; font-size: 11.5px; text-transform: uppercase; letter-spacing: .04em; color: var(--ink-2); }
-.dz-grid tr.tot td { font-weight: 700; border-top: 1px solid var(--line-2); }
+.dz-grid tr.grp td { background: var(--surface-2); font-weight: 600; font-size: 11.5px; color: var(--ink-2); }
+.dz-grid tr.tot td { font-weight: 600; border-top: 1px solid var(--line-2); }
 .dz-grid td.lock { color: var(--muted); }
 .dz-grid th.dz-partial { color: var(--warn-ink); }
-.dz-grid th.dz-partial svg { width: 11px; height: 11px; vertical-align: -1px; margin-left: 3px; }
-.dz-grid td.lock svg { width: 11px; height: 11px; vertical-align: -1px; margin-left: 3px; opacity: .7; }
+.dz-grid th.dz-partial svg { width: 11px; height: 11px; vertical-align: -1px; margin-left: 0; }
+.dz-grid td.lock svg { width: 11px; height: 11px; vertical-align: -1px; margin-left: 0; opacity: .7; }
 .dz-centers { display: grid; gap: 8px; }
 .dz-center { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr) auto auto; gap: 8px; align-items: center; }
 .dz-paste textarea.input { font-family: var(--f-mono); font-size: 12px; min-height: 120px; }
 
 /* chiusura del mese */
 .dz-mlist { display: grid; max-height: min(760px, calc(100vh - 220px)); overflow-y: auto; overscroll-behavior: contain; }
-.dz-mlist button { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 10px; align-items: center; text-align: left; padding: 10px 14px; border: 0; border-top: 1px solid var(--line); background: none; cursor: pointer; color: inherit; font: inherit; }
+.dz-mlist button { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0 8px; align-items: center; text-align: left; padding: 8px 16px; border: 0; border-top: 1px solid var(--line); background: none; cursor: pointer; color: inherit; font: inherit; }
 .dz-mlist button:first-child { border-top: 0; }
 .dz-mlist button:hover { background: var(--surface-2); }
 .dz-mlist button[aria-pressed="true"] { background: var(--accent-soft); box-shadow: inset 3px 0 0 var(--accent); }
-.dz-mlist .m { font-weight: 700; font-size: 13.5px; }
+.dz-mlist .m { font-weight: 600; font-size: 13.5px; }
 .dz-mlist .s { font-size: 12px; color: var(--muted); grid-column: 1 / -1; font-variant-numeric: tabular-nums; }
 .dz-cl { list-style: none; margin: 0; padding: 0; display: grid; }
-.dz-cl li { display: grid; grid-template-columns: 26px minmax(0, 1fr) auto; gap: 4px 10px; align-items: start; padding: 10px 0; border-top: 1px solid var(--line); }
+.dz-cl li { display: grid; grid-template-columns: 26px minmax(0, 1fr) auto; gap: 8px 8px; align-items: start; padding: 8px 0; border-top: 1px solid var(--line); }
 .dz-cl li:first-child { border-top: 0; }
 .dz-cl .ic { width: 24px; height: 24px; border-radius: 7px; display: grid; place-items: center; }
 .dz-cl .ic svg { width: 15px; height: 15px; }
@@ -123,36 +123,36 @@ th .dz-tip { font-weight: 500; }
 .dz-cl .ic.no { background: var(--warn-soft); color: var(--warn-ink); }
 .dz-cl .ic.block { background: var(--crit-soft); color: var(--crit-ink); }
 .dz-cl b { font-size: 13.5px; }
-.dz-cl .det { display: block; font-size: 12.5px; color: var(--ink-2); margin-top: 2px; }
-.dz-frozen { display: grid; gap: 6px; }
+.dz-cl .det { display: block; font-size: 12.5px; color: var(--ink-2); margin-top: 0; }
+.dz-frozen { display: grid; gap: 8px; }
 
 /* report CdA: fogli A4 */
 /* min-width 0: il foglio largo 210 mm non deve allargare la griglia della pagina sui telefoni */
 .dz-report { display: block; min-width: 0; }
 .dz-rk { display: grid; grid-template-columns: repeat(auto-fit, minmax(126px, 1fr)); gap: 8px; }
-.dz-rk > div { border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; display: grid; gap: 2px; break-inside: avoid; }
+.dz-rk > div { border: 1px solid var(--line); border-radius: 8px; padding: 8px 8px; display: grid; gap: 0; break-inside: avoid; }
 .dz-rk span { font-size: 11px; color: var(--ink-2); }
 .dz-rk b { font-size: 17px; letter-spacing: -.01em; font-variant-numeric: tabular-nums; }
 .dz-rk small { font-size: 10.5px; color: var(--muted); }
 .dz-rk > div.st-ok { border-left: 3px solid var(--good); }
 .dz-rk > div.st-warn { border-left: 3px solid var(--warn); }
 .dz-rk > div.st-bad { border-left: 3px solid var(--crit); }
-.dz-rk .good { color: var(--good-ink); font-weight: 700; }
-.dz-rk .bad { color: var(--crit-ink); font-weight: 700; }
+.dz-rk .good { color: var(--good-ink); font-weight: 600; }
+.dz-rk .bad { color: var(--crit-ink); font-weight: 600; }
 .dz-rtw { min-width: 0; overflow-x: auto; }
 .dz-rt { width: 100%; border-collapse: collapse; font-size: 11.5px; font-variant-numeric: tabular-nums; }
-.dz-rt th { text-align: left; font-size: 10px; text-transform: uppercase; letter-spacing: .04em; color: var(--ink-2); border-bottom: 1.5px solid var(--ink); padding: 4px 6px; }
-.dz-rt td { padding: 3px 6px; border-bottom: 1px solid var(--line); }
+.dz-rt th { text-align: left; font-size: 10px; color: var(--ink-2); border-bottom: 1.5px solid var(--ink); padding: 8px 8px; }
+.dz-rt td { padding: 0 8px; border-bottom: 1px solid var(--line); }
 .dz-rt .r { text-align: right; }
-.dz-rt tr.tot td { font-weight: 700; background: var(--surface-2); }
-.dz-rn { display: grid; gap: 4px; font-size: 12px; color: var(--ink); }
-.dz-comment { display: grid; gap: 4px; }
+.dz-rt tr.tot td { font-weight: 600; background: var(--surface-2); }
+.dz-rn { display: grid; gap: 8px; font-size: 12px; color: var(--ink); }
+.dz-comment { display: grid; gap: 8px; }
 .dz-comment textarea.input { min-height: 56px; font-size: 12.5px; }
-.dz-comment .print-only { white-space: pre-wrap; font-size: 12px; border-left: 3px solid var(--maize); padding: 4px 10px; background: var(--surface-2); }
+.dz-comment .print-only { white-space: pre-wrap; font-size: 12px; border-left: 3px solid var(--maize); padding: 8px 8px; background: var(--surface-2); }
 .dz-sheet-tools { position: sticky; top: calc(var(--top) + 50px); z-index: 5; }
 
 @media (max-width: 720px) {
-  .dz-hw-row { grid-template-columns: minmax(92px, 36%) minmax(0, 1fr) 78px; gap: 6px; }
+  .dz-hw-row { grid-template-columns: minmax(92px, 36%) minmax(0, 1fr) 78px; gap: 8px; }
   .dz-hw-lbl, .dz-hw-val { font-size: 12px; }
   .dz-periods, .dz-cols2 { grid-template-columns: minmax(0, 1fr); }
   .dz-center { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }

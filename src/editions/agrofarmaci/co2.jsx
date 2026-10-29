@@ -28,7 +28,7 @@ export function Co2Programmi({ d, route }) {
   const isOlive = base.r.perKgOil != null;
   return (
     <>
-      <div className="row" style={{ justifyContent: 'space-between', marginBottom: 10, gap: 8 }}>
+      <div className="row" style={{ justifyContent: 'space-between', marginBottom: 8, gap: 8 }}>
         <Seg options={crops.map(c => ({ id: c, label: CROP_LABEL[c] || c }))} value={crop} onChange={c => go('esg', 'co2', c)} label="Coltura" />
         {touched && <Btn small kind="ghost" icon={LuRotateCcw} onClick={() => setEdits({})}>Torna ai programmi registrati</Btn>}
       </div>
@@ -46,7 +46,7 @@ export function Co2Programmi({ d, route }) {
               <Kpi label="Costo dei prodotti" value={eur(r.cost)} unit="/ha" foot={`${nf(r.passes)} passaggi`} />
             </div>
             <StackBar parts={[{ key: 'p', label: 'Prodotti', value: r.products, color: 'var(--s1)' }, { key: 'f', label: 'Gasolio', value: r.fuel, color: 'var(--s4)' }]} ariaLabel="Ripartizione delle emissioni" />
-            <div className="small muted" style={{ marginTop: 6 }}>Rame metallo per ettaro all’anno (fascia verde fino a 4 kg)</div>
+            <div className="small muted" style={{ marginTop: 8 }}>Rame metallo per ettaro all’anno (fascia verde fino a 4 kg)</div>
             <Bullet value={r.copperKgHa} lo={0} hi={6} min={0} max={4} />
             <Table rows={r.rows} pageSize={12} rowKey={x => x.i} exportName={`programma-${p.id}`} cols={[
               { key: 'product', label: 'Prodotto', render: x => <span>{x.product}{x.organic && <> <Chip kind="good">bio</Chip></>}<div className="muted small">{x.when}</div></span> },

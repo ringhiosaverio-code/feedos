@@ -63,7 +63,7 @@ export function SignalList({ items, limit = 8, compact, emptyText = 'Nessuna dec
           </article>
         );
       })}
-      {items.length > limit && <div className="row" style={{ padding: '10px 16px' }}><Btn small kind="ghost" onClick={() => setAll(x => !x)}>{all ? 'Mostra meno' : `Mostra tutte (${items.length})`}</Btn></div>}
+      {items.length > limit && <div className="row" style={{ padding: '8px 16px' }}><Btn small kind="ghost" onClick={() => setAll(x => !x)}>{all ? 'Mostra meno' : `Mostra tutte (${items.length})`}</Btn></div>}
     </div>
   );
 }
