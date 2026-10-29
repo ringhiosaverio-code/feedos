@@ -197,7 +197,7 @@ function CustomerMap({ d, rows, onPick, agent }) {
         ))}
       </svg>
       {h && <div className="tip" style={{ left: Math.min(Math.max(x(h.lon), 90), W - 90), top: y(h.lat) - r(h.tonnes) - 6 }}><b>{h.name}</b><div className="small">{h.city} · {nf(h.tonnes || 0)} t · {h.marginT != null ? fmtPm(h.marginT, 1) : '—'}</div>{h.idle > 30 && <div className="small">nessuna consegna negli ultimi {h.idle} giorni del periodo</div>}</div>}
-      <p className="xs muted" style={{ margin: '6px 0 0' }}>Posizioni dei comuni (coordinate approssimate), senza base cartografica · cerchio vuoto = nessuna consegna negli ultimi 30 giorni del periodo.</p>
+      <p className="xs muted" style={{ margin: '8px 0 0' }}>Posizioni dei comuni (coordinate approssimate), senza base cartografica · cerchio vuoto = nessuna consegna negli ultimi 30 giorni del periodo.</p>
     </div>
   );
 }
@@ -364,7 +364,7 @@ function NuovaOfferta({ d, prefill, scope }) {
     <Panel title="Nuova offerta" sub="Il margine si aggiorna mentre scrivi: costo pieno di oggi, prezzo minimo e obiettivo del prodotto, sconto autorizzato e fido del cliente" id="com-offer"
       actions={<Btn small kind="ghost" icon={LuX} title="Chiudi" onClick={() => go('commerciale', 'offerte')} />}>
       <div className="split">
-        <div className="stack" style={{ gap: 12 }}>
+        <div className="stack" style={{ gap: 16 }}>
           <div className="form">
             <Field label="Cliente"><Select value={cust} onChange={v => { setCust(v); setPid(null); setPrice(null); }} options={custs.map(x => ({ id: x.id, label: x.name }))} id="of-cust" /></Field>
             <Field label="Prodotto"><Select value={p?.id} onChange={v => { setPid(v); setPrice(null); }} options={prods.map(x => ({ id: x.id, label: x.name }))} id="of-prod" /></Field>
@@ -502,7 +502,7 @@ function Listino({ d, per, scope }) {
           <Panel title={`Dal listino al margine pocket · ${sel.name}`} sub={`${upLabel(sel.p)} sulle consegne del periodo (${nf(W.tonnes)} t): sconti, premi, provvigione, dilazione e trasporto, poi il costo industriale effettivo`} id="com-pocket">
             {W.tonnes > 0 ? <Waterfall steps={W.steps.map(s => ({ label: s.label, value: s.value, kind: s.kind === 'total' ? 'total' : undefined, color: s.key === 'margin' ? (s.value >= 0 ? 'var(--s3)' : 'var(--crit)') : s.key === 'pocket' ? 'var(--s1)' : undefined }))} height={280} ariaLabel={`Cascata del prezzo di ${sel.name}`} />
               : <Empty title="Nessuna consegna nel periodo" />}
-            <p className="xs muted" style={{ margin: '6px 0 0' }}>Prezzo pocket = netto − premio di fine anno − provvigione − onere della dilazione − trasporto; margine pocket = prezzo pocket − (materie prime dei lotti, calo, energia misurata, trasformazione variabile, imballo).</p>
+            <p className="xs muted" style={{ margin: '8px 0 0' }}>Prezzo pocket = netto − premio di fine anno − provvigione − onere della dilazione − trasporto; margine pocket = prezzo pocket − (materie prime dei lotti, calo, energia misurata, trasformazione variabile, imballo).</p>
           </Panel>
           <Panel title="Versioni del listino" sub="Ogni revisione ha decorrenza e motivo; le precedenti restano per la realizzazione storica" flush
             actions={<Btn small kind="ghost" onClick={() => openDrawer('product', sel.id)}>Scheda prodotto</Btn>}>
@@ -547,7 +547,7 @@ function Revisione({ d, ctx, rows, draft, setDraft }) {
     <Panel title="Nuovo listino" sub="Decorrenza, prezzi e simulazione prima di confermare · una data futura non cambia i prezzi di oggi" id="com-rev"
       actions={<Btn small kind="ghost" icon={LuX} title="Chiudi senza salvare" onClick={() => setDraft(null)} />}>
       <div className="com-rev">
-        <div className="stack" style={{ gap: 12 }}>
+        <div className="stack" style={{ gap: 16 }}>
           <div className="form">
             <Field label="In vigore dal"><input type="date" className="input" value={draft.validFrom} onChange={e => set({ validFrom: e.target.value })} id="rev-from" /></Field>
             <Field label="Motivo"><input className="input" value={draft.reason} onChange={e => set({ reason: e.target.value })} placeholder="Es. aumento della soia" /></Field>
@@ -568,7 +568,7 @@ function Revisione({ d, ctx, rows, draft, setDraft }) {
           )}
           <Field label="Elasticità della domanda" hint="ε: −0,5 vuol dire che un aumento del 2% fa perdere l’1% dei volumi; 0 = volumi invariati"><NumInput value={draft.elasticity} decimals={2} step={0.1} max={0} onChange={x => set({ elasticity: x ?? 0 })} /></Field>
         </div>
-        <div className="stack com-sim" style={{ gap: 10 }}>
+        <div className="stack com-sim" style={{ gap: 8 }}>
           <div className="eyebrow">Effetto stimato in un anno</div>
           {sim && n ? <>
             <div className="kpis two">
@@ -650,7 +650,7 @@ function Visite({ d, sel, per, scope }) {
           ]} empty="Nessuna visita nel periodo." />
         </Panel>
         <Panel title="Registra una visita" sub="Per le stalle da latte: reddito sul costo alimentare (IOFC) = latte × prezzo − costo della razione per capo al giorno" id="com-visit">
-          <div className="stack" style={{ gap: 12 }}>
+          <div className="stack" style={{ gap: 16 }}>
             <Field label="Cliente"><Select value={f.customerId} onChange={v => setF(x => ({ ...x, customerId: v }))} options={custs.map(c => ({ id: c.id, label: c.name }))} id="vi-cust" /></Field>
             <div className="form">
               <Field label="Data"><input type="date" className="input" value={f.date} max={today} onChange={e => setF(x => ({ ...x, date: e.target.value }))} id="vi-date" /></Field>

@@ -202,7 +202,7 @@ function LotD({ d, id }) {
         {chk.items.length ? <div className="tw"><table className="t"><thead><tr><th>Parametro</th><th className="r">Analizzato</th><th className="r">Dichiarato</th><th className="r">Ammesso</th><th>Esito</th></tr></thead>
           <tbody>{chk.items.map(x => <tr key={x.id}><td>{x.label}</td><td className="r">{nf(x.value, 2)}</td><td className="r">{nf(x.declared, 1)}</td><td className="r">{x.min != null ? `${nf(x.min, 2)}–${nf(x.max, 2)}` : '—'}</td><td>{x.status === 'ok' ? <Chip kind="good">ok</Chip> : x.status === 'n/d' ? '—' : <Chip kind="crit">{x.status}</Chip>}</td></tr>)}</tbody></table></div>
           : <p className="small muted">Nessuna analisi: registra l’esito del laboratorio o del NIR.</p>}
-        <div className="form" style={{ marginTop: 10 }}>{[...PARAMS, { id: 'UM', label: 'Umidità' }].map(p => <Field key={p.id} label={`${p.id} %`} hint={dec[p.id] != null ? `dichiarato ${nf(dec[p.id], 1)}` : ''}><NumInput value={an[p.id]} decimals={2} onChange={v => setAn(x => ({ ...x, [p.id]: v }))} slim /></Field>)}</div>
+        <div className="form" style={{ marginTop: 8 }}>{[...PARAMS, { id: 'UM', label: 'Umidità' }].map(p => <Field key={p.id} label={`${p.id} %`} hint={dec[p.id] != null ? `dichiarato ${nf(dec[p.id], 1)}` : ''}><NumInput value={an[p.id]} decimals={2} onChange={v => setAn(x => ({ ...x, [p.id]: v }))} slim /></Field>)}</div>
         <Btn small icon={LuPlus} onClick={addAn}>Registra analisi</Btn>
       </div>
       <div className="dsec"><div className="eyebrow">Materie prime usate (a monte)</div>

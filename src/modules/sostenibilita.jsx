@@ -199,7 +199,7 @@ export function Cruscotto({ d }) {
               </div>
             ))}
           </div>
-          <div className="kv" style={{ marginTop: 12 }}>
+          <div className="kv" style={{ marginTop: 16 }}>
             <dt>Per tonnellata di mangime</dt><dd>{fmtN(G.perT)} kg CO₂e (stabilimento {fmtN(G.perTOps, 1)})</dd>
             <dt>Scope 1+2 sui ricavi</dt><dd>{fmtN(G.perMEur, 1)} t per milione di euro</dd>
           </div>
@@ -435,7 +435,7 @@ export function Acqua({ d, nuova }) {
       {W.drift > drift && <div className="note crit"><b>Acqua per tonnellata +{nf(W.drift * 100)}% negli ultimi 3 mesi</b> ({nf(W.recent * 1000, 1)} contro {nf(W.before * 1000, 1)} litri/t). {Object.entries(W.sourceDrift).filter(([, x]) => x > drift).map(([k, x]) => `${k}: +${nf(x * 100)}%. `).join('')}A parità di produzione, un aumento così indica di solito una perdita o un reintegro anomalo della caldaia.</div>}
       <div className="split r">
         <Panel title="Registra una lettura" sub="Basta il consumo del mese; con la lettura del contatore il consumo si calcola da solo" id="esg-water-form" className={nuova ? 'hilite' : ''}>
-          <div className="stack" style={{ gap: 12 }}>
+          <div className="stack" style={{ gap: 16 }}>
             <Field label="Fonte"><Seg options={['Acquedotto', 'Pozzo', 'Altro'].map(x => ({ id: x, label: x }))} value={f.source} onChange={s => set({ source: s, month: firstFree(s), reading: null, m3: null })} label="Fonte" /></Field>
             <div className="form">
               <Field label="Mese"><input className="input" type="month" value={f.month} max={today.slice(0, 7)} onChange={e => set({ month: e.target.value })} /></Field>
@@ -454,9 +454,9 @@ export function Acqua({ d, nuova }) {
             <>
               <Columns cols={W.months.map(m => ({ label: monthLabel(m.month), parts: sources.map(s => ({ key: s, value: m.bySource[s] || 0 })) }))} keys={sources.map(s => ({ key: s, label: s, color: SOURCE_COLOR[s] || 'var(--s5)' }))} unit="m³" height={190} ariaLabel="Prelievo idrico mensile" />
               <Legend items={sources.map(s => ({ label: s, color: SOURCE_COLOR[s] || 'var(--s5)' }))} />
-              <div style={{ marginTop: 12 }}>
+              <div style={{ marginTop: 16 }}>
                 <LineChart labels={W.months.map(m => monthLabel(m.month))} height={150} unit="L/t" decimals={1} series={[{ key: 'l', label: 'Litri per tonnellata', color: 'var(--s1)', values: W.months.map(m => (m.perT != null ? m.perT * 1000 : null)) }]} refs={avg != null ? [{ y: avg, label: `media ${nf(avg, 1)}`, kind: 'muted' }] : []} ariaLabel="Litri per tonnellata" />
-                {W.partial.length > 0 && <p className="small muted" style={{ margin: '6px 0 0' }}>{W.partial.map(m => monthLabel(m, false)).join(', ')}: produzione registrata solo per una parte del mese, quindi niente litri per tonnellata; la lettura del contatore resta nel prelievo.</p>}
+                {W.partial.length > 0 && <p className="small muted" style={{ margin: '8px 0 0' }}>{W.partial.map(m => monthLabel(m, false)).join(', ')}: produzione registrata solo per una parte del mese, quindi niente litri per tonnellata; la lettura del contatore resta nel prelievo.</p>}
               </div>
             </>
           ) : <Empty icon={LuDroplets} title="Ancora nessuna lettura">Registra il consumo dell’ultimo mese: da lì nascono il prelievo idrico (E9) e i litri per tonnellata.</Empty>}
@@ -514,7 +514,7 @@ export function Rifiuti({ d, nuovo }) {
       {S.missedKg >= 200 && <div className="note maize"><b>{nf(S.missedKg)} kg di rifiuti di norma recuperabili sono andati a smaltimento</b> ({S.missed.slice(0, 2).map(c => `${c.name.toLowerCase()}, EER ${c.code}`).join('; ')}). Separandoli alla fonte il recupero passerebbe dal {nf(S.recovery * 100)}% al {nf(ifAll * 100)}%.</div>}
       <div className="split r">
         <Panel title="Registra un rifiuto" sub="Dal formulario: codice EER, chilogrammi e destinazione" id="esg-waste-form" className={nuovo ? 'hilite' : ''}>
-          <div className="stack" style={{ gap: 12 }}>
+          <div className="stack" style={{ gap: 16 }}>
             <Field label="Codice EER"><Select value={f.eer} onChange={v => { const dest = v === 'altro' || EER_BY_CODE[v]?.recoverable ? 'recupero' : 'smaltimento'; set({ eer: v, dest, op: defaultWasteOp(dest) }); }} options={[...EER.map(e => ({ id: e.code, label: `${e.code} · ${e.name}` })), { id: 'altro', label: 'Altro codice…' }]} ariaLabel="Codice EER" /></Field>
             {custom && <div className="form"><Field label="Codice" hint="con * se pericoloso"><input className="input" value={f.code} onChange={e => set({ code: e.target.value })} placeholder="es. 16 01 07*" /></Field><Field label="Descrizione"><input className="input" value={f.name} onChange={e => set({ name: e.target.value })} /></Field></div>}
             <div className="row gap-s">{haz ? <Chip kind="crit" icon={LuTriangleAlert}>Pericoloso</Chip> : <Chip kind="good">Non pericoloso</Chip>}{!custom && EER_BY_CODE[f.eer]?.hint && <span className="small muted">{EER_BY_CODE[f.eer].hint}</span>}</div>
@@ -539,7 +539,7 @@ export function Rifiuti({ d, nuovo }) {
                   <span className="eer-bar" style={{ width: Math.max(4, c.kg / maxKg * 100) + '%' }}><i style={{ width: c.recKg / c.kg * 100 + '%' }} /></span>
                 </div>
               ))}
-              <div className="row between small muted" style={{ marginTop: 6 }}><Legend items={[{ label: 'Recupero', color: 'var(--s3)' }, { label: 'Smaltimento', color: 'var(--surface-3)' }]} /><span>{S.recovery != null ? `${nf(S.recovery * 100)}% a recupero` : ''}</span></div>
+              <div className="row between small muted" style={{ marginTop: 8 }}><Legend items={[{ label: 'Recupero', color: 'var(--s3)' }, { label: 'Smaltimento', color: 'var(--surface-3)' }]} /><span>{S.recovery != null ? `${nf(S.recovery * 100)}% a recupero` : ''}</span></div>
             </div>
           ) : <Empty icon={LuRecycle} title="Ancora nessun rifiuto registrato">Riporta i formulari dell’ultimo trimestre: bastano codice EER, chilogrammi e destinazione.</Empty>}
         </Panel>

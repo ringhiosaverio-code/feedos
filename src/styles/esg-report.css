@@ -1,75 +1,75 @@
 /* FeedOS 18 · Report e questionari (pacchetto WP4): stile del pacchetto, solo classi con il prefisso erp- e token del tema
  * (var(--…)), chiaro e scuro, 390 e 1440 px senza sbordi. Il file viene incluso da build.mjs senza import. */
-.erp { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; min-width: 0; }
+.erp { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; min-width: 0; }
 .erp-top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; }
 .erp-top .esh-pbar { margin: 0; }
-.erp-strip { display: flex; flex-wrap: wrap; gap: 6px; }
+.erp-strip { display: flex; flex-wrap: wrap; gap: 8px; }
 .erp > .esh-subnav { margin: 0; }
 
 /* anelli di copertura */
-.erp-rings { display: grid; grid-template-columns: repeat(3, minmax(0, auto)) minmax(0, 1fr); gap: 14px 22px; align-items: center; padding: 14px 16px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); }
-.erp-ring { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.erp-rings { display: grid; grid-template-columns: repeat(3, minmax(0, auto)) minmax(0, 1fr); gap: 16px 24px; align-items: center; padding: 16px 16px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); }
+.erp-ring { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .erp-ring .ring-c b { font-size: 18px; }
-.erp-ring-t { display: grid; gap: 2px; min-width: 0; font-size: 13px; }
+.erp-ring-t { display: grid; gap: 0; min-width: 0; font-size: 13px; }
 .erp-ring-t span { font-size: 12px; color: var(--muted); }
 .erp-ring-off { max-width: 220px; }
 .erp-ring-note { color: var(--ink-2); max-width: 70ch; }
-.erp-ring-note .note { display: flex; gap: 6px; align-items: center; }
+.erp-ring-note .note { display: flex; gap: 8px; align-items: center; }
 
 /* lista dei datapoint per informativa */
 .erp-g { border-top: 1px solid var(--line); }
 .erp-g:first-child { border-top: 0; }
-.erp-g-hd { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 10px 14px; background: var(--surface-2); font-size: 13.5px; color: var(--ink); }
+.erp-g-hd { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 8px 16px; background: var(--surface-2); font-size: 13.5px; color: var(--ink); }
 .erp-g-hd b { flex: 1 1 220px; min-width: 0; }
-.erp-g-cov { display: inline-flex; align-items: center; gap: 6px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.erp-g-cov { display: inline-flex; align-items: center; gap: 8px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
 .erp-bar { display: inline-block; width: 70px; height: 6px; border-radius: 3px; background: var(--surface-3); overflow: hidden; }
 .erp-bar i { display: block; height: 100%; background: var(--accent); border-radius: 3px; }
-.erp-dp { display: grid; grid-template-columns: minmax(0, 2.1fr) minmax(0, 1.6fr) auto auto; gap: 6px 14px; align-items: center; padding: 9px 14px; border-top: 1px solid var(--line); font-size: 13px; }
+.erp-dp { display: grid; grid-template-columns: minmax(0, 2.1fr) minmax(0, 1.6fr) auto auto; gap: 8px 16px; align-items: center; padding: 8px 16px; border-top: 1px solid var(--line); font-size: 13px; }
 .erp-dp-gap { box-shadow: inset 3px 0 0 var(--crit); }
 .erp-dp-l, .erp-dp-v { min-width: 0; overflow-wrap: anywhere; color: var(--ink); }
-.erp-dp-l .sub, .erp-dp-v .sub { display: block; margin-top: 2px; font-size: 11.5px; color: var(--muted); }
-.erp-dp-c { display: flex; flex-wrap: wrap; gap: 4px; justify-content: flex-end; }
-.erp-dp-a { display: flex; flex-wrap: wrap; gap: 4px; justify-content: flex-end; }
+.erp-dp-l .sub, .erp-dp-v .sub { display: block; margin-top: 0; font-size: 11.5px; color: var(--muted); }
+.erp-dp-c { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
+.erp-dp-a { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
 .erp-dp-a a.btn svg { width: 14px; height: 14px; }
 
 /* moduli e cassetti */
-.erp-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; align-items: start; }
+.erp-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 16px; align-items: start; }
 .erp-form .seg { flex-wrap: wrap; max-width: 100%; }
-.erp-ta { height: auto; min-height: 84px; padding: 8px 10px; line-height: 1.45; resize: vertical; font: inherit; }
-.erp-fs { border: 1px solid var(--line); border-radius: var(--r-sm); padding: 10px 12px 12px; margin: 0; min-width: 0; }
-.erp-fs legend { padding: 0 6px; font-size: 12.5px; font-weight: 600; color: var(--ink-2); }
-.erp-ev { display: grid; gap: 4px; max-height: 180px; overflow: auto; }
+.erp-ta { height: auto; min-height: 84px; padding: 8px 8px; line-height: 1.45; resize: vertical; font: inherit; }
+.erp-fs { border: 1px solid var(--line); border-radius: var(--r-sm); padding: 8px 16px 16px; margin: 0; min-width: 0; }
+.erp-fs legend { padding: 0 8px; font-size: 12.5px; font-weight: 600; color: var(--ink-2); }
+.erp-ev { display: grid; gap: 8px; max-height: 180px; overflow: auto; }
 .erp-file { position: absolute; width: 1px; height: 1px; opacity: 0; overflow: hidden; }
 label.btn { position: relative; }
 
 /* esercizio e chiusura */
 .erp-ex { grid-template-columns: minmax(0, 1fr); }
-.erp-steps { list-style: none; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin: 0 0 12px; padding: 0; }
-.erp-steps li { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border: 1px solid var(--line); border-radius: var(--r-sm); background: var(--surface-2); min-width: 0; }
-.erp-steps li div { display: grid; gap: 3px; min-width: 0; overflow-wrap: anywhere; color: var(--ink); }
+.erp-steps { list-style: none; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 0 0 16px; padding: 0; }
+.erp-steps li { display: flex; gap: 8px; align-items: flex-start; padding: 8px 16px; border: 1px solid var(--line); border-radius: var(--r-sm); background: var(--surface-2); min-width: 0; }
+.erp-steps li div { display: grid; gap: 0; min-width: 0; overflow-wrap: anywhere; color: var(--ink); }
 .erp-steps li .small { color: var(--ink-2); }
 .erp-steps li.done { border-color: color-mix(in srgb, var(--good) 45%, transparent); background: var(--good-soft); }
-.erp-step-n { flex: none; display: inline-flex; width: 24px; height: 24px; align-items: center; justify-content: center; border-radius: 50%; background: var(--surface-3); color: var(--ink-2); font-weight: 700; font-size: 12px; }
+.erp-step-n { flex: none; display: inline-flex; width: 24px; height: 24px; align-items: center; justify-content: center; border-radius: 50%; background: var(--surface-3); color: var(--ink-2); font-weight: 600; font-size: 12px; }
 .erp-steps li.done .erp-step-n { background: transparent; color: var(--good-ink); }
 .erp-step-n svg { width: 20px; height: 20px; }
-.erp-hash { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0 0 12px; font-size: 12px; color: var(--ink-2); }
+.erp-hash { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0 0 16px; font-size: 12px; color: var(--ink-2); }
 .erp-hash > svg { width: 16px; height: 16px; color: var(--accent); }
 .erp-hash .mono, .erp-wrap { overflow-wrap: anywhere; word-break: break-all; min-width: 0; }
-.erp-actions { display: grid; gap: 10px; }
-.erp-sign { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; }
-.erp-hist { display: grid; gap: 4px; padding: 10px 14px; border-top: 1px solid var(--line); color: var(--ink-2); }
+.erp-actions { display: grid; gap: 8px; }
+.erp-sign { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 16px; }
+.erp-hist { display: grid; gap: 8px; padding: 8px 16px; border-top: 1px solid var(--line); color: var(--ink-2); }
 
 /* rapporto e pacchetto per la banca (anche in stampa) */
-.erp-pp-head { display: grid; gap: 2px; font-size: 12px; color: var(--ink-2); }
+.erp-pp-head { display: grid; gap: 0; font-size: 12px; color: var(--ink-2); }
 .erp-pp-head b { font-size: 13.5px; color: var(--ink); }
-.erp-h2 { margin: 6px 0 0; font: 700 15px/1.2 var(--f-display); text-transform: uppercase; letter-spacing: .02em; color: var(--accent); }
-.erp-narr { display: grid; gap: 4px; min-width: 0; }
-.erp-narr h3 { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 6px 0 0; font-size: 13.5px; color: var(--ink); }
+.erp-h2 { margin: 8px 0 0; font: 600 15px/1.2 var(--f-display); color: var(--accent); }
+.erp-narr { display: grid; gap: 8px; min-width: 0; }
+.erp-narr h3 { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 8px 0 0; font-size: 13.5px; color: var(--ink); }
 .erp-narr p { margin: 0; line-height: 1.5; overflow-wrap: anywhere; }
 .erp-edit { margin-left: auto; }
 .erp-miss { color: var(--crit-ink); }
-.erp-ul { margin: 0; padding-left: 18px; display: grid; gap: 2px; overflow-wrap: anywhere; }
-.erp-kv { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); gap: 4px 14px; margin: 0; font-size: 12.5px; }
+.erp-ul { margin: 0; padding-left: 16px; display: grid; gap: 0; overflow-wrap: anywhere; }
+.erp-kv { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); gap: 8px 16px; margin: 0; font-size: 12.5px; }
 .erp-kv dt { color: var(--ink-2); overflow-wrap: anywhere; }
 .erp-kv dd { margin: 0; color: var(--ink); overflow-wrap: anywhere; }
 .erp-kv dd .sub { display: block; font-size: 11px; color: var(--muted); }
@@ -79,28 +79,28 @@ label.btn { position: relative; }
 .erp-src.good { color: var(--good-ink); } .erp-src.violet { color: var(--s7); } .erp-src.accent { color: var(--accent); } .erp-src.warn { color: var(--warn-ink); }
 .erp-good { color: var(--good-ink); font-weight: 600; }
 .erp-bad { color: var(--crit-ink); font-weight: 600; }
-.erp-pmi { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 10px 16px; }
+.erp-pmi { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 8px 16px; }
 .erp-pmi > div:first-child { flex: 1 1 320px; min-width: 0; }
-.erp-pmi p { margin: 6px 0 0; }
+.erp-pmi p { margin: 8px 0 0; }
 
 /* storico */
-.erp-hcards { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
-.erp-hcard { display: grid; gap: 6px; align-content: start; justify-items: start; padding: 12px 14px; border: 1px solid var(--line); border-radius: var(--r-sm); background: var(--surface-2); min-width: 0; overflow-wrap: anywhere; }
+.erp-hcards { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; }
+.erp-hcard { display: grid; gap: 8px; align-content: start; justify-items: start; padding: 16px 16px; border: 1px solid var(--line); border-radius: var(--r-sm); background: var(--surface-2); min-width: 0; overflow-wrap: anywhere; }
 
 /* questionari */
 .erp-qhead { gap: 8px; }
-.erp-q { display: grid; gap: 10px; }
-.erp-qi { display: grid; gap: 8px; padding: 10px 12px; border: 1px solid var(--line); border-radius: var(--r-sm); background: var(--surface); min-width: 0; }
+.erp-q { display: grid; gap: 8px; }
+.erp-qi { display: grid; gap: 8px; padding: 8px 16px; border: 1px solid var(--line); border-radius: var(--r-sm); background: var(--surface); min-width: 0; }
 .erp-qi header { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 13px; }
 .erp-qi header b { flex: 1 1 240px; min-width: 0; overflow-wrap: anywhere; }
-.erp-qi-a { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 13px; color: var(--ink); }
+.erp-qi-a { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 13px; color: var(--ink); }
 .erp-qi-a p { flex: 1 1 260px; margin: 0; min-width: 0; overflow-wrap: anywhere; }
-.erp-qi-f { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); gap: 10px; }
+.erp-qi-f { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); gap: 8px; }
 .erp-qi-f select { max-width: 100%; }
 
 /* materialità */
 .erp-mat { align-items: start; }
-.erp-matrix { display: block; width: 100%; max-width: 520px; height: auto; margin: 0 auto 6px; }
+.erp-matrix { display: block; width: 100%; max-width: 520px; height: auto; margin: 0 auto 8px; }
 .erp-mz { fill: var(--accent-soft); opacity: .55; }
 .erp-grid { stroke: var(--grid, var(--line)); stroke-width: 1; }
 .erp-thr { stroke: var(--accent); stroke-width: 1.4; stroke-dasharray: 5 4; }
@@ -108,10 +108,10 @@ label.btn { position: relative; }
 .erp-ax { fill: var(--ink-2); font-size: 11px; font-weight: 600; }
 .erp-pt { stroke: var(--surface); stroke-width: 1.2; opacity: .8; }
 .erp-pt-m { stroke: var(--ink); stroke-width: 1.4; }
-.erp-pl { fill: var(--ink); font-size: 10.5px; font-weight: 700; }
+.erp-pl { fill: var(--ink); font-size: 10.5px; font-weight: 600; }
 .erp-mlist { margin-top: 8px; }
-.erp-topics { list-style: none; margin: 0 0 10px; padding: 0; display: grid; gap: 6px; }
-.erp-topics li { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 6px 8px; border-radius: var(--r-sm); font-size: 13px; color: var(--ink-2); }
+.erp-topics { list-style: none; margin: 0 0 8px; padding: 0; display: grid; gap: 8px; }
+.erp-topics li { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 8px 8px; border-radius: var(--r-sm); font-size: 13px; color: var(--ink-2); }
 .erp-topics li.on { background: var(--accent-soft); color: var(--ink); }
 .erp-topics li b { flex: 1 1 180px; min-width: 0; }
 
@@ -121,13 +121,13 @@ label.btn { position: relative; }
   .erp-steps { grid-template-columns: minmax(0, 1fr); }
 }
 @media (max-width: 720px) {
-  .erp-rings { grid-template-columns: minmax(0, 1fr); padding: 12px; }
-  .erp-dp { grid-template-columns: minmax(0, 1fr) auto; padding: 9px 12px; }
+  .erp-rings { grid-template-columns: minmax(0, 1fr); padding: 16px; }
+  .erp-dp { grid-template-columns: minmax(0, 1fr) auto; padding: 8px 16px; }
   .erp-dp-l { grid-column: 1 / -1; }
   .erp-dp-a { grid-column: 1 / -1; justify-content: flex-start; }
   .erp-qi-f { grid-template-columns: minmax(0, 1fr); }
   .erp-kv { grid-template-columns: minmax(0, 1fr); }
-  .erp-kv dd { margin-bottom: 6px; }
+  .erp-kv dd { margin-bottom: 8px; }
   .erp-edit { margin-left: 0; }
 }
 @media print {

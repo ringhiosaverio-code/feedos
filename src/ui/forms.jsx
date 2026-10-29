@@ -19,7 +19,7 @@ export function FieldInput({ f, value, onChange, d }) {
   if (f.type === 'number') return <NumInput value={value ?? null} onChange={onChange} decimals={f.decimals ?? 2} />;
   if (f.type === 'date') return <input type="date" className="input" value={value || ''} onChange={e => onChange(e.target.value)} />;
   if (f.type === 'month') return <input type="month" className="input" value={value || ''} onChange={e => onChange(e.target.value)} />;
-  if (f.type === 'bool') return <label className="row small" style={{ gap: 6, minHeight: 34 }}><input type="checkbox" checked={value !== false} onChange={e => onChange(e.target.checked)} /> sì</label>;
+  if (f.type === 'bool') return <label className="row small" style={{ gap: 8, minHeight: 34 }}><input type="checkbox" checked={value !== false} onChange={e => onChange(e.target.checked)} /> sì</label>;
   if (f.type === 'enum') return <Select value={value ?? ''} onChange={onChange} options={[{ id: '', label: '—' }, ...f.options.map(o => ({ id: o, label: o }))]} />;
   if (f.type === 'ref') {
     const rows = [...(d?.[f.ref] || [])].sort((a, b) => String(recLabel(f.ref, a)).localeCompare(String(recLabel(f.ref, b)), 'it'));
@@ -34,7 +34,7 @@ export function EntityForm({ coll, rec, d, onSave, onCancel, saveLabel = 'Salva'
   const save = () => { if (F.validate()) onSave(F.v); };
   const err = k => F.errors.find(e => e.field === k)?.msg;
   return (
-    <form className="stack" style={{ gap: 12 }} onSubmit={e => { e.preventDefault(); save(); }}>
+    <form className="stack" style={{ gap: 16 }} onSubmit={e => { e.preventDefault(); save(); }}>
       <div className="form">
         {(FIELDS[coll] || []).map(f => (
           <Field key={f.key} label={`${f.label}${f.required ? ' *' : ''}`} hint={err(f.key) ? <span style={{ color: 'var(--crit-ink)' }}>{err(f.key)}</span> : ''}>

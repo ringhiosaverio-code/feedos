@@ -170,7 +170,7 @@ function Piano({ d }) {
           ]} />
         </Panel>
         <Panel title="Aggiungi al piano" sub="La linea proposta è quella abituale del prodotto">
-          <div className="stack" style={{ gap: 12 }}>
+          <div className="stack" style={{ gap: 16 }}>
             <Field label="Settimana"><Select value={np.week} onChange={v => setNp(x => ({ ...x, week: v }))} options={weeks.map(w => ({ id: w, label: 'dal ' + dateIt(w) }))} /></Field>
             <Field label="Prodotto"><Select value={np.productId} onChange={v => setNp(x => ({ ...x, productId: v }))} options={d.products.map(p => ({ id: p.id, label: p.name }))} /></Field>
             <Field label="Tonnellate"><NumInput value={np.tonnes} onChange={v => setNp(x => ({ ...x, tonnes: v || 0 }))} decimals={0} /></Field>
@@ -240,7 +240,7 @@ function NuovaProduzione({ d }) {
   return (
     <Panel title="Nuova registrazione di produzione" sub="Le materie prime si scaricano dai lotti accettati più vecchi (FIFO) secondo la formula approvata; il lotto nasce «in attesa» del rilascio" id="prod-new"
       actions={<Btn small kind="ghost" icon={LuX} title="Chiudi" onClick={() => go('produzione', 'registro')} />}>
-      <div className="stack" style={{ gap: 14 }}>
+      <div className="stack" style={{ gap: 16 }}>
         <div className="form">
           <Field label="Data"><input type="date" className="input" value={f.date} max={today} onChange={e => set({ date: e.target.value })} /></Field>
           <Field label="Prodotto"><Select value={f.productId} onChange={v => set({ productId: v, lineId: I.prod[v]?.lineId || f.lineId })} options={d.products.map(p => ({ id: p.id, label: p.name }))} id="run-prod" /></Field>
@@ -255,7 +255,7 @@ function NuovaProduzione({ d }) {
           <Field label="Scarti t"><NumInput value={f.waste} onChange={v => set({ waste: v || 0 })} decimals={2} /></Field>
         </div>
         {form && <p className="small muted">Formula {form.code} versione {form.version}: {form.lines.length} materie prime, {nf(sum(form.lines, l => l.kg) * (f.tonnes || 0) / 1000, 1)} t da scaricare. Se lasci vuoti ore ed energia, FeedOS usa i valori tipici della linea (da correggere con le letture reali).</p>}
-        {err && <div className="note crit"><b>{err.text}</b>{err.list && <ul style={{ margin: '6px 0 0', paddingLeft: 18 }}>{err.list.map(s => <li key={s.ing}>{I.ing[s.ing]?.name}: mancano {nf(s.kg / 1000, 2)} t</li>)}</ul>}</div>}
+        {err && <div className="note crit"><b>{err.text}</b>{err.list && <ul style={{ margin: '8px 0 0', paddingLeft: 16 }}>{err.list.map(s => <li key={s.ing}>{I.ing[s.ing]?.name}: mancano {nf(s.kg / 1000, 2)} t</li>)}</ul>}</div>}
         <div className="row"><Btn kind="primary" icon={LuCheck} onClick={save}>Registra e crea il lotto</Btn><Btn kind="ghost" onClick={() => go('produzione', 'registro')}>Annulla</Btn></div>
       </div>
     </Panel>
@@ -316,7 +316,7 @@ function Energia({ d, sel, sigs }) {
             refs={[{ y: cur.base, label: 'riferimento', kind: 'muted' }, { y: cur.base * 1.07, label: '+7%', kind: 'crit' }]} ariaLabel={`Elettricità per tonnellata della ${l.name}`} />
         </Panel>
         <Panel title="Lettura" sub={`${nf(cur.tYear)} t prodotte in 12 mesi`}>
-          <div className="stack" style={{ gap: 12 }}>
+          <div className="stack" style={{ gap: 16 }}>
             <Kv items={[['Elettricità', `${nf(cur.cur, 1)} kWh/t (riferimento ${nf(cur.base, 1)})`], ['GPL', `${nf(cur.gplCur, 2)} kg/t`], ['Resa oraria', `${nf(cur.tphCur, 1)} t/h su ${l.capacityTph} nominali`], ['Scarti', `${nf((cur.wasteCur || 0) * 100, 2)}%`], ['Costo energetico', `${nf((cur.cur || 0) * (+en.kwhPrice || 0) + (cur.gplCur || 0) * (+en.gplPrice || 0), 2)} €/t`]]} />
             {cur.drift > 0.07 ? <div className="note crit"><b>Consumo in aumento del {nf(cur.drift * 100, 1)}%.</b> Se continua costa circa {nf(annualCost)} € l’anno in elettricità{compl.length ? `; negli ultimi 45 giorni ${compl.length} reclami riguardano lotti di questa linea (${[...new Set(compl.map(c => c.category.toLowerCase()))].join(', ')})` : ''}. Cause tipiche: trafila usurata, vapore del condizionatore, rulli da regolare.</div>
               : <div className="note good">Consumo in linea con il riferimento.</div>}

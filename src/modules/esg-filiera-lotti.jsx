@@ -7,7 +7,7 @@ import { LuArrowLeft, LuClipboardPaste, LuSave, LuUpload, LuDownload, LuMap, LuP
 import { store, openDrawer } from '../core/store.js';
 import { go } from '../core/router.js';
 import { traceIndex } from '../core/derived.js';
-import { nf, dateIt, monthsIn, endOfMonth, monthLabel, norm, sum } from '../core/util.js';
+import { nf, dateIt, monthsIn, endOfMonth, monthLabel, norm, sum, codeCase } from '../core/util.js';
 import { readFile } from '../core/io.js';
 import { sha256HexSync } from '../core/hash.js';
 import { recall } from '../engine/trace.js';
@@ -128,17 +128,17 @@ export function LottoDettaglio({ d, today, id }) {
           ['Evidenze', <EvidenceCount d={d} type="eudrLots" refId={r.e?.id || r.id} />], r.e?.note ? ['Nota', r.e.note] : null]} />
       </Panel>
       <div className="grid g3 efl-flagcards">
-        <Panel title={`EUDR ${s.eudrOk ? '✓' : '✗'}`} sub="Requisiti del ruolo per il lotto">
+        <Panel title={`EUDR: ${s.eudrOk ? 'requisiti soddisfatti' : 'requisiti mancanti'}`} sub="Requisiti del ruolo per il lotto">
           <ul className="efl-checks">{s.checks.map(c => <li key={c.key}><Check ok={c.ok} required={c.required} /><span>{c.label}<span className="sub">{c.note}</span></span></li>)}</ul>
         </Panel>
-        <Panel title={s.dcf ? 'DCF fisica ✓' : s.dcfMB ? 'DCF in bilancio di massa' : 'DCF ✗'} sub="Senza deforestazione e conversione">
+        <Panel title={s.dcf ? 'DCF fisica' : s.dcfMB ? 'DCF in bilancio di massa' : 'DCF: non dimostrata'} sub="Senza deforestazione e conversione">
           <ul className="efl-checks">
             <li><Check ok={s.dcfChecks.conversionFree} /><span>Senza conversione di ecosistemi<span className="sub">{r.e?.conversionFree === true ? 'dichiarato' : 'non dimostrato'}</span></span></li>
             <li><Check ok={s.dcfChecks.cutoff} /><span>Data limite entro il 31/12/2020<span className="sub">{r.e?.cutoff ? dateIt(r.e.cutoff) : 'non indicata'}</span></span></li>
             <li><Check ok={s.dcf} /><span>Catena a identità preservata o segregata<span className="sub">{r.e?.coc || 'non indicata'}{s.dcfMB ? ' · vale come DCF in bilancio di massa, non fisica' : ''}</span></span></li>
           </ul>
         </Panel>
-        <Panel title={`FEFAC SSG ${s.ssg ? '✓' : '✗'}`} sub="Schema che supera il benchmark">
+        <Panel title={`FEFAC SSG: ${s.ssg ? 'schema riconosciuto' : 'schema non riconosciuto'}`} sub="Schema che supera il benchmark">
           <ul className="efl-checks"><li><Check ok={s.ssg} /><span>{r.e?.scheme && r.e.scheme !== 'nessuno' ? r.e.scheme : 'Nessuno schema'}<span className="sub">{r.e?.ssgBenchmark ? `benchmark SSG ${r.e.ssgBenchmark}` : 'nessun benchmark indicato'}</span></span></li>
             <li><Check ok={s.certValid !== false} required={!!r.e?.certExpiry} /><span>Certificato valido all’arrivo<span className="sub">{r.e?.certNo ? `${r.e.certNo} fino al ${dateIt(r.e.certExpiry)}` : 'nessun certificato'}</span></span></li></ul>
         </Panel>
@@ -172,7 +172,7 @@ function LotEdit({ d, r, today }) {
   const save = () => {
     const upstreamRefs = v.upstream.split(/[\s,;]+/).map(normDdsRef).filter(Boolean);
     const hasRef = !!ref || upstreamRefs.length > 0;
-    const obj = { id: e.id || `eu-${r.id}`, ingLotId: r.id, ingId: r.ingId, supplierId: r.supplierId, ddsRef: ref || null, ddsVerification: v.ddsVerification.trim().toUpperCase() || null, upstreamRefs, country: v.country || null, region: v.region.trim() || null,
+    const obj = { id: e.id || `eu-${r.id}`, ingLotId: r.id, ingId: r.ingId, supplierId: r.supplierId, ddsRef: ref || null, ddsVerification: codeCase(v.ddsVerification.trim()) || null, upstreamRefs, country: v.country || null, region: v.region.trim() || null,
       scheme: v.scheme || null, coc: v.coc || null, cutoff: v.cutoff || null, conversionFree: v.conv === 'si' ? true : v.conv === 'no' ? false : null, ssgBenchmark: v.ssg || null, certNo: v.certNo.trim() || null, certExpiry: v.certExpiry || null,
       mitigation: v.mitigation.trim() || null, directImport: v.directImport, note: v.note.trim() || null, status: v.status !== 'auto' ? v.status : hasRef && v.country ? 'completo' : 'incompleto', updatedAt: today, source: 'inserito a mano' };
     store.batch([{ kind: 'upsertMany', coll: 'eudrLots', key: 'ingLotId', objs: [obj] }], `EUDR: dati del lotto ${r.code}`);

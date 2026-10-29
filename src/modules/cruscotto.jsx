@@ -131,8 +131,8 @@ function Setup({ d }) {
   const pct = Math.round((100 * done) / tot);
   return (
     <Panel title={`Messa in servizio: ${pct}%`} sub="I passi per avere numeri affidabili dai dati dell’impresa · clic per andare al punto" id="kpi-setup">
-      <span className="meter" role="img" aria-label={`${pct}% completato`} style={{ marginBottom: 12 }}><i style={{ width: pct + '%', background: pct >= 80 ? 'var(--good)' : pct >= 50 ? 'var(--warn)' : 'var(--crit)' }} /></span>
-      <div className="grid g3" style={{ gap: 6 }}>
+      <span className="meter" role="img" aria-label={`${pct}% completato`} style={{ marginBottom: 16 }}><i style={{ width: pct + '%', background: pct >= 80 ? 'var(--good)' : pct >= 50 ? 'var(--warn)' : 'var(--crit)' }} /></span>
+      <div className="grid g3" style={{ gap: 8 }}>
         {steps.map(([label, w, ok, link]) => (
           <button key={label} className="dlink" onClick={() => go(link[0], link[1])}>{ok ? <LuCircleCheck aria-hidden="true" style={{ color: 'var(--good)' }} /> : <LuCircle aria-hidden="true" />}<span className={ok ? 'muted' : ''}>{label}</span></button>
         ))}

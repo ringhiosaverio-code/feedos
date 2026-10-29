@@ -136,5 +136,7 @@ export function rng(seed = 1) {
 // ---------- identificativi ----------
 let idc = 0;
 export function uid(prefix = 'x') { idc = (idc + 1) % 1e6; return prefix + '-' + Date.now().toString(36) + '-' + idc.toString(36) + Math.random().toString(36).slice(2, 5); }
+/** Codici (lotti, formule, riferimenti): in maiuscolo perché sono codici, non testo da leggere. */
+export const codeCase = s => String(s ?? '').toUpperCase();
 export function slug(s) { return String(s).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''); }
 export function norm(s) { return String(s ?? '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, ''); }

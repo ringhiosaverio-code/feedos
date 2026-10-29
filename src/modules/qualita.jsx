@@ -182,7 +182,7 @@ function Carte({ d, sel }) {
                 refs={[{ y: 0, label: 'dichiarato', kind: 'muted' }, ...(S ? [{ y: S.ucl, label: 'UCL', kind: 'muted' }, { y: S.lcl, label: 'LCL', kind: 'muted' }] : []), ...(tol ? [{ y: tol.min - decNow, label: 'tolleranza', kind: 'crit' }, { y: tol.max - decNow, label: 'tolleranza', kind: 'crit' }] : [])]}
                 ariaLabel={`Carta di controllo ${par}`} />
             </div>
-            <div className="stack" style={{ gap: 10 }}>
+            <div className="stack" style={{ gap: 8 }}>
               <Kv items={[['Lotti analizzati', rows.length], ['Scarto medio', `${sf(S?.mean, 2)} punti`], ['Variabilità (σ)', `${nf(S?.sd, 2)} punti`], ['Punti fuori controllo', S?.outOfControl ?? '—'], ['Serie di 8 dallo stesso lato', S?.runs ?? '—'], ['Capacità (Cpk)', S?.cpk != null ? nf(S.cpk, 2) : '—'], ['Fuori tolleranza di etichetta', outs.length]]} />
               <div className={`note ${S?.cpk >= 1.33 ? 'good' : S?.cpk >= 1 ? 'maize' : 'crit'}`}>{S?.cpk == null ? 'Capacità non calcolabile.' : S.cpk >= 1.33 ? 'Processo capace: la variabilità sta ampiamente dentro le tolleranze di etichetta.' : S.cpk >= 1 ? 'Processo al limite: ridurre la variabilità (campionamento, analisi NIR delle materie prime, dosaggio).' : 'Processo non capace: una parte dei lotti può uscire dalle tolleranze. Verificare taratura NIR, dosaggio e valori delle materie prime.'}</div>
               <p className="small muted">UCL e LCL si calcolano con l’escursione mobile (σ = MR/1,128); le tolleranze usano il valore dichiarato della formula in vigore.</p>
@@ -281,7 +281,7 @@ function NuovoReclamo({ d }) {
         <Field label="Categoria"><Select value={cat} onChange={setCat} options={['Qualità del pellet', 'Qualità', 'Consegna', 'Etichetta', 'Prestazioni', 'Altro']} /></Field>
         <Field label="Gravità"><Select value={sev} onChange={v => setSev(+v)} options={[{ id: 1, label: '1 · lieve' }, { id: 2, label: '2 · media' }, { id: 3, label: '3 · grave' }]} /></Field>
       </div>
-      <div className="stack" style={{ gap: 12, marginTop: 12 }}>
+      <div className="stack" style={{ gap: 16, marginTop: 16 }}>
         <Field label="Descrizione"><textarea className="input" value={desc} onChange={e => setDesc(e.target.value)} placeholder="Cosa ha segnalato il cliente, con quali quantità e quando" id="rc-desc" /></Field>
         <div className="row"><Btn kind="primary" icon={LuPlus} onClick={save} disabled={!p}>Registra reclamo</Btn></div>
       </div>
@@ -327,8 +327,8 @@ function Richiamo({ d, sel }) {
           <Seg options={[{ id: 'ing', label: 'Lotto di materia prima' }, { id: 'lot', label: 'Lotto di prodotto' }]} value={kind} onChange={k => { setKind(k); setPicked([]); }} label="Tipo di lotto" />
           <div style={{ flex: 1, minWidth: 260 }}><SearchBox value={q} onChange={setQ} placeholder={kind === 'ing' ? 'Codice lotto o materia prima (es. M01, mais)' : 'Codice lotto o prodotto'} id="rc-search" /></div>
         </div>
-        {picked.length > 0 && <div className="row gap-s" style={{ marginTop: 12 }}><span className="small"><b>Lotti scelti:</b></span>{picked.map(id => <button key={id} className="chip pick on" onClick={() => setPicked(p => p.filter(x => x !== id))} title="Togli">{I.ingLot[id]?.code || I.lot[id]?.code} · {I.ingLot[id] ? I.ing[I.ingLot[id].ingId]?.name : I.prod[I.lot[id]?.productId]?.name} ✕</button>)}</div>}
-        <div className="row gap-s" style={{ marginTop: 10 }}>
+        {picked.length > 0 && <div className="row gap-s" style={{ marginTop: 16 }}><span className="small"><b>Lotti scelti:</b></span>{picked.map(id => <button key={id} className="chip pick on" onClick={() => setPicked(p => p.filter(x => x !== id))} title="Togli">{I.ingLot[id]?.code || I.lot[id]?.code} · {I.ingLot[id] ? I.ing[I.ingLot[id].ingId]?.name : I.prod[I.lot[id]?.productId]?.name} <LuX aria-hidden="true" /></button>)}</div>}
+        <div className="row gap-s" style={{ marginTop: 8 }}>
           {!q && kind === 'ing' && <span className="small muted">Suggeriti: lotti con aflatossina B1 ≥ 10 µg/kg</span>}
           {cands.map(c => <button key={c.id} className={`chip outline pick ${picked.includes(c.id) ? 'on' : ''}`} onClick={() => setPicked(p => p.includes(c.id) ? p.filter(x => x !== c.id) : [...p, c.id])} aria-pressed={picked.includes(c.id)}>{c.code} · {c.label}{c.extra ? ' · ' + c.extra : ''}</button>)}
         </div>

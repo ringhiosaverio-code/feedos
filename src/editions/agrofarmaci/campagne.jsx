@@ -31,7 +31,7 @@ export function Campagne({ d, route }) {
         <Kpi label={closed ? `Premi ${closed.name}` : 'Premi maturati'} value={eur(closed ? rbPrev.total : rbCur.total)} foot={closed ? (rbPrev.settled ? `liquidati il ${dateIt(closed.rebatesSettledAt)}` : `da liquidare entro il ${dateIt(closed.settleBy)} · ${nf(rbPrev.n)} clienti`) : `${nf(rbCur.n)} clienti sopra il primo scaglione`} status={closed && !rbPrev.settled ? 'warn' : 'ok'} />
         <Kpi label="Resi sulla campagna" value={pct(rs?.share, 1)} foot={`tetto ${nf((rs?.cap || 0.05) * 100)}% per cliente · ${nf(rs?.over.length || 0)} oltre`} status={rs?.over.length ? 'warn' : 'ok'} />
       </div>
-      <div className="row" style={{ marginBottom: 10 }}><Seg options={VIEWS} value={view} onChange={v => go('commerciale', 'campagne', v)} label="Vista delle campagne" /></div>
+      <div className="row" style={{ marginBottom: 8 }}><Seg options={VIEWS} value={view} onChange={v => go('commerciale', 'campagne', v)} label="Vista delle campagne" /></div>
       {view === 'anticipi' && <Anticipi d={d} cur={cur} prev={prev} ep={ep} today={today} />}
       {view === 'premi' && <Premi closed={closed} rbPrev={rbPrev} cur={cur} rbCur={rbCur} today={today} />}
       {view === 'resi' && <Resi d={d} rs={rs} camp={closed || cur} />}

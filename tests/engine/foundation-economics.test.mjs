@@ -279,9 +279,9 @@ test('resolvePeriod: preset alla data di oggi', () => {
   const c = resolvePeriod({ preset: 'custom', from: '2026-09-30', to: '2026-01-01' }, today);
   assert.deepEqual([c.from, c.to, c.days, c.open, c.key], ['2026-01-01', '2026-09-30', 273, false, '2026-01-01_2026-09-30']);
   assert.equal(c.label, 'gennaio – settembre 2026');
-  assert.equal(resolvePeriod({ preset: 'custom', from: '2026-01-01' }, today).preset, '12m');
-  assert.equal(resolvePeriod({ preset: 'boh' }, today).preset, '12m');
-  assert.equal(resolvePeriod(null, today).days, 365);
+  assert.equal(resolvePeriod({ preset: 'custom', from: '2026-01-01' }, today).preset, 'mese-chiuso');
+  assert.equal(resolvePeriod({ preset: 'boh' }, today).preset, 'mese-chiuso');
+  assert.equal(resolvePeriod(null, today).days, 30, 'di base l’ultimo mese chiuso (settembre)');
   // 29/02
   const L = r('12m', '2028-02-29');
   assert.deepEqual([L.from, L.to, L.days], ['2027-03-02', '2028-02-29', 365]);
@@ -290,7 +290,7 @@ test('resolvePeriod: preset alla data di oggi', () => {
   assert.equal(periodLabel({ from: '2025-10-17', to: '2026-10-16' }), '17/10/2025 – 16/10/2026');
   assert.equal(periodLabel({ from: '2025-10-01', to: '2026-09-30' }), 'ottobre 2025 – settembre 2026');
   assert.equal(PRESETS.length, 7); assert.deepEqual(COMPARES.map(x => x.id), ['prec', 'ap', 'budget', 'nessuno']);
-  assert.deepEqual(DEFAULT_SPEC, { preset: '12m', from: null, to: null, compare: 'prec' });
+  assert.deepEqual(DEFAULT_SPEC, { preset: 'mese-chiuso', from: null, to: null, compare: 'prec' }, 'ultimo mese chiuso contro il mese prima');
 });
 
 test('comparePeriod: «prec» sui mesi interi sposta di mesi, altrimenti di giorni; «ap» con il 29/02 e gli stessi giorni', () => {

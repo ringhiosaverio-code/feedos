@@ -74,7 +74,7 @@ export function ImportWizard({ d }) {
         {STEPS.map((s, i) => <li key={s} className={i === step ? 'on' : i < step ? 'done' : ''}><span>{i + 1}</span>{s}</li>)}
       </ol>
       {step === 0 && (
-        <div className="stack" style={{ gap: 12 }}>
+        <div className="stack" style={{ gap: 16 }}>
           <div className="grid g4" style={{ gap: 8 }}>
             {Object.entries(TYPES).map(([id, t]) => (
               <button key={id} className={`imp-type ${type === id ? 'on' : ''}`} onClick={() => setType(id)} aria-pressed={type === id}><b>{t.label}</b><span className="small muted">{DESC[id]}</span></button>
@@ -87,7 +87,7 @@ export function ImportWizard({ d }) {
         </div>
       )}
       {step === 1 && (
-        <div className="stack" style={{ gap: 12 }}>
+        <div className="stack" style={{ gap: 16 }}>
           <p className="small">{DESC[type]} Colonne riconosciute: {fields.map(f => f.label + (f.required ? ' *' : '')).join(', ')}.</p>
           <div className="row">
             <label className="btn primary"><LuUpload aria-hidden="true" />Scegli il file CSV<input type="file" accept=".csv,text/csv,text/plain" hidden onChange={onFile} /></label>
@@ -96,7 +96,7 @@ export function ImportWizard({ d }) {
         </div>
       )}
       {step === 2 && file && (
-        <div className="stack" style={{ gap: 12 }}>
+        <div className="stack" style={{ gap: 16 }}>
           <p className="small">{file.name}: {nf(file.rows.length)} righe, {file.header.length} colonne. Controlla gli abbinamenti proposti.</p>
           <div className="tw"><table className="t">
             <thead><tr><th>Campo di FeedOS</th><th>Colonna del file</th><th>Abbinamento</th><th>Esempio</th></tr></thead>
@@ -117,7 +117,7 @@ export function ImportWizard({ d }) {
         </div>
       )}
       {step >= 3 && pv && (
-        <div className="stack" style={{ gap: 12 }}>
+        <div className="stack" style={{ gap: 16 }}>
           <div className="row gap-s" style={{ flexWrap: 'wrap' }}>
             {Object.entries(pv.counts).map(([k, n]) => <Chip key={k} kind={STATUS[k].kind}>{nf(n)} {n === 1 ? STATUS[k].label : STATUS[k].plural}</Chip>)}
             <span className="small muted">chiave: {pv.key.map(k => fields.find(f => f.key === k)?.label || k).join(' + ')}</span>
@@ -140,7 +140,7 @@ export function ImportWizard({ d }) {
           {closedRows.length > 0 && (
             <div className="note warn">
               <b>{closedRows.length} righe cadono in mesi chiusi.</b> Importarle cambia numeri già consegnati alla direzione.
-              <label className="row small" style={{ gap: 6, marginTop: 6 }}><input type="checkbox" checked={force} onChange={e => setForce(e.target.checked)} /> Importa anche nei mesi chiusi</label>
+              <label className="row small" style={{ gap: 8, marginTop: 8 }}><input type="checkbox" checked={force} onChange={e => setForce(e.target.checked)} /> Importa anche nei mesi chiusi</label>
               {force && <Field label="Motivo (resta nel registro)"><input className="input" value={note} onChange={e => setNote(e.target.value)} placeholder="Es. fatture di settembre arrivate in ritardo" /></Field>}
             </div>
           )}

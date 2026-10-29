@@ -1,45 +1,45 @@
 /* FeedOS 18 · Elementi condivisi dei pacchetti ESG (fondazione 18): cruscotto a riquadri, selettore dell'esercizio, sottosezioni,
  * provenienza dei numeri, nota metodologica e avvertenza. Prefisso esh-, solo token del tema (chiaro e scuro). */
-.esh-hub { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 12px; margin: 0 0 16px; }
-.esh-card { display: flex; flex-direction: column; gap: 6px; min-width: 0; padding: 12px 14px; background: var(--surface); border: 1px solid var(--line); border-left: 3px solid var(--line-2); border-radius: var(--r); }
+.esh-hub { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 16px; margin: 0 0 16px; }
+.esh-card { display: flex; flex-direction: column; gap: 8px; min-width: 0; padding: 16px 16px; background: var(--surface); border: 1px solid var(--line); border-left: 3px solid var(--line-2); border-radius: var(--r); }
 .esh-card.esh-ok { border-left-color: var(--good); }
 .esh-card.esh-warn { border-left-color: var(--warn); }
 .esh-card.esh-bad { border-left-color: var(--crit); }
-.esh-card-hd { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; min-width: 0; font-size: 13px; color: var(--ink); }
+.esh-card-hd { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 8px; min-width: 0; font-size: 13px; color: var(--ink); }
 .esh-card-hd b { flex: 1 1 9em; min-width: 0; overflow-wrap: break-word; }
 .esh-card-ic { display: inline-flex; flex: none; width: 26px; height: 26px; align-items: center; justify-content: center; border-radius: var(--r-sm); background: var(--accent-soft); color: var(--accent); }
 .esh-card-ic svg { width: 15px; height: 15px; }
-.esh-card-v { font-family: var(--f-display); font-size: 22px; font-weight: 700; line-height: 1.1; color: var(--ink); overflow-wrap: anywhere; }
-.esh-card-v small { margin-left: 4px; font-family: var(--f-sans); font-size: 12px; font-weight: 400; color: var(--muted); }
+.esh-card-v { font-family: var(--f-display); font-size: 22px; font-weight: 600; line-height: 1.1; color: var(--ink); overflow-wrap: anywhere; }
+.esh-card-v small { margin-left: 8px; font-family: var(--f-sans); font-size: 12px; font-weight: 400; color: var(--muted); }
 .esh-card-wip { font-size: 13px; color: var(--muted); }
 .esh-card-sub { margin: 0; font-size: 12px; color: var(--ink-2); overflow-wrap: anywhere; }
-.esh-card-go { margin-top: auto; display: inline-flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 600; color: var(--accent); text-decoration: none; }
+.esh-card-go { margin-top: auto; display: inline-flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 600; color: var(--accent); text-decoration: none; }
 .esh-card-go:hover { text-decoration: underline; }
 .esh-card-go:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 3px; }
 .esh-card-go svg { width: 13px; height: 13px; }
 
-.esh-pbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0 0 12px; color: var(--ink-2); }
+.esh-pbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0 0 16px; color: var(--ink-2); }
 .esh-pbar > svg { width: 16px; height: 16px; color: var(--accent); }
 .esh-pbar-l { font-weight: 600; font-size: 13px; color: var(--ink); }
 .esh-pbar select { max-width: 100%; }
 
-.esh-subnav { display: flex; gap: 6px; max-width: 100%; overflow-x: auto; margin: 0 0 12px; padding: 0 0 2px; scrollbar-width: thin; }
-.esh-subnav button { flex: none; display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); color: var(--ink-2); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
+.esh-subnav { display: flex; gap: 8px; max-width: 100%; overflow-x: auto; margin: 0 0 16px; padding: 0 0 0; scrollbar-width: thin; }
+.esh-subnav button { flex: none; display: inline-flex; align-items: center; gap: 8px; padding: 8px 16px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); color: var(--ink-2); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
 .esh-subnav button:hover { border-color: var(--line-2); color: var(--ink); }
 .esh-subnav button[aria-current] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
 .esh-subnav button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-.esh-badge { min-width: 18px; padding: 0 5px; border-radius: 999px; background: var(--surface-3); color: var(--ink); font-size: 11px; text-align: center; }
+.esh-badge { min-width: 18px; padding: 0 8px; border-radius: 999px; background: var(--surface-3); color: var(--ink); font-size: 11px; text-align: center; }
 .esh-subnav button[aria-current] .esh-badge { background: var(--accent-2); color: var(--accent-ink); }
 
 .esh-lin, .esh-method { font-size: 13px; color: var(--ink-2); }
-.esh-lin > summary, .esh-method > summary { display: inline-flex; align-items: center; gap: 5px; cursor: pointer; color: var(--accent); font-weight: 600; list-style: none; }
+.esh-lin > summary, .esh-method > summary { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; color: var(--accent); font-weight: 600; list-style: none; }
 .esh-lin > summary::-webkit-details-marker, .esh-method > summary::-webkit-details-marker { display: none; }
 .esh-lin > summary svg, .esh-method > summary svg { width: 14px; height: 14px; }
-.esh-lin[open] > .kv { margin-top: 8px; padding: 10px 12px; border: 1px solid var(--line); border-radius: var(--r-sm); background: var(--surface-2); }
-.esh-method[open] { padding: 0 0 4px; }
+.esh-lin[open] > .kv { margin-top: 8px; padding: 8px 16px; border: 1px solid var(--line); border-radius: var(--r-sm); background: var(--surface-2); }
+.esh-method[open] { padding: 0 0 8px; }
 .esh-method p { margin: 8px 0 0; max-width: 78ch; }
-.esh-ev { gap: 4px; color: var(--accent); font-weight: 600; }
+.esh-ev { gap: 8px; color: var(--accent); font-weight: 600; }
 .esh-ev svg { width: 13px; height: 13px; }
 .esh-ev.esh-ev0 { color: var(--muted); font-weight: 400; }
-.esh-disc { margin: 12px 0 0; font-size: 12px; color: var(--muted); }
+.esh-disc { margin: 16px 0 0; font-size: 12px; color: var(--muted); }
 @media print { .esh-hub, .esh-pbar, .esh-subnav { display: none; } .esh-lin, .esh-method { color: var(--ink); } }
