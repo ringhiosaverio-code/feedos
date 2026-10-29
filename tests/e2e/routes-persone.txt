@@ -1,1 +1,7 @@
 # FeedOS 18 · Persone e sicurezza: percorsi in più per tests/e2e/smoke.py, uno per riga (es. esg.persone.sezione). Le righe con # sono commenti.
+esg.persone.panoramica
+esg.persone.organico
+esg.persone.sicurezza
+esg.persone.formazione
+esg.persone.parita
+esg.persone.ot23
