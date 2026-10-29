@@ -1,2 +1,83 @@
-/* FeedOS 18 · Rischi climatici (pacchetto WP8): stile del pacchetto, solo classi con il prefisso proprio e token del tema (var(--…)).
+/* FeedOS 18 · Rischi climatici (pacchetto WP8): stile del pacchetto, solo classi con il prefisso eri- e token del tema (var(--…)).
+ * Regole di progetto: spaziature in multipli di 8 px, niente gradienti né ombre colorate, pesi 400 e 600, nessun maiuscolo.
  * Il file viene incluso da build.mjs senza import. */
+
+.eri { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; }
+.eri > * { min-width: 0; }
+.eri-demo { margin: 0; padding: 8px 16px; border: 1px solid var(--line); border-radius: var(--r); color: var(--ink-2); }
+.eri-na { color: var(--muted); }
+.eri-empty { padding: 16px; color: var(--muted); }
+.eri-h2 { font-size: 16px; font-weight: 600; margin: 24px 0 8px; }
+.eri-steps { margin: 0 0 8px; padding-left: 24px; display: grid; gap: 8px; }
+.eri-pre { white-space: pre-wrap; margin: 0; padding: 16px; background: var(--surface-2); border-radius: var(--r); font-size: 12px; }
+.eri-area { width: 100%; min-height: 120px; font-family: var(--f-mono); font-size: 12px; }
+.eri-form { padding: 16px; border-top: 1px solid var(--line); display: grid; gap: 8px; }
+.eri-form-x { display: flex; justify-content: flex-end; }
+.eri-toolbar { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+.eri-chips { flex-wrap: wrap; gap: 8px; }
+.eri-scroll { overflow-x: auto; max-width: 100%; }
+
+/* banner di stato della copertura */
+.eri-banner { display: flex; gap: 16px; align-items: flex-start; padding: 16px; border: 1px solid var(--line); border-left-width: 4px; border-radius: var(--r); background: var(--surface); }
+.eri-banner.ok { border-left-color: var(--good); }
+.eri-banner.bad { border-left-color: var(--crit); }
+.eri-banner svg { flex: 0 0 auto; width: 24px; height: 24px; margin-top: 0; }
+.eri-banner p { margin: 8px 0 0; }
+
+/* livello 0–4: quattro segmenti neutri */
+.eri-lv { display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; }
+.eri-lv-bars { display: inline-flex; }
+.eri-lv-bars i { display: inline-block; width: 8px; height: 12px; border: 1px solid var(--line); background: var(--surface); }
+.eri-lv-bars i.on { background: var(--ink-2); border-color: var(--ink-2); }
+.eri-lv-n { font-weight: 600; }
+.eri-lv-t { font-size: 12px; color: var(--ink-2); }
+
+/* matrice dei pericoli per sito */
+.eri-hz { border-collapse: collapse; width: 100%; font-size: 13px; }
+.eri-hz th, .eri-hz td { padding: 8px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: middle; white-space: nowrap; }
+.eri-hz thead th { font-weight: 600; color: var(--ink-2); font-size: 12px; }
+.eri-hz tbody th { font-weight: 400; }
+.eri-hz tbody th .sub { display: block; margin-top: 8px; }
+.eri-cell { display: inline-flex; min-width: 96px; min-height: 40px; padding: 0; background: transparent; border: 0; color: inherit; cursor: pointer; align-items: center; }
+.eri-cell:hover .eri-lv-bars i { border-color: var(--ink-2); }
+.eri-cell:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* mappa dei siti senza sfondo geografico */
+.eri-map { display: block; width: 100%; max-width: 640px; height: auto; border-radius: var(--r); background: var(--surface-2); }
+.eri-map line { stroke: var(--line); stroke-width: 1; }
+.eri-map-main { fill: var(--ink); }
+.eri-map-site { fill: var(--s1); }
+.eri-map-ext { fill: var(--surface); stroke: var(--ink); stroke-width: 1.5; }
+.eri-map-cu { fill: var(--muted); }
+.eri-map-lb { font-size: 12px; fill: var(--ink-2); }
+.eri-map-scale line { stroke: var(--ink-2); stroke-width: 1.5; }
+.eri-map-scale text { font-size: 12px; fill: var(--ink-2); }
+
+.eri-legend { margin: 8px 0 0; padding-left: 24px; display: grid; gap: 8px; font-size: 13px; }
+
+/* riquadri degli shock di prezzo */
+.eri-shocks { display: grid; grid-template-columns: repeat(auto-fit, minmax(192px, 1fr)); gap: 16px; }
+.eri-shock { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.eri-shock > span:first-child { flex: 1 1 128px; }
+
+/* matrice probabilità × impatto (5 × 5) */
+.eri-mx { display: grid; grid-template-columns: 64px repeat(5, minmax(40px, 1fr)); gap: 8px; align-items: stretch; max-width: 560px; }
+.eri-mx-corner, .eri-mx-h { display: flex; align-items: center; justify-content: center; font-size: 12px; color: var(--ink-2); text-align: center; }
+.eri-mx-c { min-height: 64px; padding: 8px; border: 1px solid var(--line); border-radius: var(--r); display: flex; flex-wrap: wrap; align-content: flex-start; gap: 8px; }
+.eri-mx-lo { background: var(--surface); }
+.eri-mx-mid { background: var(--surface-2); }
+.eri-mx-hi { background: var(--surface-3); border-color: var(--ink-2); }
+.eri-mx-b { min-width: 40px; padding: 8px; border: 1px solid var(--line); border-radius: var(--r); background: var(--surface); color: var(--ink); font-size: 12px; cursor: pointer; }
+.eri-mx-b:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* scheda stampabile per la banca */
+.eri-print { width: 100%; border-collapse: collapse; font-size: 12px; margin-bottom: 8px; }
+.eri-print th, .eri-print td { padding: 8px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+.eri-print th { font-weight: 600; }
+.eri-print th, .eri-print td { overflow-wrap: break-word; }
+.eri-nw { white-space: nowrap; }
+
+@media (max-width: 600px) {
+  .eri-banner { flex-direction: column; gap: 8px; }
+  .eri-mx { grid-template-columns: 56px repeat(5, minmax(40px, 1fr)); gap: 8px; }
+}

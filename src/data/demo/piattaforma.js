@@ -3,6 +3,8 @@
  * {add?: {raccolta: righe}, update?: {raccolta: [{id, ...campi nuovi}]}, settings?: {chiave: valore}} che aggiunge soltanto.
  * Obiettivi di settore per un mangimificio di medie dimensioni; nessuna anomalia è inserita nei dati. */
 const TARGETS = {
+  'esg-copertura-ass': { target: 1, warn: 0.9 },
+  'esg-rischio-siti': { target: 0, warn: 1 },
   oee: { target: 0.75, warn: 0.65 },
   'utilizzo-linee': { target: 0.85, warn: 0.75 },
   'kwh-t': { target: 22, warn: 24 },
