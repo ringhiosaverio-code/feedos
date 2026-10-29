@@ -302,3 +302,23 @@ Stress test: a price shock per material (or energy) run with the same engine as 
 
 Transition: internal carbon cost on Scope 1 + 2 at the price in the transition plan, ETS2 cost at the internal price (from the Climate tab), purchases subject to CBAM against the 50 t threshold.`,
 };
+
+/** Scheda in Markdown: la sezione del report (indicatori, tabella di transizione, testo), per la banca e per il VSME. */
+export function rischiMarkdown(d, P, today = esgToday(d)) {
+  const sec = rischiReportSection(d, { today }, P, null);
+  if (!sec) return `# Rischi climatici\n\nNessun dato registrato per il periodo ${P?.label || ''}.\n`;
+  const val = k => {
+    if (!fin(k.value)) return 'n.d.';
+    return k.scale === 100 ? fmtNum(+k.value * 100, '%', 'it', k.decimals ?? 0) : fmtNum(+k.value, k.unit || '', 'it', k.decimals);
+  };
+  const out = [`# ${sec.title}`, '', `Periodo: ${P?.label || ''} · emesso il ${today}`, '', '## Indicatori', ''];
+  for (const k of sec.kpis) out.push(`- ${k.label}: ${val(k)}${k.note ? ` (${k.note})` : ''}`);
+  if (sec.table && sec.table.rows.length) {
+    const cols = sec.table.cols;
+    out.push('', '## Rischi di transizione prioritari', '', `| ${cols.map(c => c.label).join(' | ')} |`, `| ${cols.map(() => '---').join(' | ')} |`);
+    for (const r of sec.table.rows) out.push(`| ${cols.map(c => String(r[c.key] ?? '—').replace(/\|/g, '/')).join(' | ')} |`);
+  }
+  out.push('', '## Note', '', ...sec.narrative.map(x => `- ${x}`), '');
+  return out.join('\n');
+}
+const fin = v => v != null && v !== '' && typeof v !== 'boolean' && Number.isFinite(+v);

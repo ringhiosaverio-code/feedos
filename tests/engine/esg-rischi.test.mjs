@@ -222,6 +222,15 @@ test('DifesaOS: il demo ha siti, pericoli e rischi del settore agrofarmaci, senz
   assert.ok(Number.isFinite(R.sourcingExposure(A2, currentPeriod(A2)).value));
 });
 
+test('scheda in Markdown: indicatori e tabella di transizione dalla sezione del report, senza NaN né undefined', () => {
+  const md = R.rischiMarkdown(D, P, today);
+  assert.match(md, /^# Rischi climatici/);
+  assert.match(md, /Copertura catastrofale: 100%/);
+  assert.match(md, /\| Rischio di transizione \| Orizzonte \|/);
+  assert.ok(!/NaN|undefined/.test(md));
+  assert.match(R.rischiMarkdown(emptyData(), P, today), /Nessun dato registrato/);
+});
+
 test('KPI, sezione del report e riepilogo: forme sul demo e sull’archivio vuoto', () => {
   for (const d of [D, emptyData(), starterData()]) {
     const c = makeCtx(d, today), Pd = currentPeriod(d);
