@@ -131,7 +131,7 @@ export function Columns({ cols, keys, height = 220, unit = '', decimals = 0, ari
   const tickDec = dec(ticks[1] - ticks[0]);
   const padL = Math.max(34, 8 + 7 * nf(hi, tickDec).length), padR = 10, padT = 12, padB = 24;
   const n = cols.length;
-  const slot = (W - padL - padR) / Math.max(1, n);
+  const slot = Math.max(0, W - padL - padR) / Math.max(1, n); // larghezza non negativa anche prima della misura
   const bw = Math.min(24, slot * 0.7);
   const y = v => padT + (hi - v) / (hi || 1) * (height - padT - padB);
   const ev = every || Math.max(1, Math.ceil(n / Math.max(2, Math.floor((W - padL) / 56))));
