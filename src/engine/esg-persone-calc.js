@@ -228,9 +228,9 @@ export function safetyRates(d, P) {
       byCause: group(causeOf), byArea: group(i => lineName(i.lineId) || (typeof i.area === 'string' && i.area.trim() ? i.area.trim() : 'non indicato')),
       unknownRecordable: work.filter(i => i.recordable == null || !fin(i.lostDays)).length,
       formulas: {
-        ifr: `${lti.length} infortuni con assenza × 1.000.000 ÷ ${h == null ? 'ore n.d.' : nf(h, 0) + ' h'}`,
+        ifr: `${lti.length} ${lti.length === 1 ? 'infortunio' : 'infortuni'} con assenza × 1.000.000 ÷ ${h == null ? 'ore n.d.' : nf(h, 0) + ' h'}`,
         igr: `(${lostDays} giornate perse${convDays ? ` + ${convDays} convenzionali` : ''}) × 1.000 ÷ ${h == null ? 'ore n.d.' : nf(h, 0) + ' h'}`,
-        b9: `${rec.length} infortuni registrabili × 200.000 ÷ ${h == null ? 'ore n.d.' : nf(h, 0) + ' h'}`,
+        b9: `${rec.length} ${rec.length === 1 ? 'infortunio registrabile' : 'infortuni registrabili'} × 200.000 ÷ ${h == null ? 'ore n.d.' : nf(h, 0) + ' h'}`,
       },
       quality: h == null ? 'mancante' : H.quality === 'stimato' ? 'stimato' : 'calcolato',
     };

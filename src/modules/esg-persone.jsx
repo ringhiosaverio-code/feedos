@@ -82,7 +82,7 @@ function Panoramica({ d, P, S, today }) {
   const { wf: w, wfPrev, rates: r, training: t, pay } = S;
   const ifD = pctChange(ms[1]?.if12, ms[0]?.if12);
   const trD = pctChange(tr12[1], tr12[0]);
-  const rows = Object.entries(dps).map(([id, x]) => ({ id, ...x, label: VS_DP[id]?.label?.it || id, text: fmtValue(x.value, x.unit, 'it', VS_DP[id]) ?? '—' }));
+  const rows = Object.entries(dps).map(([id, x]) => ({ id, ...x, label: VS_DP[id]?.label?.it || id, text: String(fmtValue(x.value, x.unit, 'it', VS_DP[id]) ?? '—').replace(/^1 persone$/, '1 persona') }));
   const company = d.settings?.company?.short || d.settings?.company?.name || '';
   const md = lang => downloadText(`persone-sicurezza-${P.key}-${lang}`, 'md', personeMarkdown(S, lang, company), 'text/markdown;charset=utf-8');
   const json = () => downloadText(`persone-datapoint-${P.key}`, 'json', JSON.stringify({ meta: { package: 'persone', period: S.period, packVersion: S.pack.version, validAsOf: S.pack.validAsOf, generatedOn: today, note: 'Dati pseudonimi e aggregati; gruppi con meno di 5 persone non inclusi.' }, datapoints: dps }, null, 2), 'application/json');

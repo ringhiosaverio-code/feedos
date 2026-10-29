@@ -34,25 +34,29 @@ export function Sicurezza({ d, P, S, today, arg }) {
   return (
     <>
       <div className="kpis">
-        <Kpi label="Indice di frequenza" value={numTxt(r?.ifr)} unit="per 10⁶ h" foot={r ? `${r.lti} infortuni con assenza · ${P.short}` : ''} cmp={r && rp?.ifr != null ? { value: rp.ifr, cur: r.ifr, kind: 'ratio', good: 'down', decimals: 1, label: 'anno prima' } : undefined} />
+        <Kpi label="Indice di frequenza" value={numTxt(r?.ifr)} unit="per 10⁶ h" foot={r ? `${r.lti} ${r.lti === 1 ? 'infortunio' : 'infortuni'} con assenza · ${P.short}` : ''} cmp={r && rp?.ifr != null ? { value: rp.ifr, cur: r.ifr, kind: 'ratio', good: 'down', decimals: 1, label: 'anno prima' } : undefined} />
         <Kpi label="Indice di gravità" value={numTxt(r?.igr, 2)} unit="per 10³ h" foot={r ? `${r.lostDays} giornate perse${r.convDays ? ` + ${r.convDays} convenzionali` : ''}` : ''} cmp={r && rp?.igr != null ? { value: rp.igr, cur: r.igr, kind: 'ratio', good: 'down', decimals: 2, label: 'anno prima' } : undefined} />
-        <Kpi label="Infortuni registrabili (VS B9)" value={numTxt(r?.b9)} unit="per 200.000 h" foot={r ? `${r.recordable} registrabili · ${r.fatalities ? `${r.fatalities} decessi` : 'nessun decesso'}` : ''} cmp={r && rp?.b9 != null ? { value: rp.b9, cur: r.b9, kind: 'ratio', good: 'down', decimals: 1, label: 'anno prima' } : undefined} />
+        <Kpi label="Infortuni registrabili (VS B9)" value={numTxt(r?.b9)} unit="per 200.000 h" foot={r ? `${r.recordable} ${r.recordable === 1 ? 'registrabile' : 'registrabili'} · ${r.fatalities ? `${r.fatalities} decessi` : 'nessun decesso'}` : ''} cmp={r && rp?.b9 != null ? { value: rp.b9, cur: r.b9, kind: 'ratio', good: 'down', decimals: 1, label: 'anno prima' } : undefined} />
         <Kpi label="Quasi infortuni segnalati" value={r ? nf(r.nearMiss) : '—'} foot={r?.nearMissRatio != null ? `${nf(r.nearMissRatio, 1)} per infortunio registrabile` : 'nel periodo'} />
         <Kpi label={`Ore lavorate a ${monthLabel(lastClosed, false)}`} value={cur?.hours != null ? nf(cur.hours) : '—'} unit="h" delta={hoursD} deltaGood={null} foot={hoursD != null ? vsMonth(prevMonth(lastClosed)) : cur?.src === 'mancante' ? 'mese senza ore' : ''} />
         <Kpi label="Indice di frequenza, 12 mesi" value={numTxt(cur?.if12)} unit="per 10⁶ h" delta={ifD} deltaGood={ifD == null ? null : ifD <= 0} foot={ifD != null ? vsMonth(prevMonth(lastClosed)) : ''} />
       </div>
       <Panel title="Come si calcolano gli indici" sub={`Esercizio ${P.label}: ${r?.hours != null ? `${nf(r.hours)} ore lavorate` : 'ore non disponibili'}`}
         actions={r ? <span className="epe-src small">ore <QualityChip q={r.hoursQuality} /></span> : null} flush>
-        {r ? <Table rows={[
-          { id: 'if', name: 'Indice di frequenza (IF)', value: numTxt(r.ifr), unit: 'per 10⁶ h', formula: r.formulas.ifr, item: items.if },
-          { id: 'ig', name: 'Indice di gravità (IG)', value: numTxt(r.igr, 2), unit: 'per 10³ h', formula: r.formulas.igr, item: items.ig },
-          { id: 'b9', name: 'Tasso del VS B9', value: numTxt(r.b9), unit: 'per 200.000 h', formula: r.formulas.b9, item: items.b9 },
-        ]} rowKey={x => x.id} pageSize={5} cols={[
-          { key: 'name', label: 'Indice', nosort: true },
-          { key: 'value', label: 'Valore', align: 'r', nosort: true, render: x => <span className="epe-num">{x.value} <span className="xs muted">{x.unit}</span></span> },
-          { key: 'formula', label: 'Formula con i numeri del periodo', nosort: true, render: x => <span className="epe-wrap">{x.formula}</span> },
-          { key: 'src', label: 'Fonte', nosort: true, render: x => <PackSource item={x.item} validAsOf={S.pack.validAsOf} /> },
-        ]} /> : <Empty title="Nessun dato del periodo">Inserire le ore lavorate e gli eventi del registro.</Empty>}
+        {r ? <ul className="epe-rates">
+          {[
+            { id: 'if', name: 'Indice di frequenza (IF)', value: numTxt(r.ifr), unit: 'per 10⁶ h', formula: r.formulas.ifr, item: items.if },
+            { id: 'ig', name: 'Indice di gravità (IG)', value: numTxt(r.igr, 2), unit: 'per 10³ h', formula: r.formulas.igr, item: items.ig },
+            { id: 'b9', name: 'Tasso del VS B9', value: numTxt(r.b9), unit: 'per 200.000 h', formula: r.formulas.b9, item: items.b9 },
+          ].map(x => (
+            <li key={x.id}>
+              <span className="epe-rates-n">{x.name}</span>
+              <span className="epe-rates-v">{x.value} <small>{x.unit}</small></span>
+              <span className="epe-rates-f">{x.formula}</span>
+              <PackSource item={x.item} validAsOf={S.pack.validAsOf} />
+            </li>
+          ))}
+        </ul> : <Empty title="Nessun dato del periodo">Inserire le ore lavorate e gli eventi del registro.</Empty>}
         {r?.hoursEstimated?.length ? <p className="note warn small epe-m16">Ore stimate per {r.hoursEstimated.length} {r.hoursEstimated.length === 1 ? 'mese' : 'mesi'} ({r.hoursEstimated.map(m => monthLabel(m)).join(', ')}): ETP della fotografia × {nf(r.perFte)} h ÷ 12. Il dato risulta «stimato» nel VS. <StatusChip status={items.fb?.status} /></p> : null}
         {r?.inItinere ? <p className="small muted epe-m16">{r.inItinere === 1 ? 'Un infortunio in itinere è' : `${r.inItinere} infortuni in itinere sono`} nel registro ma fuori dagli indici.</p> : null}
         <div className="epe-m16 small">
@@ -61,11 +65,19 @@ export function Sicurezza({ d, P, S, today, arg }) {
             : <span className="muted">Nessun riferimento di settore nel pacchetto per questo settore: il confronto utile è con gli esercizi precedenti.</span>}
         </div>
       </Panel>
-      <div className="grid g2">
-        <Panel title="Indice di frequenza sui 12 mesi" sub="Valore a fine mese sugli ultimi 12 mesi">
-          <LineChart series={[{ key: 'if', label: 'IF 12 mesi', color: 'var(--s1)', values: series.map(x => x.if12) }]} labels={series.map(x => monthLabel(x.month))} height={200} unit="" decimals={1}
-            refs={band ? [{ y: band.hi, label: `settore ${band.hi}`, kind: 'muted' }] : []} ariaLabel="Indice di frequenza sui 12 mesi" />
-        </Panel>
+      <div className="grid g2 epe-top">
+        <div className="stack">
+          <Panel title="Indice di frequenza sui 12 mesi" sub="Valore a fine mese sugli ultimi 12 mesi">
+            <LineChart series={[{ key: 'if', label: 'IF 12 mesi', color: 'var(--s1)', values: series.map(x => x.if12) }]} labels={series.map(x => monthLabel(x.month))} height={200} unit="" decimals={1}
+              refs={band ? [{ y: band.hi, label: `settore ${band.hi}`, kind: 'muted' }] : []} ariaLabel="Indice di frequenza sui 12 mesi" />
+          </Panel>
+          <Panel title="Ore lavorate ed eventi per mese" sub="Ore dei dipendenti; i mesi senza registrazione sono stimati">
+            <Columns cols={series.slice(1).map(x => ({ label: monthLabel(x.month), parts: [{ key: x.src === 'stimato' ? 'est' : 'mis', value: x.hours || 0 }] }))}
+              keys={[{ key: 'mis', label: 'Ore registrate', color: 'var(--s1)' }, { key: 'est', label: 'Ore stimate', color: 'var(--s4)' }]} height={180} unit="h" ariaLabel="Ore lavorate per mese" />
+            <Legend items={[{ label: 'ore registrate', color: 'var(--s1)' }, { label: 'ore stimate', color: 'var(--s4)' }]} />
+            <p className="small muted epe-note">Infortuni nei 12 mesi: {series.slice(1).reduce((a, x) => a + x.injuries, 0)} (di cui con assenza {series.slice(1).reduce((a, x) => a + x.lti, 0)}); quasi infortuni: {series.slice(1).reduce((a, x) => a + x.nearMiss, 0)}.</p>
+          </Panel>
+        </div>
         <HoursEditor d={d} months={months} P={P} />
       </div>
       <div className="grid g2">
@@ -138,7 +150,7 @@ function HoursEditor({ d, months, P }) {
           <tbody>
             {months.map(m => (
               <tr key={m}>
-                <td>{monthLabel(m, false)}</td>
+                <td className="epe-num">{monthLabel(m)}</td>
                 <td className="r"><NumInput slim value={val(m, 'hours')} decimals={0} min={0} onChange={v => set(m, 'hours', v)} ariaLabel={`Ore di ${monthLabel(m, false)}`} /></td>
                 <td className="r"><NumInput slim value={val(m, 'overtime')} decimals={0} min={0} onChange={v => set(m, 'overtime', v)} ariaLabel={`Straordinari di ${monthLabel(m, false)}`} /></td>
                 <td className="r"><NumInput slim value={val(m, 'agencyHours')} decimals={0} min={0} onChange={v => set(m, 'agencyHours', v)} ariaLabel={`Ore dei somministrati di ${monthLabel(m, false)}`} /></td>

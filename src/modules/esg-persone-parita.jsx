@@ -38,23 +38,17 @@ export function Parita({ d, P, S, today }) {
             <Kpi label={`Categorie oltre il ${nf(thr)}%`} value={nf(pg.flagged.length)} foot={pg.byCategory.some(c => !c.suppressed) ? `su ${pg.byCategory.filter(c => !c.suppressed).length} confrontabili` : `nessuna categoria con almeno ${sc} donne e ${sc} uomini`} />
           </div>
           {signsDiffer && <p className="note small epe-note">Media e mediana vanno in direzioni diverse: dipende dalla composizione (per esempio più donne tra gli impiegati e più uomini tra gli operai e i dirigenti). Il confronto che conta per la valutazione congiunta è dentro la stessa categoria.</p>}
-          <div className="grid g2">
-            <Panel title="Divario per categoria" sub={`Retribuzione annua lorda riportata al tempo pieno · esercizio ${pg.periodKey}`} flush>
-              <Table rows={pg.byCategory} rowKey={x => x.category} pageSize={10} cols={[
-                { key: 'category', label: 'Categoria', render: x => CATEGORY_LABEL[x.category] || x.category },
-                { key: 'n', label: 'Donne e uomini', nosort: true, render: x => `${x.nF} e ${x.nM}` },
-                { key: 'meanF', label: 'Media donne', align: 'r', render: x => (x.suppressed ? <span className="muted">—</span> : eur(x.meanF)) },
-                { key: 'meanM', label: 'Media uomini', align: 'r', render: x => (x.suppressed ? <span className="muted">—</span> : eur(x.meanM)) },
-                { key: 'meanGap', label: 'Divario medio', align: 'r', render: x => (x.suppressed ? <span className="muted small">{x.note}</span> : <span className={Math.abs(x.meanGap) >= thr / 100 ? 'epe-late' : ''}>{pctTxt(x.meanGap)}</span>) },
-                { key: 'medianGap', label: 'Divario mediano', align: 'r', render: x => (x.suppressed ? '—' : pctTxt(x.medianGap)) },
-              ]} />
-            </Panel>
-            <Panel title="Donne e uomini per quartile di retribuzione" sub="Quattro fasce con lo stesso numero di persone, dalla più bassa alla più alta">
-              {qCols.some(c => c.parts.length) ? <><Columns cols={qCols} keys={[{ key: 'F', label: 'Donne', color: 'var(--s5)' }, { key: 'M', label: 'Uomini', color: 'var(--s1)' }]} height={190} unit="%" ariaLabel="Quota di donne e uomini per quartile" />
-                <Legend items={[{ label: 'Donne', color: 'var(--s5)' }, { label: 'Uomini', color: 'var(--s1)' }]} /></> : <Empty title={`Quartili non mostrati: meno di ${sc} persone per fascia`} />}
-            </Panel>
-          </div>
-          {pg.flag5 && <p className="note warn small">Divario medio di almeno il {nf(thr)}% in {pg.flagged.map(c => (CATEGORY_LABEL[c] || c).toLowerCase()).join(', ')}. {du?.report ? 'Per chi presenta la relazione, se non è giustificato da criteri oggettivi e non è corretto entro sei mesi serve la valutazione congiunta con le rappresentanze.' : 'Sotto i 100 dipendenti la relazione non è obbligatoria: conviene comunque documentare i criteri (livello, anzianità, mansione) che spiegano la differenza.'}</p>}
+          <Panel title="Divario per categoria" sub={`Retribuzione annua lorda riportata al tempo pieno · ${pg.periodKey === P.key ? P.label : `esercizio ${pg.periodKey}`}`} flush>
+            <Table rows={pg.byCategory} rowKey={x => x.category} pageSize={10} cols={[
+              { key: 'category', label: 'Categoria', render: x => CATEGORY_LABEL[x.category] || x.category },
+              { key: 'n', label: 'Donne e uomini', nosort: true, render: x => `${x.nF} e ${x.nM}` },
+              { key: 'meanF', label: 'Media donne', align: 'r', render: x => (x.suppressed ? <span className="muted">—</span> : eur(x.meanF)) },
+              { key: 'meanM', label: 'Media uomini', align: 'r', render: x => (x.suppressed ? <span className="muted">—</span> : eur(x.meanM)) },
+              { key: 'meanGap', label: 'Divario medio', align: 'r', render: x => (x.suppressed ? <span className="muted small">{x.note}</span> : <span className={Math.abs(x.meanGap) >= thr / 100 ? 'epe-late' : ''}>{pctTxt(x.meanGap)}</span>) },
+              { key: 'medianGap', label: 'Divario mediano', align: 'r', render: x => (x.suppressed ? '—' : pctTxt(x.medianGap)) },
+            ]} />
+          </Panel>
+          {pg.flag5 && <p className="note warn small">Divario medio di almeno il {nf(thr)}% nella categoria {pg.flagged.map(c => (CATEGORY_LABEL[c] || c).toLowerCase()).join(', ')}. {du?.report ? 'Per chi presenta la relazione, se non è giustificato da criteri oggettivi e non è corretto entro sei mesi serve la valutazione congiunta con le rappresentanze.' : 'Sotto i 100 dipendenti la relazione non è obbligatoria: conviene comunque documentare i criteri (livello, anzianità, mansione) che spiegano la differenza.'}</p>}
         </>
       ) : (
         <Panel title="Divario retributivo di genere" sub="Nessuna retribuzione per l’esercizio">
@@ -62,21 +56,13 @@ export function Parita({ d, P, S, today }) {
           <div className="row epe-pad"><Btn icon={LuArrowRight} onClick={() => go('dati', 'importa')}>Vai a Importa</Btn></div>
         </Panel>
       )}
-      <div className="grid g2">
-        <Panel title="Trasparenza retributiva" sub={`D.Lgs. 96/2026 · dipendenti medi ${du?.headcount != null ? nf(du.headcount, 1) : 'n.d.'}`}>
-          <ul className="epe-bands">
-            {(du?.bands || []).map(b => (
-              <li key={b.id} className={du?.band?.id === b.id ? 'epe-band-on' : ''}>
-                <span className="epe-strong">{b.label}</span>
-                <span>{b.firstReport ? `prima relazione entro il ${dateIt(b.firstReport)}, ${b.every}` : 'nessuna relazione sul divario'}</span>
-                <span className="epe-src small">{du?.band?.id === b.id ? <Chip kind="accent">questa impresa</Chip> : null}<StatusChip status={b.status} /></span>
-              </li>
-            ))}
-          </ul>
-          {du?.band?.note && <p className="small">{du.band.note}</p>}
-          {du?.joint && <p className="small muted">{du.joint.note}</p>}
-          <PackSource item={du?.band || du?.joint} validAsOf={S?.pack?.validAsOf} />
-        </Panel>
+      <div className="grid g2 epe-top">
+        {pg ? (
+          <Panel title="Donne e uomini per quartile di retribuzione" sub="Quattro fasce con lo stesso numero di persone, dalla più bassa alla più alta">
+            {qCols.some(c => c.parts.length) ? <><Columns cols={qCols} keys={[{ key: 'F', label: 'Donne', color: 'var(--s5)' }, { key: 'M', label: 'Uomini', color: 'var(--s1)' }]} height={190} unit="%" ariaLabel="Quota di donne e uomini per quartile" />
+              <Legend items={[{ label: 'Donne', color: 'var(--s5)' }, { label: 'Uomini', color: 'var(--s1)' }]} /></> : <Empty title={`Quartili non mostrati: meno di ${sc} persone per fascia`} />}
+          </Panel>
+        ) : null}
         <Panel title="Rapporto biennale sul personale maschile e femminile" sub="Art. 46 D.Lgs. 198/2006"
           actions={<Btn small kind="ghost" icon={LuDownload} disabled={!S?.wf} onClick={() => downloadCsv(`rapporto-biennale-${P.key}`, biennialRows(S), BIENNIAL_COLS)}>Tabelle CSV</Btn>}>
           <p className="small">{bi?.applies ? `Dovuto: oltre 50 dipendenti. Biennio ${bi.biennium}, da trasmettere entro il ${dateIt(bi.due)} sul portale del Ministero.` : 'Non dovuto fino a 50 dipendenti; le tabelle restano utili per i questionari dei clienti.'}</p>
@@ -85,6 +71,20 @@ export function Parita({ d, P, S, today }) {
           {bi?.item?.note && <p className="small muted">{bi.item.note}</p>}
         </Panel>
       </div>
+      <Panel title="Trasparenza retributiva" sub={`D.Lgs. 96/2026 · dipendenti medi ${du?.headcount != null ? nf(du.headcount, 1) : 'n.d.'}`}>
+        <ul className="epe-bands">
+          {(du?.bands || []).map(b => (
+            <li key={b.id} className={du?.band?.id === b.id ? 'epe-band-on' : ''}>
+              <span className="epe-strong">{b.label}</span>
+              <span>{b.firstReport ? `prima relazione entro il ${dateIt(b.firstReport)}, ${b.every}` : 'nessuna relazione sul divario'}</span>
+              <span className="epe-src small">{du?.band?.id === b.id ? <Chip kind="accent">questa impresa</Chip> : null}<StatusChip status={b.status} /></span>
+            </li>
+          ))}
+        </ul>
+        {du?.band?.note && <p className="small">{du.band.note}</p>}
+        {du?.joint && <p className="small muted">{du.joint.note}</p>}
+        <PackSource item={du?.band || du?.joint} validAsOf={S?.pack?.validAsOf} />
+      </Panel>
       <PdrPanel d={d} S={S} today={today} />
     </>
   );
@@ -196,7 +196,7 @@ export function Ot23({ d, P, S, today }) {
         {!row?.submittedAt && (
           <div className="epe-add">
             <Field label="Nuovo intervento"><input className="input" value={title} maxLength={200} onChange={e => setTitle(e.target.value)} placeholder="Es. procedura di blocco e cartellinatura delle macchine" /></Field>
-            <Field label="Punti dal modello"><NumInput value={points} decimals={0} min={0} max={200} onChange={setPoints} ariaLabel="Punti" /></Field>
+            <Field label="Punti dal modello" className="epe-narrow"><NumInput value={points} decimals={0} min={0} max={200} onChange={setPoints} ariaLabel="Punti" /></Field>
             <Btn icon={LuPlus} onClick={add} disabled={!title.trim()}>Aggiungi</Btn>
           </div>
         )}
