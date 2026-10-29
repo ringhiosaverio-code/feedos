@@ -11,7 +11,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '../..');
-const IN_CORSO = ['esg-persone', 'esg-piano'];
+const IN_CORSO = ['esg-piano'];
 const walk = (dir, ext) => fs.readdirSync(dir, { withFileTypes: true }).flatMap(e => (e.isDirectory() ? walk(path.join(dir, e.name), ext) : ext.some(x => e.name.endsWith(x)) ? [path.join(dir, e.name)] : []));
 const skip = f => IN_CORSO.some(k => path.basename(f).startsWith(k));
 const CSS = walk(path.join(ROOT, 'src/styles'), ['.css']).filter(f => !skip(f));

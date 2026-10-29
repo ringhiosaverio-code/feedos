@@ -71,7 +71,7 @@ export function Sicurezza({ d, P, S, today, arg }) {
             <LineChart series={[{ key: 'if', label: 'IF 12 mesi', color: 'var(--s1)', values: series.map(x => x.if12) }]} labels={series.map(x => monthLabel(x.month))} height={200} unit="" decimals={1}
               refs={band ? [{ y: band.hi, label: `settore ${band.hi}`, kind: 'muted' }] : []} ariaLabel="Indice di frequenza sui 12 mesi" />
           </Panel>
-          <Panel title="Ore lavorate ed eventi per mese" sub="Ore dei dipendenti; i mesi senza registrazione sono stimati">
+          <Panel title="Ore lavorate per mese" sub="Ore dei dipendenti; i mesi senza registrazione sono stimati">
             <Columns cols={series.slice(1).map(x => ({ label: monthLabel(x.month), parts: [{ key: x.src === 'stimato' ? 'est' : 'mis', value: x.hours || 0 }] }))}
               keys={[{ key: 'mis', label: 'Ore registrate', color: 'var(--s1)' }, { key: 'est', label: 'Ore stimate', color: 'var(--s4)' }]} height={180} unit="h" ariaLabel="Ore lavorate per mese" />
             <Legend items={[{ label: 'ore registrate', color: 'var(--s1)' }, { label: 'ore stimate', color: 'var(--s4)' }]} />
