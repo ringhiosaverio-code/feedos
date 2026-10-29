@@ -139,6 +139,7 @@ function score(it, s) {
   const l = norm(it.label);
   if (l.startsWith(s)) x += 50;
   if (l.includes(s)) x += 20;
+  if (norm(it.kind).startsWith(s)) x += 30; // «cliente» porta prima i clienti, non i reclami che ne citano il nome
   if (it.kind === 'Pagina') x += 8;
   if (it.kind === 'Azione') x += 6;
   if (it.weak) x -= 10;
