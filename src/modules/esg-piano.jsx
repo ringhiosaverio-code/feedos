@@ -9,7 +9,7 @@ import { store, toast } from '../core/store.js';
 import { appToday } from '../core/derived.js';
 import { dateIt } from '../core/util.js';
 import { currentPeriod, periodByKey } from '../engine/esg-years.js';
-import { planModel, pianoSignals, progressSeries, roadmap, ets2Plan, transitionPlan, planMarkdown, referenceTarget, kpiTargets, metricsFor, METRICS, PIANO_METHOD,
+import { planModel, pianoSignals, progressSeries, roadmap, ets2Plan, transitionPlan, planMarkdown, referenceTarget, kpiTargets, metricsFor, metricValue, METRICS, PIANO_METHOD,
   esgThresholds, pianoSettings, reductionPct, ESG_THRESHOLDS } from '../engine/esg-piano.js';
 import { baseYearStatus } from '../engine/esg-clima.js';
 import { Panel, Kpi, Table, Btn, Field, NumInput, Select, Seg, Empty, Kv, Chip, confirm } from '../ui/ui.jsx';
@@ -98,6 +98,7 @@ function Obiettivi({ d, P, prev, model, today }) {
   };
   const series = t ? progressSeries(d, t) : null;
   const cy = +P.to.slice(0, 4);
+  const prevV = t && prev ? metricValue(d, t.metric, prev).value : null;
   const B = model.B;
   const refS12 = B.ok ? referenceTarget({ baseValue: B.s1 + B.s2, baseYear: cy, targetYear: cy + 5, kind: 's12' }) : null;
   const refFlag = B.ok && model.flag?.required ? referenceTarget({ baseValue: B.flag, baseYear: cy, targetYear: cy + 5, kind: 'flag' }) : null;
@@ -113,7 +114,9 @@ function Obiettivi({ d, P, prev, model, today }) {
   return (
     <>
       <div className="kpis" id="epi-kpis">
-        <Kpi label={t ? t.label : 'Obiettivo principale'} value={g?.actual != null ? n(g.actual, t.M?.dec ?? 1) : '—'} unit={t?.M?.unit} foot={t ? `traiettoria ${withUnit(g?.path, t.M?.unit, t.M?.dec ?? 1)} · obiettivo ${withUnit(t.targetValue, t.M?.unit, t.M?.dec ?? 1)} nel ${t.targetYear}` : 'nessun obiettivo registrato'} />
+        <Kpi label={t ? t.label : 'Obiettivo principale'} value={g?.actual != null ? n(g.actual, t.M?.dec ?? 1) : '—'} unit={t?.M?.unit} raw={g?.actual ?? undefined}
+          cmp={prevV != null && prev ? { value: prevV, kind: 'ratio', good: t.M?.dir === 'up' ? 'up' : 'down', decimals: t.M?.dec ?? 1, unit: t.M?.unit, label: prev.label } : undefined}
+          foot={t ? `traiettoria ${withUnit(g?.path, t.M?.unit, t.M?.dec ?? 1)} · obiettivo ${withUnit(t.targetValue, t.M?.unit, t.M?.dec ?? 1)} nel ${t.targetYear}` : 'nessun obiettivo registrato'} />
         <Kpi label="Copertura del piano" value={model.coverage?.ratio != null ? n(model.coverage.ratio * 100) : '—'} unit="%" foot={model.coverage ? `misure approvate ${n(model.coverage.planned, 1)} t/anno su ${n(Math.max(0, model.coverage.needed), 1)} necessarie` : 'serve un obiettivo sulle emissioni con valore attuale'} />
         <Kpi label="Categoria SBTi stimata" value={model.sbti?.category || '—'} foot={model.sbti?.reason || ''} />
         <Kpi label="Quota FLAG" value={model.flag?.share != null ? n(model.flag.share * 100) : '—'} unit="%" foot={model.flag?.required ? 'serve un obiettivo FLAG' : 'sotto la soglia del 20%'} />

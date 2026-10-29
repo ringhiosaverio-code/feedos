@@ -10,6 +10,7 @@
 .epi-pad { padding: 16px; border-bottom: 1px solid var(--line); }
 .epi-pad-b { border-bottom: 0; }
 .epi-btns { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.epi-btns > .btn { max-width: 100%; height: auto; min-height: 32px; padding: 8px 16px; white-space: normal; text-align: center; }
 .epi-lead { margin: 0 0 8px; font-size: 14px; line-height: 1.5; color: var(--ink); max-width: 90ch; }
 .epi-h3 { margin: 0 0 8px; font-size: 13px; font-weight: 600; color: var(--ink-2); }
 .epi-row-act { display: inline-flex; gap: 0; }
